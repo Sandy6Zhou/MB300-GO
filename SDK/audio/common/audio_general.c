@@ -48,7 +48,11 @@ const int config_audio_cfg_online_enable = 1;
 const int config_audio_cfg_online_enable = 0;
 #endif
 
+const int config_audio_dac_dma_buf_realloc_enable = 1;
 
+const int config_audio_gain_enable = TCFG_GAIN_NODE_ENABLE;
+const int config_audio_split_gain_enable = TCFG_SPLIT_GAIN_NODE_ENABLE;
+const int config_audio_stereomix_enable = TCFG_STEROMIX_NODE_ENABLE;
 /*
  *******************************************************************
  *						Audio Codec Config
@@ -66,6 +70,14 @@ const int const_audio_codec_wma_dec_supoort_POS_play = 1; //是否支持指定�
 
 /////////////////////wav codec/////////////////
 const int const_audio_codec_wav_dec_bitDepth_set_en = 0;
+
+/*
+ *******************************************************************
+ *						Audio Effects Config
+ *******************************************************************
+ */
+//输出级限幅使能
+const int config_out_dev_limiter_enable = 0;
 
 
 

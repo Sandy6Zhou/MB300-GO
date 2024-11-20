@@ -246,6 +246,9 @@ int dev_status_event_filter(int *msg)
         dev_manager_del_prepare(msg);
         dev_manager_del(del);
         dev_manager_del_after(msg, 0);
+        if (dev_manager_get_total(1) == 0 && app_in_mode(APP_MODE_MUSIC)) {        //这里防止没有设备在线了,还不退出音乐模式
+            app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
+        }
     }
 #if RCSP_MODE
 //    RCSP_UPDATE(COMMON_FUNCTION, BIT(COMMON_FUNCTION_ATTR_TYPE_DEV_INFO));

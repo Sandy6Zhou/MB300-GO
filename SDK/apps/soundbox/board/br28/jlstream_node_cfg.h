@@ -105,6 +105,7 @@
 #define TCFG_STEROMIX_NODE_ENABLE 0 // SteroMix
 #define TCFG_SURROUND_NODE_ENABLE 0 // Surround Effect
 #define TCFG_SWITCH_NODE_ENABLE 1 // Switch
+#define TCFG_SPLIT_GAIN_NODE_ENABLE 0 // Split Gain
 #define TCFG_THREE_D_EFFECT_NODE_ENABLE 0 // ThreeD
 #define TCFG_UART_NODE_ENABLE 0 // 串口打印
 #define TCFG_VBASS_NODE_ENABLE 1 // Virtual Bass

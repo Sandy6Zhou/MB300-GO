@@ -167,6 +167,18 @@ int linein_volume_pp(void)
     }
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (get_auracast_role()) {
+        ret = le_audio_linein_volume_pp();
+    } else {
+        if (__this->onoff) {
+            update_app_auracast_deal_scene(LE_AUDIO_MUSIC_STOP);
+        } else {
+            update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
+        }
+    }
+#endif
+
 #if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
     if ((app_get_connected_role() == APP_CONNECTED_ROLE_TRANSMITTER) ||
         (app_get_connected_role() == APP_CONNECTED_ROLE_DUPLEX)) {
@@ -280,13 +292,10 @@ REGISTER_LOCAL_TWS_OPS(linein) = {
 
 static int get_linein_play_status(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_app_mode_exit_flag()) {
+    if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     if (get_broadcast_role() == 2) {
         //如果是作为接收端
         if (__this->last_run_local_audio_close) {
@@ -313,11 +322,7 @@ static int get_linein_play_status(void)
 #endif
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-    if (get_auracast_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     if (get_auracast_role() == 2) {
         //如果是作为接收端
         if (__this->last_run_local_audio_close) {
@@ -349,19 +354,6 @@ static int get_linein_play_status(void)
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
-
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
-    if (get_connected_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-
-    if (__this->onoff) {
-        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-    } else {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-#endif
 }
 
 static int linein_local_audio_open(void)
@@ -393,6 +385,33 @@ static int linein_local_audio_close(void)
 #if (LEA_BIG_FIX_ROLE==1)
     //固定为发送端
     if (get_broadcast_role()) {
+        if (linein_player_runing()) {
+            linein_stop();
+            __this->linein_local_audio_resume_onoff = 1;
+        } else {
+            __this->linein_local_audio_resume_onoff = 0;
+        }
+        __this->last_run_local_audio_close = 1;
+        return 0;
+    }
+#endif
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (get_auracast_role() == 2) {
+        //作为接收端的情况
+        if (linein_player_runing()) {
+            linein_stop();
+            __this->onoff_as_broadcast_receive = 1;
+        } else {
+            __this->onoff_as_broadcast_receive = 0;
+        }
+        __this->last_run_local_audio_close = 1;
+        return 0;
+    }
+#if (LEA_BIG_FIX_ROLE==1)
+    //固定为发送端
+    if (get_auracast_role()) {
         if (linein_player_runing()) {
             linein_stop();
             __this->linein_local_audio_resume_onoff = 1;
@@ -439,6 +458,9 @@ static void *linein_tx_le_audio_open(void *args)
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
         update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
+#endif
     }
 
     return le_audio;
@@ -462,6 +484,10 @@ static int linein_tx_le_audio_close(void *le_audio)
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    update_app_auracast_deal_scene(LE_AUDIO_MUSIC_STOP);
 #endif
 
     return 0;

@@ -34,9 +34,9 @@
 #define RX_USED_BIS_NUM                 1
 #endif
 
-#define SCAN_WINDOW_SLOT                16
-#define SCAN_INTERVAL_SLOT              28
-#define PRIMARY_ADV_INTERVAL_SLOT       192
+#define SCAN_WINDOW_SLOT                10
+#define SCAN_INTERVAL_SLOT              (28*2)
+#define PRIMARY_ADV_INTERVAL_SLOT       (192/2)
 
 /**************************************************************************************************
   Data Types

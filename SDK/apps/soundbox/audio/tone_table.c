@@ -48,6 +48,8 @@ static const struct tone_files chinese_tone_files = {
     .pc_mode         	= "tone_zh/pc.*",
     .rtc_mode        	= "tone_zh/rtc.*",
     .spdif_mode        	= "tone_zh/spdif.*",
+    .le_broadcast_open  = "tone_zh/big_mode.*",
+    .le_broadcast_close = "tone_zh/big_close.*",
 };
 
 static const struct tone_files english_tone_files = {

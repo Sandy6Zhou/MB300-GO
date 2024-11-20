@@ -496,7 +496,7 @@ static bool is_broadcast_as_transmitter()
     //(2)暂停作为广播接收设备。
     if ((cur_mode->name == APP_MODE_BT) &&
         (bt_get_connect_status() != BT_STATUS_WAITINT_CONN)) {
-        if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING) ||
+        if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING &&  bt_get_connect_status() == BT_STATUS_PLAYING_MUSIC) ||
             get_a2dp_decoder_status() ||
             a2dp_player_runing()) {
             return true;
@@ -916,6 +916,7 @@ int app_broadcast_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
         broadcast_app_mode_exit = 0;
+    case LE_AUDIO_APP_OPEN:
         config_broadcast_as_master = 1;
         mode = app_get_current_mode();
         if (mode) {
@@ -932,6 +933,7 @@ int app_broadcast_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_EXIT");
         //退出当前模式
         broadcast_app_mode_exit = 1;
+    case LE_AUDIO_APP_CLOSE:
         app_broadcast_suspend();
         le_audio_ops_unregister();
         break;
@@ -961,20 +963,18 @@ int app_broadcast_deal(int scene)
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色重启广播数据流
-                broadcast_audio_recorder_reset(app_big_hdl_info[i].big_hdl);
+                broadcast_audio_all_open(app_big_hdl_info[i].big_hdl);
             }
             ret = 1;
             break;
         }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
 #if TCFG_BT_VOL_SYNC_ENABLE
         mode = app_get_current_mode();
         if (mode && (mode->name == APP_MODE_BT)) {
             set_music_device_volume(get_music_sync_volume());
         }
-#endif
 #endif
 
         if (is_need_resume_broadcast()) {
@@ -998,7 +998,7 @@ int app_broadcast_deal(int scene)
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色暂停播放时关闭广播数据流
-                broadcast_audio_recorder_close(app_big_hdl_info[i].big_hdl);
+                broadcast_audio_all_close(app_big_hdl_info[i].big_hdl);
             }
             ret = 1;
             break;
@@ -1227,12 +1227,10 @@ static void broadcast_pair_tx_event_callback(const PAIR_EVENT event, void *priv)
     case PAIR_EVENT_TX_PRI_CHANNEL_CREATE_SUCCESS:
         u32 *private_connect_access_addr = (u32 *)priv;
         g_printf("PAIR_EVENT_TX_PRI_CHANNEL_CREATE_SUCCESS:0x%x", *private_connect_access_addr);
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
         int ret = syscfg_write(VM_WIRELESS_PAIR_CODE0, private_connect_access_addr, sizeof(u32));
         if (ret <= 0) {
             r_printf(">>>>>>wireless pair code save err");
         }
-#endif
         break;
 
     case PAIR_EVENT_TX_OPEN_PAIR_MODE_SUCCESS:
@@ -1263,9 +1261,7 @@ void app_broadcast_enter_pair(u8 role, u8 mode)
 
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &private_connect_access_addr, sizeof(u32));
-#endif
     if (role == BROADCAST_ROLE_UNKNOW) {
         if (is_broadcast_as_transmitter()) {
             broadcast_enter_pair(BROADCAST_ROLE_TRANSMITTER, mode, (void *)&pair_tx_cb, private_connect_access_addr);

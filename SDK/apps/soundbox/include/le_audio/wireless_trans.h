@@ -187,6 +187,8 @@ enum {
     LE_AUDIO_EDR_DISCONN,
     LE_AUDIO_MUSIC_START,
     LE_AUDIO_MUSIC_STOP,
+    LE_AUDIO_APP_OPEN,
+    LE_AUDIO_APP_CLOSE,
 };
 
 /**************************************************************************************************
@@ -281,6 +283,7 @@ void reset_cig_params(void);
 
 void le_audio_working_status_switch(u8 en);
 int le_audio_scene_deal(int scene);
+u8 get_le_audio_app_mode_exit_flag();
 
 #ifdef __cplusplus
 };

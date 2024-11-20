@@ -609,7 +609,7 @@ int bt_tws_poweroff()
 
 void tws_page_scan_deal_by_esco(u8 esco_flag)
 {
-    if (gtws.state & BT_TWS_UNPAIRED) {
+    if (gtws.state & BT_TWS_UNPAIRED || ((gtws.state & BT_TWS_POWER_ON) == 0)) {
         return;
     }
 

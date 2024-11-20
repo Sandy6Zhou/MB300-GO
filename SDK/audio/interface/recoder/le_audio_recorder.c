@@ -23,6 +23,7 @@
 struct le_audio_a2dp_recorder {
     void *stream;
     u8 btaddr[6];
+    u16 retry_timer;
 };
 
 static struct le_audio_a2dp_recorder *g_a2dp_recorder = NULL;
@@ -97,6 +98,17 @@ static void a2dp_recorder_callback(void *private_data, int event)
     printf("le audio a2dp recorder callback : %d\n", event);
 }
 
+static void retry_start_a2dp_player(void *p)
+{
+    if (g_a2dp_recorder && g_a2dp_recorder->stream) {
+        int err = jlstream_start(g_a2dp_recorder->stream);
+        if (err == 0) {
+            sys_timer_del(g_a2dp_recorder->retry_timer);
+            g_a2dp_recorder->retry_timer = 0;
+        }
+    }
+}
+
 int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
 {
     int err = 0;
@@ -133,6 +145,10 @@ int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
     err = jlstream_ioctl(g_a2dp_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
     if (err == 0) {
         err = jlstream_start(g_a2dp_recorder->stream);
+        if (err) {
+            g_a2dp_recorder->retry_timer = sys_timer_add(NULL, retry_start_a2dp_player, 200);
+            return 0;
+        }
     }
 
     if (err) {
@@ -162,6 +178,10 @@ void le_audio_a2dp_recorder_close(u8 *btaddr)
         jlstream_release(a2dp_recorder->stream);
     }
 
+    if (g_a2dp_recorder->retry_timer) {
+        sys_timer_del(g_a2dp_recorder->retry_timer);
+        g_a2dp_recorder->retry_timer = 0;
+    }
     free(a2dp_recorder);
     g_a2dp_recorder = NULL;
 
@@ -545,7 +565,9 @@ void le_audio_fm_recorder_close(void)
 }
 #endif
 
-#if (((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))||((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_AURACAST_SOURCE_EN)))||((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))) && TCFG_AUDIO_MIC_ENABLE
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_AUDIO_MIC_ENABLE
 static void mic_recorder_callback(void *private_data, int event)
 {
     printf("le audio mic recorder callback : %d\n", event);

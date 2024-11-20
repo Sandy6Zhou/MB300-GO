@@ -30,6 +30,7 @@
 #include "audio_demo/audio_demo.h"
 #include "media/audio_general.h"
 #include "fm_file.h"
+#include "asm/dac.h"
 
 #if (SYS_VOL_TYPE == VOL_TYPE_DIGITAL)
 #include "audio_dvol.h"
@@ -101,7 +102,7 @@ struct dac_platform_data dac_data = {
     .power_on_mode      = TCFG_AUDIO_DAC_POWER_ON_MODE,
     .vcm_cap_en         = TCFG_AUDIO_VCM_CAP_EN,
     .dma_buf_time_ms    = TCFG_AUDIO_DAC_BUFFER_TIME_MS,
-    .pa_isel            = 4, //DAC电流挡位，范围：0~6
+    .pa_isel            = TCFG_AUDIO_DAC_PA_ISEL, //DAC电流挡位，范围：0~6
     .l_ana_gain         = TCFG_AUDIO_L_CHANNEL_GAIN,
     .r_ana_gain         = TCFG_AUDIO_R_CHANNEL_GAIN,
 };
@@ -118,13 +119,10 @@ void audio_dac_initcall(void)
 {
     printf("audio_dac_initcall\n");
 
-#if (SYS_VOL_TYPE == VOL_TYPE_DIGITAL)
-    audio_digital_vol_init(NULL, 0);
-#endif
-
     dac_data.bit_width = audio_general_out_dev_bit_width();
     if (dac_data.mode == DAC_MODE_H2_SINGLE) {
         dac_data.power_boost = TCFG_AUDIO_DAC_POWER_BOOST;
+        //power_boost使能的情况下，ldo_volt最大可配置到3，再提高一档输出幅度
         dac_data.ldo_volt = dac_data.power_boost ? 2 : 0;
     } else {
         dac_data.power_boost = 0;
@@ -132,6 +130,7 @@ void audio_dac_initcall(void)
     }
     dac_data.max_sample_rate    = AUDIO_DAC_MAX_SAMPLE_RATE;
     audio_dac_init(&dac_hdl, &dac_data);
+    /* dac_hdl.ng_threshold = 4; //dac底噪优化阈值 */
 
 #if defined(TCFG_AUDIO_DAC_24BIT_MODE) && TCFG_AUDIO_DAC_24BIT_MODE
     audio_dac_set_bit_mode(&dac_hdl, 1);
@@ -160,6 +159,21 @@ void audio_dac_initcall(void)
     mix_out_automute_open();
 #endif  //#if AUDIO_OUTPUT_AUTOMUTE
 }
+
+#if defined(TCFG_AUDIO_DAC_IO_ENABLE) && TCFG_AUDIO_DAC_IO_ENABLE
+static void audio_dac_io_initcall()
+{
+    struct audio_dac_io_param param = {0};
+    param.state[0] = 1;                 //左声道初始电平状态
+    param.state[1] = 1;                 //右声道初始电平状态
+    param.irq_points = 256;
+    param.channel = BIT(0) | BIT(1);    //使能左右声道
+    param.digital_gain = 16384;         //数字音量：-16384~16384
+    param.ldo_volt = 0;                 //电压档位：0~3
+    //此外IOVDD配置也会影响DAC输出电平
+    audio_dac_io_init(&param);
+}
+#endif
 
 static u8 audio_init_complete()
 {
@@ -333,7 +347,15 @@ static int audio_init()
     audio_general_init();
     audio_input_initcall();
 
+#if (SYS_VOL_TYPE == VOL_TYPE_DIGITAL)
+    audio_digital_vol_init(NULL, 0);
+#endif
+
+#if TCFG_DAC_NODE_ENABLE
     audio_dac_initcall();
+#elif (defined(TCFG_AUDIO_DAC_IO_ENABLE) && TCFG_AUDIO_DAC_IO_ENABLE)
+    audio_dac_io_initcall();
+#endif
 
 #if TCFG_AUDIO_ANC_ENABLE
     anc_init();

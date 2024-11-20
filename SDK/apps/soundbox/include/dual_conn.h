@@ -9,5 +9,6 @@ extern void tws_delete_pair_timer(void);
 #else
 extern void dual_conn_close();
 #endif
+extern void dual_conn_state_handler();
 
 #endif

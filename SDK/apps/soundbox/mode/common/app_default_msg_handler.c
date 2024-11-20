@@ -212,10 +212,16 @@ void app_common_key_msg_handler(int *msg)
         break;
 
     case APP_MSG_LE_BROADCAST_SW:
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         g_printf("APP_MSG_LE_AURACAST_SW");
+
+#if 1
         app_auracast_switch();
+#else
+        extern void auracast_phone_select_mode(void);
+        auracast_phone_select_mode();
+#endif
+
 #elif ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN ) && (!TCFG_KBOX_1T3_MODE_EN))
         g_printf("APP_MSG_LE_BROADCAST_SW");
         app_broadcast_switch();

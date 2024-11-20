@@ -18,7 +18,7 @@
  */
 #include "ui/includes.h"
 #include "timer.h"
-#include "asm/crc16.h"
+#include "crc.h"
 #include "ui/lcd_spi/lcd_drive.h"
 #include "ascii.h"
 #include "font/font_textout.h"

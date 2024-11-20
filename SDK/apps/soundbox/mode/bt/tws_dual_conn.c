@@ -12,6 +12,7 @@
 #include "bt_tws.h"
 #include "user_cfg.h"
 #include "bt_common.h"
+#include "le_broadcast.h"
 
 #if(TCFG_USER_TWS_ENABLE && TCFG_APP_BT_EN)
 
@@ -74,6 +75,28 @@ static void write_scan_conn_enable(bool scan_enable, bool conn_enable)
             return;
         }
     }
+
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && LEA_BIG_RX_CLOSE_EDR_EN)
+    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
+        return;
+    }
+#endif
+
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+
+#if LEA_CIG_CENTRAL_CLOSE_EDR_CONN
+    if ((get_connected_role() & CONNECTED_ROLE_CENTRAL) == CONNECTED_ROLE_CENTRAL) {
+        return;
+    }
+#endif
+
+#if LEA_CIG_PERIPHERAL_CLOSE_EDR_CONN
+    if ((get_connected_role() & CONNECTED_ROLE_PERIP) == CONNECTED_ROLE_PERIP) {
+        return;
+    }
+#endif
+
+#endif
 
     lmp_hci_write_scan_enable((conn_enable << 1) | scan_enable);
 
@@ -451,6 +474,28 @@ static void dual_conn_page_device_timeout(void *p)
     if (!g_dual_conn.page_head_inited) {
         return;
     }
+
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && LEA_BIG_RX_CLOSE_EDR_EN)
+    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
+        return;
+    }
+#endif
+
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+
+#if LEA_CIG_CENTRAL_CLOSE_EDR_CONN
+    if ((get_connected_role() & CONNECTED_ROLE_CENTRAL) == CONNECTED_ROLE_CENTRAL) {
+        return;
+    }
+#endif
+
+#if LEA_CIG_PERIPHERAL_CLOSE_EDR_CONN
+    if ((get_connected_role() & CONNECTED_ROLE_PERIP) == CONNECTED_ROLE_PERIP) {
+        return;
+    }
+#endif
+
+#endif
 
     /* 参数有效性检查 */
     list_for_each_entry(info, &g_dual_conn.page_head, entry) {
@@ -1111,14 +1156,21 @@ static int dual_conn_app_event_handler(int *msg)
         case APP_MSG_TWS_UNPAIRED:
 #if CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_AUTO
             /* 未配对, 开始自动配对 */
-            if (bt_get_total_connect_dev() == 0) {
-                tws_api_set_quick_connect_addr(tws_set_auto_pair_code());
-                tws_api_auto_pair(0);
-            } else {
-                tws_api_wait_pair_when_phone_connect(0);
+#if TCFG_TWS_PAIR_ALWAYS
+            u8 tws_can_pair = 1;
+#else
+            u8 tws_can_pair = !bt_get_total_connect_dev();
+#endif
+            if (tws_can_pair) {
+                if (bt_get_total_connect_dev() == 0) {
+                    tws_api_set_quick_connect_addr(tws_set_auto_pair_code());
+                    tws_api_auto_pair(0);
+                } else {
+                    tws_api_wait_pair_when_phone_connect(0);
+                }
+                g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_timeout,
+                                                    TCFG_TWS_PAIR_TIMEOUT  * 1000);
             }
-            g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_timeout,
-                                                TCFG_TWS_PAIR_TIMEOUT  * 1000);
 #else
             /* 未配对, 等待发起配对 */
             if (!list_empty(&g_dual_conn.page_head)) {

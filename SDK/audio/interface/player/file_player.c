@@ -613,6 +613,26 @@ int file_dec_set_start_play(u32 start_time, u32 coding_type)
 }
 #endif
 
+
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+static int file_name_match_mp3(char *file_name)
+{
+    const char *ext_name;
+    for (int i = 0; file_name[i] != '\0'; i++) {
+        if (file_name[i] == '.') {
+            ext_name = file_name + i + 1;
+            goto __match;
+        }
+    }
+    return 0;
+__match:
+    if (!strncasecmp(ext_name, "mp3", 3)) {
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 /*----------------------------------------------------------------------------*/
 /**@brief    获取id3信息
    @return   true：成功

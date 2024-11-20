@@ -411,7 +411,7 @@ static int tws_switch_get_status()
 
 static int tws_get_output_channel()
 {
-    int channel = AUDIO_CH_MIX;
+    int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
     if (tws_api_is_connect()) {
         channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
     }

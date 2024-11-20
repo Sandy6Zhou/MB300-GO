@@ -13,6 +13,7 @@
 #include "app_tone.h"
 #include "app_main.h"
 #include "vol_sync.h"
+#include "dual_conn.h"
 #include "audio_config.h"
 #include "btstack/a2dp_media_codec.h"
 #include "soundbox.h"
@@ -290,36 +291,7 @@ int bt_get_low_latency_mode()
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 static int get_a2dp_play_status(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_ERR;
-    }
-#endif
-
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-    if (get_auracast_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_ERR;
-    }
-#endif
-
-    if (bt_get_call_status() != BT_CALL_HANGUP) {
-        return LOCAL_AUDIO_PLAYER_STATUS_ERR;
-    }
-    if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING) ||
-        get_a2dp_decoder_status() ||
-        a2dp_player_runing()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-    } else {
-        return LOCAL_AUDIO_PLAYER_STATUS_ERR;
-    }
-#endif
-
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
-    if (get_connected_app_mode_exit_flag()) {
+    if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_ERR;
     }
 
@@ -333,7 +305,7 @@ static int get_a2dp_play_status(void)
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_ERR;
     }
-#endif
+
     return 0;
 }
 

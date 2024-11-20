@@ -148,7 +148,7 @@ static void a2dp_player_callback(void *private_data, int event)
 
 static void a2dp_player_set_audio_channel(struct a2dp_player *player)
 {
-    int channel = AUDIO_CH_MIX;
+    int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
     if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
         channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
     }
@@ -266,10 +266,15 @@ int a2dp_player_open(u8 *btaddr)
 
     if (CONFIG_BTCTLER_TWS_ENABLE) {
         if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
-            player->channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
+            if (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) {	//如果dac配置的立体声，tws 连接上时解码也要配置输出立体声，由channel_adapter节点做tws 声道适配;
+                player->channel = AUDIO_CH_LR; 					// 避免断开tws 连接时，立体声输出无法声道分离
+            } else {
+                player->channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
+            }
             jlstream_ioctl(player->stream, NODE_IOC_SET_CHANNEL, player->channel);
         } else {
-            jlstream_ioctl(player->stream, NODE_IOC_SET_CHANNEL, AUDIO_CH_MIX);
+            int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
+            jlstream_ioctl(player->stream, NODE_IOC_SET_CHANNEL, channel);
         }
     }
     err = jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE,
@@ -328,7 +333,10 @@ int a2dp_player_get_btaddr(u8 *btaddr)
         memcpy(btaddr, g_a2dp_player->bt_addr, 6);
         return 1;
     } else {
-#if LEA_BIG_CTRLER_TX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN
+#if (LEA_BIG_CTRLER_TX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
         u8 *addr =  le_audio_a2dp_recorder_get_btaddr();
         if (addr) {
             memcpy(btaddr, addr, 6);

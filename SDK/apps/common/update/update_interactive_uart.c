@@ -9,7 +9,7 @@
 #include "clock.h"
 #include "timer.h"
 #include "utils/fs/fs.h"
-#include "asm/crc16.h"
+#include "crc.h"
 
 #include "update_interactive_uart.h"
 

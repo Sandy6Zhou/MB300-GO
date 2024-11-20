@@ -84,7 +84,11 @@ const int CONFIG_LNA_CHECK_VAL = -80;
  		#ifdef CONFIG_NEW_BREDR_ENABLE
  	    	#if (BT_FOR_APP_EN)
  		    	const int config_btctler_modules        = (BT_MODULE_CLASSIC | BT_MODULE_LE);
-            #elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+            #elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
                 const int config_btctler_modules        = (BT_MODULE_CLASSIC | BT_MODULE_LE);
  	        #else
  		        const int config_btctler_modules        = (BT_MODULE_CLASSIC);

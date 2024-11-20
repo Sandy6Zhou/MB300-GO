@@ -15,7 +15,7 @@
 #include "gpio.h"
 /* #include "uart_update.h" */
 #include "update_interactive_uart.h"
-#include "asm/crc16.h"
+#include "crc.h"
 #include "clock.h"
 
 

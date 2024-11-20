@@ -16,6 +16,7 @@
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "le_broadcast.h"
+#include "audio_config.h"
 
 
 #if TCFG_APP_LINEIN_EN
@@ -27,6 +28,26 @@ int linein_app_msg_handler(int *msg)
     if (false == app_in_mode(APP_MODE_LINEIN)) {
         return 0;
     }
+
+    printf("linein_app_msg type:0x%x", msg[0]);
+    u8 msg_type = msg[0];
+#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2)
+    if (get_broadcast_connect_status() &&  \
+        (msg_type == APP_MSG_MUSIC_PP  \
+         || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
+#if LEA_BIG_VOL_SYNC_EN
+         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
+#endif
+        )) {
+
+        printf("BIS receiving state does not support the event %d", msg_type);
+
+        return 0;
+
+    }
+#endif
+
+
     switch (msg[0]) {
     case APP_MSG_CHANGE_MODE:
         printf("app msg key change mode\n");
@@ -44,10 +65,27 @@ int linein_app_msg_handler(int *msg)
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */
         break;
     case APP_MSG_MUSIC_PP:
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_broadcast_role() == 2) {
+            //接收端已连上
+            linein_volume_mute_mark ^= 1;
+            audio_app_mute_en(linein_volume_mute_mark);
+        } else {
+            if (linein_volume_mute_mark == 1) {
+                //没有连接情况下，如果之前是mute住了，那么先解mute
+                linein_volume_mute_mark ^= 1;
+                audio_app_mute_en(linein_volume_mute_mark);
+                break;
+            }
+        }
+        linein_last_onoff = linein_volume_pp();
+        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==2)
+        //固定为接收端
+        u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
+        if (get_auracast_role() == 2) {
             //接收端已连上
             linein_volume_mute_mark ^= 1;
             audio_app_mute_en(linein_volume_mute_mark);

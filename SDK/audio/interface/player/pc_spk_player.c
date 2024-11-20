@@ -24,6 +24,10 @@
 #include "app_le_broadcast.h"
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#include "app_le_auracast.h"
+#endif
+
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[pcspk]"
 #define LOG_ERROR_ENABLE
@@ -92,7 +96,7 @@ int pc_spk_player_open(void)
     int err = 0;
     struct pc_spk_player *player = NULL;;
 
-    if (g_pc_spk_player) {
+    if (g_pc_spk_player || !app_in_mode(APP_MODE_PC)) {
         return 0;
     }
 
@@ -194,6 +198,16 @@ static void pc_spk_player_restert(void)
         le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
     }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (!get_auracast_role()) {
+        if (g_pc_spk_state == PC_SPK_STA_OPEN) {
+            pc_spk_player_close();
+            pc_spk_player_open();
+        }
+    } else { //广播模式则重启广播数据流
+        le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+        le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+    }
 #else
     if (g_pc_spk_state == PC_SPK_STA_OPEN) {
         pc_spk_player_close();
@@ -226,6 +240,9 @@ int pcspk_open_player_by_taskq(void)
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && !TCFG_KBOX_1T3_MODE_EN
     if ((g_pc_spk_state == PC_SPK_STA_CLOSE ||
          g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) && !get_broadcast_role()) {
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if ((g_pc_spk_state == PC_SPK_STA_CLOSE ||
+         g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) && !get_auracast_role()) {
 #else
     if (g_pc_spk_state == PC_SPK_STA_CLOSE ||
         g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) {

@@ -27,6 +27,7 @@ struct audio_cfifo {
     struct list_head head;      /*子通道数据链表头*/
     spinlock_t lock;
     u8 bit_wide;
+    u8 data_saturation_disable;/*fifo数据饱和处理*/
 };
 
 struct audio_cfifo_channel {

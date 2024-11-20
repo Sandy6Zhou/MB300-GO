@@ -226,21 +226,18 @@ static int audio_pcmic_add_syncts_with_timestamp(struct audio_pcmic_channel *ch,
     }
 
     spin_lock(&pc_mic_lock);
-    if (dac_adapter_link_to_syncts_check(syncts)) {
-        spin_unlock(&pc_mic_lock);
-        return 0;
-    }
-
     if (iis_adapter_link_to_syncts_check(syncts)) {
         log_debug("syncts has beed link to iis");
         spin_unlock(&pc_mic_lock);
         return 0;
     }
+#if TCFG_DAC_NODE_ENABLE
     if (dac_adapter_link_to_syncts_check(syncts)) {
         spin_unlock(&pc_mic_lock);
         log_debug("syncts has beed link to dac");
         return 0;
     }
+#endif
 
     struct audio_pcmic_sync_node *node = NULL;
     list_for_each_entry(node, &hdl->sync_list, entry) {

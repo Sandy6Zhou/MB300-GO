@@ -545,6 +545,7 @@ c_SRC_FILES := \
 	apps/soundbox/mode/bt/dual_conn.c \
 	apps/soundbox/mode/bt/kws_voice_event_deal.c \
 	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c \
+	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast_phone_select_mode.c \
 	apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c \
@@ -1005,7 +1006,9 @@ LFLAGS := \
 	cpu/br28/liba/le_audio_profile.a \
 	cpu/br28/liba/lib_limiter.a \
 	cpu/br28/liba/libSAS_pi32v2_OnChip.a \
-	cpu/br28/liba/jla_codec_lib.a \
+	cpu/br28/liba/lib_jl_codec_common.a \
+	cpu/br28/liba/lib_lc3_codec.a \
+	cpu/br28/liba/lib_jla_codec.a \
 	cpu/br28/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br28/liba/lib_wtg_dec.a \
 	cpu/br28/liba/bfilterfun_lib.a \
@@ -1014,11 +1017,6 @@ LFLAGS := \
 	cpu/br28/liba/crypto_toolbox_Osize.a \
 	cpu/br28/liba/lib_dns.a \
 	cpu/br28/liba/update.a \
-	cpu/br28/liba/res.a \
-	cpu/br28/liba/ui_draw.a \
-	cpu/br28/liba/font.a \
-	cpu/br28/liba/ui_cpu.a \
-	cpu/br28/liba/ui_dot.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \

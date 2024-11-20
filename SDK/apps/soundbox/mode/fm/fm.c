@@ -84,7 +84,6 @@ static void app_fm_init()
     log_info("\n --------fm start-----------\n");
 #ifdef CONFIG_CPU_BR29
     /* #if TCFG_KBOX_1T3_MODE_EN */
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     app_broadcast_close_in_other_mode();
 #endif
@@ -92,10 +91,16 @@ static void app_fm_init()
 #if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
     app_connected_close_in_other_mode();
 #endif
-    btstack_exit_in_other_mode();
-#elif TCFG_BT_BACKGROUND_ENABLE   //br29 fm和蓝牙共用rf，如果打开后台，在进入fm需要关闭蓝牙
-    btstack_exit_in_other_mode();
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
 #endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    app_auracast_source_close(APP_AURACAST_STATUS_STOP);
+#endif
+
+    btstack_exit_in_other_mode();
 #endif
 
 #if TCFG_CODE_RUN_RAM_FM_CODE
@@ -132,7 +137,11 @@ static void app_fm_init()
 #endif
 
 #ifndef CONFIG_CPU_BR29
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     btstack_init_in_other_mode();
 #endif
 #endif
@@ -184,7 +193,11 @@ void app_fm_exit()
 
 #ifdef CONFIG_CPU_BR29
     /* #if TCFG_KBOX_1T3_MODE_EN */
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     if (next_mode && (next_mode->name != APP_MODE_BT && next_mode->name != APP_MODE_RTC)) {
         btstack_init_in_other_mode();
     }
@@ -258,8 +271,7 @@ static int fm_mode_try_exit()
 #endif
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();

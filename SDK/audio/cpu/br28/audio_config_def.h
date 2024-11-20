@@ -120,6 +120,8 @@
 #endif
 #endif
 
+#define TCFG_AUDIO_DAC_NOISEGATE_ENABLE     1
+
 /*
  *该配置适用于没有音量按键的产品，防止打开音量同步之后
  *连接支持音量同步的设备，将音量调小过后，连接不支持音

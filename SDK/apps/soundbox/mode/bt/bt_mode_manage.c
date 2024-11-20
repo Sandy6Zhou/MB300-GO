@@ -40,7 +40,8 @@ int bt_work_mode_select(u8 mode)
         break;
     case BT_MODE_BROADCAST:
 #if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
-        app_broadcast_close(APP_BROADCAST_STATUS_STOP);
+        //app_broadcast_close(APP_BROADCAST_STATUS_STOP);
+        le_audio_scene_deal(LE_AUDIO_APP_CLOSE);
         app_broadcast_uninit();
 #endif
         break;
@@ -63,7 +64,7 @@ int bt_work_mode_select(u8 mode)
 #if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
         app_broadcast_init();
         app_broadcast_open();
-        le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
+        le_audio_scene_deal(LE_AUDIO_APP_OPEN);
 #endif
         break;
     case BT_MODE_CIG:

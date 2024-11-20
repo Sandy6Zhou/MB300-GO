@@ -174,6 +174,18 @@ static void spdif_restart(void)
         }
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (get_auracast_role()) {
+            //关闭广播音频播放
+            void *le_audio = spdif_get_le_audio_hdl();
+            if (le_audio) {
+#if LEA_LOCAL_SYNC_PLAY_EN
+                le_audio_player_close(le_audio);
+#endif
+                le_audio_spdif_recorder_close();
+            }
+        }
+#endif
         spdif_stop();
         spdif_release(NULL);
     }
@@ -212,6 +224,36 @@ static void spdif_open_player(int arg)
     printf("================ open spdif player\n");
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) { //打开广播的数据流
+        struct le_audio_stream_params *params   =  spdif_get_le_audio_params();
+        void *le_audio = spdif_get_le_audio_hdl();
+        int err = -1;
+        if (params && le_audio) {
+            struct le_audio_stream_format *le_audio_fmt = &params->fmt;
+            err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
+            if (err != 0) {
+                ASSERT(0, "spdif recorder open fail");
+            }
+#if LEA_LOCAL_SYNC_PLAY_EN
+            err = le_audio_player_open(le_audio, params);
+            if (err != 0) {
+                ASSERT(0, "spdif player open fail");
+            }
+#endif
+        } else {
+            // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
+            if (params == NULL) {
+                r_printf("=========================> [%s, %d] param == NULL\n", __func__, __LINE__);
+            }
+            if (le_audio == NULL) {
+                r_printf("=========================> [%s, %d] le_audio == NULL\n", __func__, __LINE__);
+            }
+#if (LEA_BIG_FIX_ROLE==1)
+            sys_timeout_add(NULL, delay_open_spdif_player, 1000);
+#endif
+        }
+    }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (get_auracast_role() == APP_AURACAST_AS_SOURCE) { //打开广播的数据流
         struct le_audio_stream_params *params   =  spdif_get_le_audio_params();
         void *le_audio = spdif_get_le_audio_hdl();
         int err = -1;

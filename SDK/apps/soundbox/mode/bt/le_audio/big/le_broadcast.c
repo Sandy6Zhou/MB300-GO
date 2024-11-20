@@ -21,6 +21,7 @@
 #include "wireless_trans.h"
 #include "clock_manager/clock_manager.h"
 #include "le_audio_stream.h"
+#include "le_audio_player.h"
 #include "bt_event_func.h"
 #include "audio_config.h"
 #include "le_audio_player.h"
@@ -521,6 +522,11 @@ static void broadcast_tx_event_callback(const BIG_EVENT event, void *priv)
 int broadcast_transmitter(big_parameter_t *params)
 {
     int ret;
+
+#if !LEA_BIG_CTRLER_TX_EN
+    log_error("broadcast transmitter open fail");
+    return -EPERM;
+#endif
 
     if (broadcast_role == BROADCAST_ROLE_RECEIVER) {
         log_error("broadcast_role err");
@@ -1082,6 +1088,11 @@ int broadcast_receiver(big_parameter_t *params)
 {
     int ret;
 
+#if !LEA_BIG_CTRLER_RX_EN
+    log_error("broadcast receiver open fail");
+    return -EPERM;
+#endif
+
     if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
         log_error("broadcast_role err");
         return -EPERM;
@@ -1348,6 +1359,56 @@ u8 get_broadcast_role(void)
 
 /* --------------------------------------------------------------------------*/
 /**
+ * @brief get current broadcast connect status
+ *
+ * @return connect status (1:connected, 0:disconnected)
+ */
+/* ----------------------------------------------------------------------------*/
+u8 get_broadcast_connect_status(void)
+{
+
+    struct broadcast_hdl *p;
+
+
+    u8 conn_status = 0;
+
+
+    u8 i = 0;
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    spin_lock(&broadcast_lock);
+    list_for_each_entry(p, &broadcast_list_head, entry) {
+        if (p->big_hdl == g_big_hdl) {
+            //关闭原来的recorder
+            if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+                for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                    if (p->bis_hdl_info[i].init_ok) {
+                        conn_status = 1;
+                        spin_unlock(&broadcast_lock);
+                        return  conn_status;
+                    }
+
+                }
+            } else if (broadcast_role == BROADCAST_ROLE_RECEIVER) {
+                for (i = 0; i < get_bis_num(BROADCAST_ROLE_RECEIVER); i++) {
+                    if (p->bis_hdl_info[i].init_ok) {
+                        conn_status = 1;
+                        spin_unlock(&broadcast_lock);
+                        return  conn_status;
+                    }
+                }
+            }
+        }
+    }
+    spin_unlock(&broadcast_lock);
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+
+
+    return  conn_status;
+
+}
+/* --------------------------------------------------------------------------*/
+/**
  * @brief 初始化同步的状态数据的内容
  *
  * @param data:用来同步的数据
@@ -1573,6 +1634,8 @@ int broadcast_audio_all_open(u16 big_hdl)
 
     u8 i = 0;
     void *recorder = 0;
+
+    broadcast_audio_all_close(big_hdl);
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     list_for_each_entry(broadcast_hdl, &broadcast_list_head, entry) {

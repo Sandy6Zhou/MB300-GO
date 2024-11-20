@@ -18,6 +18,7 @@
 #include "bt_slience_detect.h"
 #include "poweroff.h"
 #include "bt_background.h"
+#include "app_le_auracast.h"
 
 #if(TCFG_USER_TWS_ENABLE == 0)
 
@@ -187,6 +188,14 @@ void sys_enter_soft_poweroff(enum poweroff_reason reason)
 #if (TCFG_KBOX_1T3_MODE_EN && (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN))
     app_connected_close_all(APP_CONNECTED_STATUS_STOP);
     app_connected_uninit();
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    app_auracast_source_close(APP_AURACAST_STATUS_STOP);
 #endif
 
     app_send_message(APP_MSG_POWER_OFF, 0);

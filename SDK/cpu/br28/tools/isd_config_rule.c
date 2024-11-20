@@ -179,6 +179,10 @@ UTBD = CONFIG_UBOOT_DEBUG_BAUD_RATE; //uboot串口波特率
 EX_FLASH = PC03_1A_PC08;	//CS_pin / spi (0/1/2) /port(A/B) / power_io
 EX_FLASH_IO = 2_PC01_PC02_PC04_PC05_PC00;	//data_width / CLK_pin / DO_pin / DI_pin / D2_pin / D3_pin   当data_width为4的时候，D2_pin和D3_pin才有效
 #endif
+
+//配置需要锁住的IO
+LATCH_IO = PB01 & 0_PB02 & 1; //&0\1表示输出低或者高
+
 /* #0:disable */
 /* #1:PA9 PA10  */
 /* #2:USB */
@@ -481,7 +485,7 @@ ANCIF1_OPT = CONFIG_ANCIF1_OPT;
 /*******************非用户配置区**********************/
 #endif/*CONFIG_ANC_ENABLE*/
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
+#if (BT_AI_SEL_PROTOCOL & REALME_EN)
 REALME_ADR = AUTO;
 REALME_LEN = 0x1000;
 REALME_OPT = 0;

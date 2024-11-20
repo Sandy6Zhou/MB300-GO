@@ -681,7 +681,9 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
     struct app_mode *mode;
     mode = app_get_current_mode();
     int i = 0;
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
     if (le_audio_player_is_playing()) {
         sprintf(node_name, "%s%s", "Vol_LE_", "Audio");
         return 0;
@@ -1479,7 +1481,9 @@ void app_audio_set_volume(u8 state, s16 volume, u8 fade)
 {
     audio_app_volume_set(state, volume, fade);
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    update_broadcast_sync_data(BROADCAST_SYNC_VOL, volume);
+    if (state == APP_AUDIO_STATE_MUSIC) {
+        update_broadcast_sync_data(BROADCAST_SYNC_VOL, volume);
+    }
 #endif
 
 #if AUDIO_VBASS_LINK_VOLUME

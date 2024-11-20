@@ -529,8 +529,14 @@ struct app_mode *app_mode_switch_handler(int *msg)
 int app_get_message(int *msg, int max_num, const struct key_remap_table *key_table)
 {
     const struct app_msg_handler *handler;
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
 
     app_core_get_message(msg, max_num);
+
+    if (msg[1] == APP_MSG_MUSIC_PLAY_SUCCESS) {
+        printf("app_get_message  APP_MSG_MUSIC_PLAY_SUCCESS:0x%x\n", rets_addr);
+    }
 
     if (msg[0] == MSG_FROM_KEY && key_table) {
         /*

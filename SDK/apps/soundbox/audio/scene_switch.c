@@ -570,7 +570,9 @@ void music_vocal_remover_switch(void)
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     vocal_remover_param_tool_set cfg = {0};
     char *vocal_node_name = "VocalRemovMedia";
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
     if (le_audio_player_is_playing()) {
         vocal_node_name  = "VocalRemovLEAud";
     }

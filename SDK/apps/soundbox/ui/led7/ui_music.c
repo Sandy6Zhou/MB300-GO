@@ -70,6 +70,15 @@ static void led7_show_filenumber(void *hd, u16 file_num)
     dis->lock(0);
 }
 
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
+    dis->lock(0);
+}
 
 static void led7_show_pause(void *hd)
 {
@@ -200,7 +209,13 @@ static void ui_music_main(void *hd, void *private) //主界面显示
             /* printf("sec = %d \n", play_second); */
         }
     } else {
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+        led7_show_le(hd);
+#else
         printf("!!! %s %d\n", __FUNCTION__, __LINE__);
+#endif
     }
 #endif
 }

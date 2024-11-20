@@ -64,7 +64,7 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
-
+#include "app_le_auracast.h"
 
 #if TCFG_APP_BT_EN
 
@@ -201,6 +201,11 @@ void bt_function_select_init()
 #else
     bt_set_update_battery_time(0);
 #endif
+
+#if TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE
+    bt_set_disable_sco_flag(1);
+#endif
+
     /*回连搜索时间长度设置,可使用该函数注册使用，ms单位,u16*/
     bt_set_page_timeout_value(0);
 
@@ -264,7 +269,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
 
         bt_status_init_ok();
 
-#if (TCFG_USER_BLE_ENABLE || TCFG_BT_BLE_ADV_ENABLE)
+#if (TCFG_USER_BLE_ENABLE && TCFG_BT_BLE_ADV_ENABLE)
 #if RCSP_MODE
         rcsp_init();
 #endif
@@ -658,6 +663,14 @@ static u8 bt_nobackground_exit()
 #endif
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    app_auracast_source_close(APP_AURACAST_STATUS_STOP);
+#endif
+
     bt_cmd_prepare(USER_CTRL_POWER_OFF, 0, NULL);
     if (g_bt_hdl.auto_connection_timer) {
         sys_timeout_del(g_bt_hdl.auto_connection_timer);
@@ -896,6 +909,10 @@ int bt_nobackground_status_event_handler(int *msg)
             app_connected_open_in_other_mode();
         }
 #endif
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        app_auracast_open_in_other_mode();
 #endif
         break;
 

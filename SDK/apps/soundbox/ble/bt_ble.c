@@ -304,11 +304,11 @@ static void reflash_adv_tag_data(const u8 *tag_data, u8 len, u8 spec_val)
     memcpy(tmp_tag_data, tag_data, len);
     memcpy(&tmp_tag_data[14], dev_battery_level, 3);
 
-    u8 cur_ear_pos;
+    u8 cur_ear_pos = 0;
 #if TCFG_CHARGESTORE_ENABLE
     log_info("get pos form chargesstore\n");
     cur_ear_pos = chargestore_get_earphone_pos();
-#else
+#elif TCFG_USER_TWS_ENABLE
     cur_ear_pos = bt_tws_get_local_channel();
 #endif
 

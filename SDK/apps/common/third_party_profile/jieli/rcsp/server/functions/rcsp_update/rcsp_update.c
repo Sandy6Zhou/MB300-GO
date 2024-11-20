@@ -43,6 +43,10 @@
 #endif
 
 
+#if (TCFG_MIC_EFFECT_ENABLE)
+#include "mic_effect.h"
+#endif
+
 #define RCSP_DEBUG_EN
 #ifdef  RCSP_DEBUG_EN
 #define rcsp_putchar(x)                	putchar(x)
@@ -112,7 +116,9 @@ static void rcsp_update_prepare()
 #endif
 
 #if (TCFG_MIC_EFFECT_ENABLE && (0 == RCSP_REVERBERATION_SETTING))
-    mic_effect_stop();
+    if (mic_effect_player_runing()) {
+        mic_effect_player_close();
+    }
 #endif
 
 }
@@ -120,7 +126,7 @@ static void rcsp_update_prepare()
 static void rcsp_update_fail_and_resume(void)
 {
 #if (TCFG_MIC_EFFECT_ENABLE)
-    mic_effect_start();
+    mic_effect_player_open();
 #endif
 
 #if (SOUNDCARD_ENABLE)

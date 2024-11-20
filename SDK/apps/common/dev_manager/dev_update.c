@@ -206,7 +206,7 @@ static void dev_update_param_private_handle(UPDATA_PARM *p)
     // cppcheck-suppress unreadVariable
     u16 up_type = p->parm_type;
 
-#ifdef CONFIG_SD_UPDATE_ENABLE
+#if (defined CONFIG_SD_UPDATE_ENABLE) && TCFG_SD0_ENABLE
     if ((up_type == SD0_UPDATA) || (up_type == SD1_UPDATA)) {
         int sd_start = (u32)p->parm_priv;
         void *sd = NULL;

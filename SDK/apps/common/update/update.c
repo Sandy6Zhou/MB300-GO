@@ -6,7 +6,7 @@
 #endif
 #include "update.h"
 #include "update_loader_download.h"
-#include "asm/crc16.h"
+#include "crc.h"
 #include "asm/wdt.h"
 #include "os/os_api.h"
 #include "os/os_cpu.h"

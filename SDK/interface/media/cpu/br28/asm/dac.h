@@ -187,6 +187,7 @@ struct audio_dac_hdl {
     volatile u8 mute;
     volatile u8 state;
     volatile u8 agree_on;
+    u8 ng_threshold;
     u8 gain;
     u8 vol_l;
     u8 vol_r;
@@ -195,6 +196,7 @@ struct audio_dac_hdl {
     u16 d_volume[2];
     u32 sample_rate;
     u32 digital_gain_limit;
+    u32 output_buf_len;
     u16 start_ms;
     u16 delay_ms;
     u16 start_points;
@@ -211,7 +213,6 @@ struct audio_dac_hdl {
     u8 sound_state;
     unsigned long sound_resume_time;
     s16 *output_buf;
-    u16 output_buf_len;
     u8 *mono_lr_diff_tmp_buf;
     u8 anc_dac_open;
     u16 set_analog_gain_timer;      //设置模拟增益的定时器
@@ -647,5 +648,53 @@ void audio_dac_set_samplerate_callback_del(struct audio_dac_hdl *dac, void (*cb)
 
 int audio_dac_adapter_link_to_syncts_check(struct audio_dac_hdl *dac, void *syncts);
 
+// DAC IO
+struct audio_dac_io_param {
+    /*
+     *       state 通道初始状态
+     * 使能单左/单右声道，初始状态为高电平：state[0] = 1
+     * 使能双声道，左声道初始状态为高，右声道初始状态为低：state[0] = 1，state[1] = 0。
+     */
+    u8 state[2];
+    /*
+     *       irq_points 中断点数
+     * 申请buf的大小为 buf_len = irq_points * channel_num * 4
+     */
+    u16 irq_points;
+    /*
+     *       channel 打开的通道
+     * 可配 “BIT(0)、BIT(1)” 对应 “L R”
+     * 打开多通道时使用或配置：channel = BIT(0) | BIT(1);
+     */
+    u8 channel;
+    /*
+     *       digital_gain 增益
+     * 影响输出电平幅值，-16384~16384可配
+     */
+    u16 digital_gain;
+    /*
+     *       ldo_volt 电压
+     * 影响输出电平幅值，0~3可配
+     */
+    u8 ldo_volt;
+};
+
+void audio_dac_io_init(struct audio_dac_io_param *param);
+void audio_dac_io_uninit(struct audio_dac_io_param *param);
+
+/*
+ * ch：通道
+ *    初始化时使能单左/单右声道："ch = BIT(0)"
+ *    初始化时使能立体声：
+ *      左声道"ch = BIT(0)"
+ *      右声道"ch = BIT(1)"
+ *      左右声道"ch = BIT(0) | BIT(1)"
+ * val：电平
+ *    高电平 val = 1
+ *    低电平 val = 0
+ */
+void audio_dac_io_set(u8 ch, u8 val);
+
+int audio_dac_noisefloor_optimize_onoff(u8 onoff);
 #endif
 

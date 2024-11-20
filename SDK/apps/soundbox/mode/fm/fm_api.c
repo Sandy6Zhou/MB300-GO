@@ -504,6 +504,66 @@ void fm_volume_pp(void)
         }
     }
 #endif
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == 2)
+    //固定为接收端
+    u8 fm_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
+    if (get_auracast_role()) {	//如果连接上了
+        fm_volume_mute_mark ^= 1;
+        audio_app_mute_en(fm_volume_mute_mark);
+    } else {
+        //没有连接下，如果上次是mute的状态，那么不mute
+        if (fm_volume_mute_mark == 1) {
+            fm_volume_mute_mark ^= 1;
+            __this->fm_dev_mute = 1;
+            audio_app_mute_en(fm_volume_mute_mark);
+        }
+        if (__this->fm_dev_mute == 0) {
+            fm_app_mute(1);
+            fm_player_close();
+        } else {
+            fm_app_mute(0);
+            fm_player_open();
+        }
+    }
+#elif (LEA_BIG_FIX_ROLE == 1)
+    //固定为发送端
+    if (__this->fm_dev_mute == 0) {
+        fm_app_mute(1);
+        fm_player_close();
+    } else {
+        fm_app_mute(0);
+        if (get_auracast_role() != 1) {
+            //如果 fm 广播没有打开的情况下, 才去进行player的开关
+            //加这个判断是为了解决：fm广播作发送端时，按pp键，重复多开fm player导致广播异常
+            fm_player_open();
+        }
+    }
+#else
+    //加上这条判断为了解决的问题是：固定为接收端，FM播放中开广播进入接收状态，接收状态下点击pp键，然后关闭广播，点击pp键，无法播放
+    if (get_auracast_role() != 2) {
+        if (__this->fm_dev_mute == 0) {
+            fm_app_mute(1);
+            fm_player_close();
+        } else {
+            fm_app_mute(0);
+            if (get_auracast_role() != 1) {
+                //如果 fm 广播没有打开的情况下, 才去进行player的开关
+                //加这个判断是为了解决：fm广播作发送端时，按pp键，重复多开fm player导致广播异常
+                fm_player_open();
+            }
+        }
+    } else {
+        // 作为接收端时, 按下播放键时需要恢复播放, 转为发送端
+        if (__this->fm_dev_mute == 0) {
+            fm_app_mute(1);
+            fm_player_close();
+        } else {
+            fm_app_mute(0);
+            fm_player_open();
+        }
+    }
+#endif
 #else
     if (__this->fm_dev_mute == 0) {
         fm_app_mute(1);
@@ -514,6 +574,18 @@ void fm_volume_pp(void)
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     if (get_broadcast_role()) {
+        le_audio_fm_volume_pp();
+    } else {
+        if (__this->fm_dev_mute) {
+            update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
+        } else {
+            update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
+        }
+    }
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (get_auracast_role()) {
         le_audio_fm_volume_pp();
     } else {
         if (__this->fm_dev_mute) {
@@ -814,11 +886,13 @@ void txmode_fm_inside_freq_get(void)
 
 static int get_fm_play_status(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_app_mode_exit_flag()) {
+    if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#if (LEA_BIG_FIX_ROLE==1)
+
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
     if (__this->fm_local_audio_resume_onoff) {
         __this->fm_dev_mute = 0;
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -827,24 +901,12 @@ static int get_fm_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 #endif
-    if (__this->fm_dev_mute == 0) {
-        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-    } else {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-#endif
-
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
-    if (get_connected_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
 
     if (__this->fm_dev_mute == 0) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
 }
 
 static int fm_local_audio_open(void)
@@ -865,14 +927,25 @@ static int fm_local_audio_close(void)
     if (fm_player_runing()) {
         //关闭本地播放
         fm_player_close();
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1)
         if (get_broadcast_role()) {
             __this->fm_local_audio_resume_onoff = 1;
         }
 #endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==1)
+        if (get_auracast_role()) {
+            __this->fm_local_audio_resume_onoff = 1;
+        }
+#endif
     } else {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1)
         if (get_broadcast_role()) {
+            __this->fm_local_audio_resume_onoff = 0;
+        }
+#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==1)
+        if (get_auracast_role()) {
             __this->fm_local_audio_resume_onoff = 0;
         }
 #endif

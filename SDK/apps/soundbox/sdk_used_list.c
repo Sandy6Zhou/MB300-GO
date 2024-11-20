@@ -38,7 +38,10 @@ aac_dec_plug
 sine_dec_plug
 cvsd_decoder_plug
 pcm_dec_plug
+
+#if TCFG_ZERO_ACTIVE_NODE_ENABLE
 zero_file_plug
+#endif
 
 #if TCFG_BT_SUPPORT_LHDC
 lhdc_dec_plug
@@ -71,6 +74,7 @@ mp3_encoder_plug
 
 #if TCFG_ENC_ADPCM_ENABLE
 wav_encoder_plug
+wav_package
 #endif
 
 #if TCFG_ENC_PCM_ENABLE
@@ -469,8 +473,6 @@ packager_adapter
 write_file_adapter
 #endif
 
-wav_package
-
 #if TCFG_DATA_SATURATION_NODE_ENABLE
 data_saturation_node_adapter
 #endif
@@ -619,3 +621,6 @@ multi_ch_tdm_node_adapter
 multi_ch_tdm_file_plug
 #endif
 
+#if TCFG_SPLIT_GAIN_NODE_ENABLE
+split_gain_node_adapter
+#endif

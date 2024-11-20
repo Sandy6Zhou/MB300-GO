@@ -8,7 +8,7 @@
 #include "boot.h"
 #include "ioctl_cmds.h"
 #include "app_online_cfg.h"
-#include "asm/crc16.h"
+#include "crc.h"
 #include "asm/cpu.h"
 #include "app_config.h"
 #include "online_db_deal.h"
@@ -223,9 +223,15 @@ void all_assemble_package_send_to_pc(u8 id, u8 sq, u8 *buf, u32 len)
 void app_cfg_tool_event_handler(struct cfg_tool_event *cfg_tool_dev)
 {
     u8 *buf = NULL;
+#if TCFG_USER_TWS_ENABLE
+    spin_lock(&cfg_packet.lock);
+#endif
     buf = (u8 *)malloc(cfg_tool_dev->size);
     if (buf == NULL) {
         ASSERT(0, "buf malloc err!");
+#if TCFG_USER_TWS_ENABLE
+        spin_unlock(&cfg_packet.lock);
+#endif
         return;
     }
 
@@ -234,6 +240,9 @@ void app_cfg_tool_event_handler(struct cfg_tool_event *cfg_tool_dev)
     /* printf("cfg_tool_event_handler rx:\n"); */
     /* printf_buf(cfg_tool_dev->packet, cfg_tool_dev->size); */
     memcpy(buf, cfg_tool_dev->packet, cfg_tool_dev->size);
+#if TCFG_USER_TWS_ENABLE
+    spin_unlock(&cfg_packet.lock);
+#endif
 
     const struct tool_interface *p;
     list_for_each_tool_interface(p) {
@@ -408,16 +417,24 @@ static void online_cfg_tool_tws_sibling_data_deal(void *_data, u16 len, bool rx)
     if (rx) {
         cfg_packet.event = DEFAULT_ACTION;
         cfg_packet.size = len;
+        spin_lock(&cfg_packet.lock);
         if (local_packet != NULL) {
             local_packet_free();
         }
         local_packet = local_packet_malloc(cfg_packet.size);
         cfg_packet.packet = local_packet;
         memcpy(cfg_packet.packet, (u8 *)_data, cfg_packet.size);
+        spin_unlock(&cfg_packet.lock);
         if (OS_NO_ERR != os_taskq_post_type("app_core", MSG_FROM_CFGTOOL_TWS_SYNC, 0, NULL)) {
             local_packet_free();
         }
     }
+}
+
+static int cfg_tool_tws_init(void)
+{
+    spin_lock_init(&cfg_packet.lock);
+    return 0;
 }
 
 static int cfg_tool_tws_sync_rx_data(int *msg)
@@ -436,6 +453,8 @@ APP_MSG_HANDLER(tws_msg_entry) = {
     .from       = MSG_FROM_CFGTOOL_TWS_SYNC,
     .handler    = cfg_tool_tws_sync_rx_data,
 };
+
+early_initcall(cfg_tool_tws_init);
 #endif//#if TCFG_USER_TWS_ENABLE
 
 #if CFG_TOOL_VER == CFG_TOOL_VER_VISUAL

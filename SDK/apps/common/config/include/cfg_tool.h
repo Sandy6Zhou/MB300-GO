@@ -6,6 +6,7 @@
 #include "fs/sdfile.h"
 #include "asm/sfc_norflash_api.h"
 #include "sdk_config.h"
+#include "spinlock.h"
 
 //====================可视化配置工具版本定义===========================
 #define CFG_TOOL_VER_NEW	                	(1) // 新配置工具，zhenyu提供
@@ -107,6 +108,9 @@ struct cfg_tool_event {
     u32 event;
     u8 *packet;
     u16 size;
+#if TCFG_USER_TWS_ENABLE
+    spinlock_t lock;
+#endif
 };
 
 // 系统信息

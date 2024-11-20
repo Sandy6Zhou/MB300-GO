@@ -17,8 +17,7 @@
 #include "spdif_file.h"
 #include "spdif.h"
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
 
 /**************************************************************************************************
   Macros
@@ -137,15 +136,14 @@ static int auracast_sink_media_close();
 static u8 auracast_app_mode_exit = 0;  /*!< 音源模式退出标志 */
 static u8 config_auracast_as_master = 0;   /*!< 配置广播强制做主机 */
 static int cur_deal_scene = -1; /*< 当前系统处于的运行场景 */
-static auracast_sink_source_info_t sink_info;
-static auracast_user_config_t source_user_config;
 static struct app_auracast_t app_auracast;
 static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频和本地音频切换回调接口指针 */
-static uint8_t match_auracast_num = 0;
-uint8_t match_aurcast_name[3][28] = {
+static uint8_t match_auracast_num = 3;
+uint8_t match_aurcast_name[4][28] = {
     [0] = "JBL Clip 5",
     [1] = "LE-H_54B7E5C85311",
     [2] = "MoerDuo_BLE",
+    [3] = "JL_auracast",
 };
 static unsigned char errpacket[2] = {
     0x02, 0x00
@@ -459,31 +457,37 @@ static int auracast_sink_sync_terminate(uint8_t *packet, uint16_t length)
     app_auracast.latch_bis_hdl = 0;
     app_auracast.status = APP_AURACAST_STATUS_SCAN;
 
+    auracast_sink_big_sync_terminate();
+    auracast_sink_rescan();
+
     return 0;
 }
 
 static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16_t length)
 {
     switch (event) {
-    case BIG_SYNC_CREATE:
+    case AURACAST_SINK_BIG_SYNC_CREATE_EVENT:
         //建立同步
         g_printf("sink BIG_SYNC_CREATE");
         auracast_sink_sync_create(packet, length);
         break;
-    case BIG_SYNC_TERMINATE:
+    case AURACAST_SINK_BIG_SYNC_TERMINATE_EVENT:
         //主动解除同步
         g_printf("sink BIG_SYNC_TERMINATE");
-        auracast_sink_sync_terminate(packet, length);
         break;
-    case ISO_RX_CALLBACK:
+    case AURACAST_SINK_ISO_RX_CALLBACK_EVENT:
         //获取音频数据
         auracast_iso_rx_callback(packet, length);
         break;
-    case SOURCE_INFO_REPORT:
+    case AURACAST_SINK_SOURCE_INFO_REPORT_EVENT:
         //获取远端设备信息
         auracast_sync_info_report(packet, length);
         break;
-    case BIG_SYNC_LOST:
+    case AURACAST_SINK_BIG_INFO_REPORT_EVENT:
+        printf("sink BIG_INFO_REPORT\n");
+        auracast_sink_big_create();
+        break;
+    case AURACAST_SINK_BIG_SYNC_LOST_EVENT:
         //被动解除同步
         g_printf("sink BIG_SYNC_LOST");
         auracast_sink_sync_terminate(packet, length);
@@ -548,7 +552,7 @@ int app_auracast_sink_close(u8 status)
     log_info("auracast_sink_close");
 
     if (app_auracast.status == APP_AURACAST_STATUS_SYNC) {
-        auracast_sink_big_sync_terminate(&sink_info);
+        auracast_sink_big_sync_terminate();
     }
     auracast_sink_scan_stop();
     os_time_dly(10);
@@ -595,20 +599,6 @@ static void auracast_source_create(uint8_t *packet, uint16_t length)
     }
 }
 
-static void auracast_source_terminated(uint8_t *packet, uint16_t length)
-{
-    auracast_source_media_close(0xff);
-
-    app_auracast.bis_num = 0;
-    app_auracast.role = 0;
-    app_auracast.big_hdl = 0;
-    app_auracast.latch_bis_hdl = 0;
-
-    for (u8 i = 0; i < MAX_BIS_NUMS; i++) {
-        memset(&app_auracast.bis_hdl_info[i], 0, sizeof(struct app_auracast_info_t));
-    }
-}
-
 static void auracast_source_app_event_callback(uint16_t event, uint8_t *packet, uint16_t length)
 {
     uint8_t bis_index;
@@ -621,7 +611,6 @@ static void auracast_source_app_event_callback(uint16_t event, uint8_t *packet, 
             break;
         case AURACAST_SOURCE_BIG_TERMINATED:
             g_printf("AURACAST_SOURCE_BIG_TERMINATED\n");
-            auracast_source_terminated(packet, length);
             break;
         }
         return;
@@ -686,8 +675,17 @@ int app_auracast_source_close(u8 status)
     auracast_source_stop();
     os_time_dly(10);
     auracast_source_uninit();
+    auracast_source_media_close(0xff);
 
+    app_auracast.bis_num = 0;
+    app_auracast.role = 0;
+    app_auracast.big_hdl = 0;
+    app_auracast.latch_bis_hdl = 0;
     app_auracast.status = status;
+
+    for (u8 i = 0; i < MAX_BIS_NUMS; i++) {
+        memset(&app_auracast.bis_hdl_info[i], 0, sizeof(struct app_auracast_info_t));
+    }
 
     return 0;
 }
@@ -847,15 +845,6 @@ int app_auracast_deal(int scene)
         }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-#if TCFG_BT_VOL_SYNC_ENABLE
-        mode = app_get_current_mode();
-        if (mode && (mode->name == APP_MODE_BT)) {
-            set_music_device_volume(get_music_sync_volume());
-        }
-#endif
-#endif
-
         if (is_need_resume_auracast()) {
             app_auracast_resume();
             ret = 1;
@@ -946,8 +935,6 @@ void app_auracast_open_in_other_mode()
         if (mode) {
             le_audio_ops_register(mode->name);
         }
-        //下面的代码，会导致在关闭蓝牙后台后，切模式时会提前打开广播
-        /* app_auracast_resume(); */
     }
 }
 
@@ -992,8 +979,8 @@ static int auracast_source_media_open(uint8_t index)
 
     //打开广播音频播放
     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
-        app_auracast.bis_hdl_info[index].recorder = le_audio_switch_ops->tx_le_audio_open(&params);
         g_printf("auracast_source_tx_le_audio_open");
+        app_auracast.bis_hdl_info[index].recorder = le_audio_switch_ops->tx_le_audio_open(&params);
     }
     return 0;
 }
@@ -1002,6 +989,12 @@ static int auracast_source_media_close(uint8_t index)
 {
     u8 i;
     void *recorder = 0;
+    u8 player_status = 0;
+
+    //获取当前播放器状态
+    if (le_audio_switch_ops && le_audio_switch_ops->play_status) {
+        player_status = le_audio_switch_ops->play_status();
+    }
 
     for (i = 0; i < app_auracast.bis_num; i++) {
         if (0xff != index && i != index) {
@@ -1019,6 +1012,13 @@ static int auracast_source_media_close(uint8_t index)
                 recorder = NULL;
                 g_printf("auracast_source_media_close");
             }
+        }
+    }
+
+    //当前处于播放状态，关闭le audio音频流后恢复本地播放
+    if (player_status == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+        if (le_audio_switch_ops && le_audio_switch_ops->local_audio_open) {
+            le_audio_switch_ops->local_audio_open();
         }
     }
 
@@ -1070,8 +1070,8 @@ static int auracast_sink_media_open(uint8_t index, uint8_t *packet, uint16_t len
 
     //打开广播音频播放
     if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_open) {
-        le_audio_switch_ops->rx_le_audio_open(&app_auracast.bis_hdl_info[index].rx_player, &params);
         g_printf("auracast_sink_rx_le_audio_open");
+        le_audio_switch_ops->rx_le_audio_open(&app_auracast.bis_hdl_info[index].rx_player, &params);
     }
 
     return 0;
@@ -1080,9 +1080,15 @@ static int auracast_sink_media_open(uint8_t index, uint8_t *packet, uint16_t len
 static int auracast_sink_media_close()
 {
     u8 i;
+    u8 player_status = 0;
     struct le_audio_player_hdl player;
     player.le_audio = 0;
     player.rx_stream = 0;
+
+    //获取当前播放器状态
+    if (le_audio_switch_ops && le_audio_switch_ops->play_status) {
+        player_status = le_audio_switch_ops->play_status();
+    }
 
     for (i = 0; i < app_auracast.bis_num; i++) {
         if (app_auracast.bis_hdl_info[i].rx_player.le_audio) {
@@ -1102,6 +1108,13 @@ static int auracast_sink_media_close()
                 player.rx_stream = 0;
                 g_printf("auracast_sink_media_close");
             }
+        }
+    }
+
+    //当前处于播放状态，关闭le audio音频流后恢复本地播放
+    if (player_status == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+        if (le_audio_switch_ops && le_audio_switch_ops->local_audio_open) {
+            le_audio_switch_ops->local_audio_open();
         }
     }
 

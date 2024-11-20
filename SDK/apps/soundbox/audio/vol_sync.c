@@ -11,6 +11,7 @@
 #include "audio_config.h"
 #include "app_tone.h"
 #include "volume_node.h"
+#include "bt_tws.h"
 
 u8 vol_sys_tab[17] =  {0, 2, 3, 4, 6, 8, 10, 11, 12, 14, 16, 18, 19, 20, 22, 23, 25};
 const u8 vol_sync_tab[17] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 127};
@@ -80,6 +81,11 @@ void set_music_device_volume(int volume)
     u32 rets;//, reti;
     __asm__ volatile("%0 = rets":"=r"(rets));
     r_printf("set_music_device_volume=%d 0x%x\n", volume, rets);
+
+    //从机使用主机同步的音量
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        return;
+    }
 #if TCFG_BT_VOL_SYNC_ENABLE
     s16 music_volume;
 

@@ -220,7 +220,7 @@ static u8 *get_device_addr_in_page_list()
     return NULL;
 }
 
-static void dual_conn_state_handler()
+void dual_conn_state_handler()
 {
     int connect_device      = bt_get_total_connect_dev();
     int have_page_device    = page_list_empty() ? false : true;

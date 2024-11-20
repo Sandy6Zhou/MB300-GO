@@ -316,7 +316,9 @@
 <Add option="cpu/br28/liba/le_audio_profile.a" />
 <Add option="cpu/br28/liba/lib_limiter.a" />
 <Add option="cpu/br28/liba/libSAS_pi32v2_OnChip.a" />
-<Add option="cpu/br28/liba/jla_codec_lib.a" />
+<Add option="cpu/br28/liba/lib_jl_codec_common.a" />
+<Add option="cpu/br28/liba/lib_lc3_codec.a" />
+<Add option="cpu/br28/liba/lib_jla_codec.a" />
 <Add option="cpu/br28/liba/libFFT_pi32v2_OnChip.a" />
 <Add option="cpu/br28/liba/lib_wtg_dec.a" />
 <Add option="cpu/br28/liba/bfilterfun_lib.a" />
@@ -325,11 +327,6 @@
 <Add option="cpu/br28/liba/crypto_toolbox_Osize.a" />
 <Add option="cpu/br28/liba/lib_dns.a" />
 <Add option="cpu/br28/liba/update.a" />
-<Add option="cpu/br28/liba/res.a" />
-<Add option="cpu/br28/liba/ui_draw.a" />
-<Add option="cpu/br28/liba/font.a" />
-<Add option="cpu/br28/liba/ui_cpu.a" />
-<Add option="cpu/br28/liba/ui_dot.a" />
 <Add option="cpu/br28/liba/cbuf.a" />
 <Add option="cpu/br28/liba/lbuf.a" />
 <Add option="cpu/br28/liba/printf.a" />
@@ -866,6 +863,7 @@
 <Unit filename="apps/soundbox/mode/bt/dual_conn.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/kws_voice_event_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast_phone_select_mode.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c"><Option compilerVer="CC"/></Unit>
@@ -1310,6 +1308,7 @@
 <Unit filename="interface/btstack/btstack_task.h" />
 <Unit filename="interface/btstack/btstack_typedef.h" />
 <Unit filename="interface/btstack/le/att.h" />
+<Unit filename="interface/btstack/le/auracast_delegator_api.h" />
 <Unit filename="interface/btstack/le/auracast_sink_api.h" />
 <Unit filename="interface/btstack/le/auracast_source_api.h" />
 <Unit filename="interface/btstack/le/ble_api.h" />
@@ -1338,7 +1337,6 @@
 <Unit filename="interface/driver/cpu/br28/asm/chargestore.h" />
 <Unit filename="interface/driver/cpu/br28/asm/clock_hal.h" />
 <Unit filename="interface/driver/cpu/br28/asm/cpu.h" />
-<Unit filename="interface/driver/cpu/br28/asm/crc16.h" />
 <Unit filename="interface/driver/cpu/br28/asm/csfr.h" />
 <Unit filename="interface/driver/cpu/br28/asm/debug.h" />
 <Unit filename="interface/driver/cpu/br28/asm/efuse.h" />
@@ -1386,6 +1384,7 @@
 <Unit filename="interface/driver/cpu/br28/asm/wdt.h" />
 <Unit filename="interface/driver/cpu/includes.h" />
 <Unit filename="interface/driver/cpu/periph/clock.h" />
+<Unit filename="interface/driver/cpu/periph/crc.h" />
 <Unit filename="interface/driver/cpu/periph/gpadc.h" />
 <Unit filename="interface/driver/cpu/periph/gpio.h" />
 <Unit filename="interface/driver/cpu/periph/gpio_config.h" />

@@ -114,8 +114,8 @@ const char *get_le_audio_pair_name(void)
 static void le_audio_switch_ops_callback(void *ops)
 {
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
-    ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
     broadcast_audio_switch_ops = (struct le_audio_mode_ops *)ops;
 #elif (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
     connected_audio_switch_ops = (struct le_audio_mode_ops *)ops;
@@ -384,13 +384,26 @@ int le_audio_scene_deal(int scene)
     return app_connected_deal(scene);
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
     return app_auracast_deal(scene);
 #endif
 
     return -EPERM;
 }
 
+u8 get_le_audio_app_mode_exit_flag()
+{
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+    return get_broadcast_app_mode_exit_flag();
+#endif
+
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+    return get_connected_app_mode_exit_flag();
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    return get_auracast_app_mode_exit_flag();
+#endif
+
+    return 0;
+}

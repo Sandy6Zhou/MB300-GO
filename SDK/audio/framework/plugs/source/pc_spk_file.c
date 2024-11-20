@@ -18,14 +18,12 @@
 #include "circular_buf.h"
 #include "pc_spk_player.h"
 #include "uac_stream.h"
-
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
 #include "le_broadcast.h"
-#include "wireless_trans.h"
+#include "app_le_broadcast.h"
+#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#include "app_le_auracast.h"
 #endif
 
 #define LOG_TAG_CONST       USB
@@ -105,6 +103,17 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
                 pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
             }
         }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (!get_auracast_role()) {
+            if (pc_spk_player_runing() == 0) {
+                //打开播放器
+                pcspk_open_player_by_taskq();
+            }
+        } else {
+            if (get_pc_le_audio_flag()) {
+                pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
+            }
+        }
 #else
         if (pc_spk_player_runing() == 0) {
             //打开播放器
@@ -171,6 +180,14 @@ static void pcspk_det_timer_cb(void *priv)
                     log_debug(">>>>>>> PCSPK LOST CONNECT <<<<<<<");
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
                     if (get_broadcast_role() == 1) {
+                        //广播（发送端）
+                        log_debug(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
+                        pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_STOP);
+                    } else {
+                        pcspk_close_player_by_taskq();
+                    }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+                    if (get_auracast_role() == 1) {
                         //广播（发送端）
                         log_debug(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
                         pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_STOP);
