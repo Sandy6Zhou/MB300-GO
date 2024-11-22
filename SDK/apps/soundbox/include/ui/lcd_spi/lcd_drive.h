@@ -3,6 +3,7 @@
 
 
 #include "spi.h"
+#include "os/os_api.h"
 
 #ifdef Reset
 #undef Reset
@@ -89,6 +90,18 @@
 
 //~~~~~~~~~~~~~~~~~~~~~~~屏驱相关的参数和结构体~~~~~~~~~~~~~~~~~~~~~~~~~~//
 // 屏幕初始化代码延时标志
+
+#ifndef REGFLAG_CONFIRM
+#define REGFLAG_CONFIRM_FLAG  0xff5bb5ff
+#define REGFLAG_CONFIRM       ((REGFLAG_CONFIRM_FLAG>>24)&0xff),((REGFLAG_CONFIRM_FLAG>>16)&0xff),((REGFLAG_CONFIRM_FLAG>>8)&0xff),(REGFLAG_CONFIRM_FLAG&0xff)
+#endif
+
+// 初始化代码结构体
+struct lcd_cmd {
+    u8 addr;		// 地址
+    u8 param_cnt;	// 参数个数
+    u8 param[64];	// 参数
+};
 
 #ifndef REGFLAG_DELAY
 #define REGFLAG_DELAY_FLAG  0xff5aa5ff
@@ -178,6 +191,54 @@ struct _lcd_drive {
 
 extern struct _lcd_drive lcd_drive;
 
+#define LCD_LOGO    "st7789v"
+
+struct lcd_drive_new {
+    char *logo;
+
+    u8 column_addr_align;
+    u8 row_addr_align;
+
+    // 初始化寄存器
+    u8 *lcd_cmd;
+    int cmd_cnt;
+
+    //显存
+    u8 *lcd_buf;
+    u8 *lcd_dbuf[2];
+    u8 lcd_dbuf_index;
+    u8 lcd_buf_num;
+    u32 lcd_buf_size;
+    u8 lcd_busy;
+    u8 lcd_exit;
+    u8 lcd_enter;
+    u8 lcd_switch_mode;
+
+    // 配置参数
+    void *param;
+
+    // 应用层函数
+    void (*reset)(void); /* 复位函数 */
+    int (*backlight_ctrl)(u8);
+    int (*power_ctrl)(u8);
+    void (*entersleep)(void);
+    void (*exitsleep)(void);
+    u32(*read_id)(void);
+
+    OS_SEM init_sem;
+    int lcd_reinit;
+    int tp_reinit;
+
+    u32 lcd_id; //屏幕id
+};
+
+struct lcd_drive_new *lcd_drv_get_hdl(u8 mode, const char *logo);
+
+#define REGISTER_LCD_DEVICE_NEW(lcd) \
+	struct lcd_drive_new lcd sec(.lcd_device_info) __attribute__((used))
+
+extern struct lcd_drive_new lcd_device_begin[];
+extern struct lcd_drive_new lcd_device_end[];
 
 
 struct lcd_platform_data {
@@ -233,6 +294,8 @@ struct lcd_info {
     u8 row_align;
     u8 buf_num;
     u8 bl_status;
+    u8 *buffer;
+    int buffer_size;
 };
 
 

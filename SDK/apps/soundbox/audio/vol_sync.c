@@ -82,10 +82,6 @@ void set_music_device_volume(int volume)
     __asm__ volatile("%0 = rets":"=r"(rets));
     r_printf("set_music_device_volume=%d 0x%x\n", volume, rets);
 
-    //从机使用主机同步的音量
-    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
-        return;
-    }
 #if TCFG_BT_VOL_SYNC_ENABLE
     s16 music_volume;
 
@@ -114,6 +110,7 @@ void set_music_device_volume(int volume)
      *这里将手机的0~127的音量值换成实际的dac音量等级
      */
     music_volume = ((volume + 1) * max_vol) / 127;
+    phone_volume_change(&music_volume);
 #else
     music_volume = vol_sys_tab[(volume + 1) / 8];
 #endif
@@ -184,4 +181,33 @@ void opid_play_vol_sync_fun(s16 *vol, u8 mode)
     }
 #endif
 }
+
+//给手机设置设备音量使用，和音量增减一样使用查表赋值。
+void phone_volume_change(s16 *vol)
+{
+#if TCFG_BT_VOL_SYNC_ENABLE
+    vol_sys_tab[16] =  max_vol;
+
+    if (*vol == 0) {
+        *vol = vol_sys_tab[0];
+    } else if (*vol >= max_vol) {
+        *vol = vol_sys_tab[16];
+    } else {
+        for (u8 i = 0; i < sizeof(vol_sys_tab); i++) {
+            if (*vol == vol_sys_tab[i]) {
+                *vol = vol_sys_tab[i];
+                break;
+            } else if (*vol < vol_sys_tab[i]) {
+                if (*vol < vol_sys_tab[i] - 3) {
+                    *vol = vol_sys_tab[i - 1];
+                } else {
+                    *vol = vol_sys_tab[i];
+                }
+                break;
+            }
+        }
+    }
+#endif
+}
+
 

@@ -47,7 +47,7 @@
 
 
 #define STYLE_JL_WTACH              (1)//彩屏demo
-#define STYLE_JL_SOUNDBOX           (2)//点阵屏demo
+#define STYLE_JL_SOUNDBOX           (2)//点阵屏和彩屏
 #define STYLE_JL_CHARGE             (3)//点阵屏充电仓
 #define STYLE_JL_LED7               (4)//led7
 #define STYLE_UI_SIMPLE             (5)//没有ui框架

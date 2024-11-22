@@ -187,7 +187,7 @@ static enum stream_node_state a2dp_get_frame(void *_hdl, struct stream_frame **p
         a2dp_file_timestamp_setup(hdl);
     }
 #endif
-    if ((!hdl->ts_handle || hdl->edr_to_local_time) && hdl->start == 0) {
+    if ((!hdl->ts_handle /* || hdl->edr_to_local_time */) && hdl->start == 0) {
         int delay = a2dp_media_get_remain_play_time(hdl->file, 1);
         if (delay < (hdl->ts_handle ? hdl->delay_time : 300)) {
             return NODE_STA_RUN | NODE_STA_SOURCE_NO_DATA;

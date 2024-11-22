@@ -29,6 +29,11 @@ int bt_work_mode_select(u8 mode)
 {
     //先释放当前模式资源
     r_printf("%s %d %d\n", __func__, mode, g_bt_hdl.work_mode);
+    if (mode == g_bt_hdl.work_mode) {
+        printf("same work mode  : %d", g_bt_hdl.work_mode);
+        return 0;
+
+    }
     switch (g_bt_hdl.work_mode) {
     case BT_MODE_SIGLE_BOX:
 

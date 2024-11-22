@@ -30,8 +30,13 @@ if not %RCSP_EN%A==A (
     set CONFIG_DATA=config.dat
 )
 
+if %UI_RESOURCE_EN%A==1A (
+    set UI_RESOURCE_FILE=..\..\JL ..\..\font
+)
+
 @echo on
-..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev br28 -boot 0x120000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin  -tone %TONE_FILES% -res cfg_tool.bin ..\..\p11_code.bin stream.bin %CONFIG_DATA% %KEY_FILE% -uboot_compress %FORMAT% -output-fw jl_isd.fw -output-ufw update.ufw
+echo %UI_RESOURCE_EN%
+..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev br28 -boot 0x120000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin  -tone %TONE_FILES% %UI_RESOURCE_FILE% -res cfg_tool.bin ..\..\p11_code.bin stream.bin %CONFIG_DATA% %KEY_FILE% -uboot_compress %FORMAT% -output-fw jl_isd.fw -output-ufw update.ufw
 @echo off
 
 

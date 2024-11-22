@@ -1464,6 +1464,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
             params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
             params.latency = get_big_tx_latency();
@@ -1658,9 +1659,10 @@ int broadcast_audio_all_open(u16 big_hdl)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
-    params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
-    params.conn = broadcast_hdl->latch_bis_hdl;
+    params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+    params.latency = get_big_tx_latency();
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     if (find) {

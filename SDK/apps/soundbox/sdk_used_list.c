@@ -23,6 +23,10 @@ adc_file_plug
 tone_file_plug
 ring_file_plug
 key_tone_file_plug
+#if TCFG_FILEPLAY_NODE_ENABLE
+file_play_plug
+#endif
+
 sbc_hwaccel
 sbc_decoder_plug
 msbc_decoder_plug
@@ -599,6 +603,10 @@ signal_generator_file_plug
 replace_node_adapter
 #endif
 
+#if TCFG_UI_ENABLE
+sdfile_resfile_ops
+sdfile_vfs_ops
+#endif
 
 #if TCFG_REVERB_NODE_ENABLE
 reverb_node_adapter

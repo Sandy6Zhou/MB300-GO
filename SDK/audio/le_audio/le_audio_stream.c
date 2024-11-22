@@ -381,8 +381,10 @@ int le_audio_stream_tx_write(void *stream, void *data, int len)
     struct le_audio_tx_stream *tx_stream = (struct le_audio_tx_stream *)stream;
 
     int wlen = cbuf_write(&tx_stream->buf.cbuf, (u8 *)data, len);
-
-    /* y_printf("w-tx : %d, %d-\n", len, wlen); */
+    if (wlen < len) {
+        putchar('t');
+        /* printf("le_audio_stream_debug : tx cbuffer full : %d, %d-\n", len, wlen); */
+    }
 
     return wlen ;
 }
@@ -393,7 +395,8 @@ int le_audio_stream_rx_write(void *stream, void *data, int len)
 
     int wlen = cbuf_write(&rx_stream->buf.cbuf, data, len);
     if (wlen < len) {
-        /*printf("le audio stream buffer full : %d, %d\n", cbuf_get_data_len(&rx_stream->buf.cbuf), len);*/
+        putchar('r');
+        /* printf("le_audio_stream_debug : rx cbuffer full : %d, %d\n", cbuf_get_data_len(&rx_stream->buf.cbuf), len); */
     }
 
     return wlen;
@@ -406,7 +409,6 @@ int le_audio_stream_rx_frame(void *stream, void *data, int len, u32 timestamp)
     struct le_audio_frame *frame = NULL;
 
     if (rx_stream->frames_len + len > rx_stream->frames_max_size) {
-        /*printf("frame no buffer.\n");*/
         putchar('H');
         return 0;
     }

@@ -28,6 +28,7 @@
 #include "linein.h"
 #include "spdif_file.h"
 #include "spdif.h"
+#include "soundbox.h"
 /* #include "mic.h" */
 /* #include "iis.h" */
 
@@ -841,7 +842,14 @@ int app_broadcast_switch(void)
                                               broadcast_tone_play_end_callback);
             }
         } else {
-            if (app_broadcast_open() >= 0) {
+
+            if (g_bt_hdl.work_mode !=  BT_MODE_BROADCAST) {
+                bt_work_mode_select(BT_MODE_BROADCAST);
+                play_tone_file_alone_callback(get_tone_files()->le_broadcast_open,
+                                              (void *)TONE_INDEX_BROADCAST_OPEN,
+                                              broadcast_tone_play_end_callback);
+
+            } else if (app_broadcast_open() >= 0) {
                 play_tone_file_alone_callback(get_tone_files()->le_broadcast_open,
                                               (void *)TONE_INDEX_BROADCAST_OPEN,
                                               broadcast_tone_play_end_callback);
@@ -934,6 +942,7 @@ int app_broadcast_deal(int scene)
         //退出当前模式
         broadcast_app_mode_exit = 1;
     case LE_AUDIO_APP_CLOSE:
+        phone_start_cnt = 0;
         app_broadcast_suspend();
         le_audio_ops_unregister();
         break;

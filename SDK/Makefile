@@ -170,7 +170,7 @@ INCLUDES := \
 	-Iinterface/system \
 	-Iinterface/system/generic \
 	-Iinterface/system/device \
-	-Iinterface/utils/ui \
+	-Iinterface/utils/jl_ui \
 	-Iinterface/btctrler \
 	-Iinterface/btctrler/port/br28 \
 	-Iinterface/update \
@@ -190,7 +190,7 @@ INCLUDES := \
 	-Iapps/soundbox \
 	-Iapps/soundbox/include \
 	-Iapps/soundbox/include/wireless_mic \
-	-Iapps/soundbox/include/ui \
+	-Iapps/soundbox/include/jl_ui \
 	-Iapps/soundbox/board/br28 \
 	-Iapps/soundbox/ui \
 	-Iapps/common \
@@ -239,8 +239,9 @@ INCLUDES := \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
 	-Iinterface/media/cpu/br28 \
-	-Iinterface/utils/ui/ui/cpu/br28 \
 	-Iinterface/utils/flash_translation_layer \
+	-Iinterface/ui/jl_ui \
+	-Iinterface/ui/jl_ui/ui/cpu/br28 \
 	-Iapps/common/le_audio \
 	-Iapps/soundbox/include/le_audio \
 	-Iapps/soundbox/include/le_audio/big \
@@ -477,16 +478,7 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/multi_protocol_event.c \
 	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/common/third_party_profile/swift_pair/swift_pair_protocol.c \
-	apps/common/ui/interface/ui_platform.c \
-	apps/common/ui/interface/ui_pushScreen_manager.c \
-	apps/common/ui/interface/ui_resources_manager.c \
-	apps/common/ui/interface/ui_synthesis_manager.c \
-	apps/common/ui/interface/ui_synthesis_oled.c \
-	apps/common/ui/interface/watch_bgp.c \
 	apps/common/ui/lcd/lcd_ui_api.c \
-	apps/common/ui/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
-	apps/common/ui/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
-	apps/common/ui/lcd_drive/lcd_spi/oled_spi_ssd1306_128x64.c \
 	apps/common/ui/led7/led7_ui_api.c \
 	apps/common/ui/pwm_led/led_ui_api.c \
 	apps/common/ui/pwm_led/led_ui_tws_sync.c \
@@ -846,6 +838,11 @@ c_SRC_FILES := \
 	cpu/br28/power/power_port.c \
 	cpu/br28/private_iis.c \
 	cpu/br28/setup.c \
+	cpu/br28/ui_driver/interface/ui_platform.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_drive.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_gc9b71_320x386.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
 	cpu/br28/ui_driver/led7/led7_driver.c \
 	cpu/br28/ui_driver/ui_common.c \
 	cpu/components/gpadc_utils.c \
@@ -1017,6 +1014,10 @@ LFLAGS := \
 	cpu/br28/liba/crypto_toolbox_Osize.a \
 	cpu/br28/liba/lib_dns.a \
 	cpu/br28/liba/update.a \
+	cpu/br28/liba/res_new.a \
+	cpu/br28/liba/ui_draw_new.a \
+	cpu/br28/liba/font_new.a \
+	cpu/br28/liba/ui_new.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \

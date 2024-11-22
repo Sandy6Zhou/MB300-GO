@@ -196,4 +196,5 @@ void btstack_exit_in_other_mode(void);
 
 void bt_work_mode_switch_to_next(void);
 
+int bt_work_mode_select(u8 mode);
 #endif

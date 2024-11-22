@@ -157,8 +157,13 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
             return;
         }
         frame->len    = cache_len;
+#if 1
+        frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+        frame->timestamp    = hdl->timestamp * TIMESTAMP_US_DENOMINATOR;
+#else
         frame->flags  = FRAME_FLAG_SYS_TIMESTAMP_ENABLE;
         frame->timestamp = hdl->timestamp;
+#endif
         cbuf_read(&hdl->spk_cache_cbuffer, frame->data, frame->len);
         source_plug_put_output_frame(source_node, frame);
         hdl->data_run = 1;

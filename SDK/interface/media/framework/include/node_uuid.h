@@ -9,6 +9,7 @@
 
 #define NODE_UUID_TONE              0x768A
 #define NODE_UUID_RING              0xCADC
+#define NODE_UUID_FILEPLAY          0XF03B
 #define NODE_UUID_KEY_TONE          0x8346
 #define NODE_UUID_EQ                0x737B
 #define NODE_UUID_SRC               0x1ECD

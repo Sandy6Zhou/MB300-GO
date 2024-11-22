@@ -52,14 +52,7 @@ LCD_SPI_PLATFORM_DATA_BEGIN(lcd_spi_data)
           .pin_dc		= TCFG_LCD_PIN_DC,
               .pin_en		= TCFG_LCD_PIN_EN,
                   .pin_te		= TCFG_LCD_PIN_TE,
-#if (TCFG_TFT_LCD_DEV_SPI_HW_NUM == 1)
-                      .spi_cfg	= SPI1,
-                          .spi_pdata  = &spi1_p_data,
-#elif (TCFG_TFT_LCD_DEV_SPI_HW_NUM == 2)
-                      .spi_cfg	= SPI2,
-                          .spi_pdata  = &spi2_p_data,
-#endif
-                           LCD_SPI__PLATFORM_DATA_END()
+                      LCD_SPI__PLATFORM_DATA_END()
 
 const struct ui_devices_cfg ui_cfg_data = {
     .type = TFT_LCD,
@@ -395,7 +388,7 @@ int ui_key_msg_post(int key)
 //=================================================================================//
 // @brief: 应用往ui发送触摸消息，由ui控件分配
 //=================================================================================//
-#if(CONFIG_UI_STYLE == STYLE_JL_WTACH_NEW)
+#if(CONFIG_UI_STYLE == STYLE_JL_WTACH)
 int ui_touch_msg_post(struct touch_event *event)
 {
     int msg[8];
@@ -421,11 +414,6 @@ int ui_touch_msg_post(struct touch_event *event)
             spin_lock(&lock);
             touch_msg_counter--;
             spin_unlock(&lock);
-
-            /* if ((event->event == ELM_EVENT_TOUCH_DOWN) || (event->event == ELM_EVENT_TOUCH_UP)) { */
-            /*     os_time_dly(1); */
-            /*     continue; */
-            /* } */
 
             return -1;
         }
@@ -900,31 +888,15 @@ static void ui_task(void *p)
     int ret;
     struct element_key_event e = {0};
 
-#if(CONFIG_UI_STYLE == STYLE_JL_WTACH_NEW)
     ui_page_init();
-#if (TCFG_LUA_ENABLE)
-    /* lua状态机初始化 */
-    extern void lua_late_init(void);
-    lua_late_init();
-#endif /* #if (TCFG_LUA_ENABLE) */
-#endif
-
-
-
-#if TCFG_NOR_VM
-#include "ui_vm/ui_vm.h"
-    /* flash_message_init("ui_vm", 30); */
-    /* flash_weather_init("ui_vm"); */
-    extern void flash_message_cfg_init();
-    flash_message_cfg_init();
-#endif
+    mount(NULL, "flash", "sdfile", 0, NULL);
 
     ui_framework_init(p);
     sys_param_init();
     ui_sysinfo_init();
 
 
-#if(CONFIG_UI_STYLE == STYLE_JL_WTACH_NEW)
+#if(CONFIG_UI_STYLE == STYLE_JL_WTACH || CONFIG_UI_STYLE == STYLE_JL_SOUNDBOX)
     struct ui_style style;
     style.file = RES_PATH"JL/JL.sty";
     ret =  ui_set_style_file(&style);

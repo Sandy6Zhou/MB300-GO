@@ -101,6 +101,12 @@ set TONE_ZH_ENABLE=0
 set RCSP_EN=1
 #endif
 
+#if TCFG_UI_ENABLE && TCFG_SPI_LCD_ENABLE
+set UI_RESOURCE_EN=1
+#else
+set	UI_RESOURCE_EN=0
+#endif
+
 #ifdef CONFIG_EARPHONE_CASE
 #if TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN
 copy anc_ext.bin download\earphone\ALIGN_DIR\.

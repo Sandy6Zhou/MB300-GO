@@ -104,7 +104,7 @@ void sys_param_init(void)
     }
     if (__this->cur_auto_close_time && (!system_auto_close_timer)) {
         //每次重新开机把上次设置的自动关机时间设置进去
-        system_auto_close_timer = sys_s_hi_timerout_add(NULL, sys_enter_soft_poweroff, (table_system_auto_close[__this->cur_auto_close_time ] * 1000));
+        system_auto_close_timer = sys_s_hi_timerout_add(NULL, (void *)sys_enter_soft_poweroff, (table_system_auto_close[__this->cur_auto_close_time ] * 1000));
     }
 
     if (__this->display.backlight_time && (!system_backlight_timer)) {
@@ -153,7 +153,7 @@ void set_auto_poweroff_timer(int sel_item)
     if (system_auto_close_timer) {
         sys_s_hi_timer_modify(system_auto_close_timer, time * 1000);
     } else {
-        system_auto_close_timer = sys_s_hi_timerout_add(NULL, sys_enter_soft_poweroff, (time * 1000));
+        system_auto_close_timer = sys_s_hi_timerout_add(NULL, (void *)sys_enter_soft_poweroff, (time * 1000));
     }
     sys_param_write2vm();
 }

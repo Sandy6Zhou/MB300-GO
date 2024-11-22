@@ -2,8 +2,8 @@
 #define __RES_CONFIG_H__
 
 
-#define EXTERN_PATH "storage/virfat_flash/C/"
-#define INTERN_PATH "mnt/sdfile/res/"
+#define EXTERN_PATH "flash/"
+#define INTERN_PATH "flash/"
 
 #define FLASH_ROOT			"flash"
 #define FLASH_APP_PATH		FLASH_ROOT"/app/"
@@ -54,7 +54,7 @@
 
 
 #define UI_USED_DOUBLE_BUFFER   1//使用双buf推屏
-#define UI_WATCH_RES_ENABLE     0//表盘功能
+#define UI_WATCH_RES_ENABLE     1//表盘功能
 #define UI_UPGRADE_RES_ENABLE   1//升级界面功能
 
 

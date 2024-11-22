@@ -78,6 +78,8 @@ int channel_expander_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* eq系数表更新*/
 int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index);
+/* 软件EQ参数更新接口 */
+int sw_eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 谐波激励参数更新 */
 int harmonic_exciter_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* MDRC参数更新 */

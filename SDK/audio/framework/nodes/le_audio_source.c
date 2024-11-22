@@ -96,6 +96,7 @@ static void le_audio_source_handle_frame(struct stream_iport *iport, struct stre
     struct le_audio_source_iport *hdl = (struct le_audio_source_iport *)iport->private_data;
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
     struct stream_frame *frame;
+    int wlen;
 
     while (1) {
         frame = hdl->frame;
@@ -109,15 +110,18 @@ static void le_audio_source_handle_frame(struct stream_iport *iport, struct stre
 
         if (hdl->attribute == LE_AUDIO_TX_SOURCE) {
             le_audio_source_frame_timestamp_handler(ctx, frame);
-            int wlen = le_audio_stream_tx_write(ctx->tx_stream, frame->data, frame->len);
-            if (wlen < frame->len) {
-                break;
-            }
+            wlen = le_audio_stream_tx_write(ctx->tx_stream, frame->data, frame->len);
         } else {
 #if LEA_LOCAL_SYNC_PLAY_EN
             le_audio_source_frame_timestamp_handler(ctx, frame);
-            le_audio_stream_rx_write(ctx->rx_stream, frame->data, frame->len);
+            wlen = le_audio_stream_rx_write(ctx->rx_stream, frame->data, frame->len);
+#else
+            wlen = frame->len;
 #endif
+        }
+        if (wlen < frame->len) {
+            note->state |= NODE_STA_OUTPUT_BLOCKED;
+            break;
         }
 
         jlstream_free_frame(frame);
@@ -278,6 +282,11 @@ static void le_audio_source_ioc_stop(struct stream_iport *iport)
             le_audio_stream_tx_close(ctx->tx_stream);
             ctx->tx_stream = NULL;
         }
+    }
+
+    if (hdl->frame) {
+        jlstream_free_frame(hdl->frame);
+        hdl->frame = NULL;
     }
 }
 

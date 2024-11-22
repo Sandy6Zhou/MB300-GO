@@ -33,12 +33,13 @@ int pc_app_msg_handler(int *msg)
     printf("pc_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
 #if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2)
-    if (get_broadcast_connect_status() &&  \
-        (msg_type == APP_MSG_MUSIC_PP  \
+    if (get_broadcast_connect_status() &&
+        (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
 #if LEA_BIG_VOL_SYNC_EN
          || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
 #endif
+         || msg_type == APP_MSG_PC_START
         )) {
 
         printf("BIS receiving state does not support the event %d", msg_type);
