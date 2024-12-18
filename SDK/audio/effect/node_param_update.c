@@ -57,6 +57,17 @@ int band_merge_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     return jlstream_set_node_param(NODE_UUID_3BAND_MERGE, node_name, &cfg, sizeof(cfg));
 }
 
+int two_band_merge_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    multi_mix_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_2BAND_MERGE, node_name, &cfg, sizeof(cfg));
+}
+
 int vocal_remover_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
     vocal_remover_param_tool_set cfg = {0};
@@ -231,6 +242,16 @@ int virtual_bass_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
         return -1;
     }
     return jlstream_set_node_param(NODE_UUID_VBASS, node_name, &cfg, sizeof(cfg));
+}
+int virtual_bass_classic_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    virtual_bass_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_VIRTUAL_BASS_CLASSIC, node_name, &cfg, sizeof(cfg));
 }
 int voice_changer_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
@@ -463,6 +484,7 @@ int virtual_surround_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_inde
     }
     return jlstream_set_node_param(NODE_UUID_UPMIX_2TO5, node_name, &cfg, sizeof(cfg));
 }
+
 int limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
     struct limiter_param_tool_set cfg = {0};
@@ -473,6 +495,21 @@ int limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return jlstream_set_node_param(NODE_UUID_LIMITER, node_name, &cfg, sizeof(cfg));
 }
+
+
+int user_limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index, float threshold)
+{
+    struct limiter_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+
+    cfg.parm.threshold = threshold * 1000;
+    return jlstream_set_node_param(NODE_UUID_LIMITER, node_name, &cfg, sizeof(cfg));
+}
+
 
 int multiband_limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
@@ -496,4 +533,25 @@ int pcm_delay_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return jlstream_set_node_param(NODE_UUID_PCM_DELAY, node_name, &cfg, sizeof(cfg));
 
+}
+int howling_gate_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    howling_gate_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_HOWLING_GATE, node_name, &cfg, sizeof(cfg));
+}
+
+int noisegate_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct noisegate_pro_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_NOISEGATE_PRO, node_name, &cfg, sizeof(cfg));
 }

@@ -105,6 +105,7 @@ int spdif_player_open(void)
     g_spdif_player = player;
     printf("\n>>>>>>>>>>>> spdif player open succ\n\n");
 
+    app_send_message(APP_MSG_SPDIF_STATUS_UPDATE, 0);
     return 0;
 
 __exit1:
@@ -141,6 +142,7 @@ void spdif_player_close()
     g_spdif_player = NULL;
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"spdif");
+    app_send_message(APP_MSG_SPDIF_STATUS_UPDATE, 0);
 }
 
 void update_spdif_player_mute_state(void)

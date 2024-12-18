@@ -644,9 +644,9 @@ void audio_fade_in_fade_out(u8 left_vol, u8 right_vol)
 
 /*
  *************************************************************
- *
- *	audio volume save
- *
+ *					Audio Volume Save
+ *Notes:如果不想保存音量（比如保存音量到vm，可能会阻塞），可以
+ *		定义AUDIO_VOLUME_SAVE_DISABLE来关闭音量保存
  *************************************************************
  */
 
@@ -668,12 +668,14 @@ static void app_audio_volume_save_do(void *priv)
 
 static void app_audio_volume_change(void)
 {
+#ifndef AUDIO_VOLUME_SAVE_DISABLE
     local_irq_disable();
     __this->save_vol_cnt = 0;
     if (__this->save_vol_timer == 0) {
         __this->save_vol_timer = sys_timer_add(NULL, app_audio_volume_save_do, 1000);//中断里不能操作vm 关中断不能操作vm
     }
     local_irq_enable();
+#endif
 }
 
 int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
@@ -836,6 +838,17 @@ static void app_audio_set_mute_timer_func(void *arg)
 void audio_app_volume_set(u8 state, s16 volume, u8 fade)
 {
     u8 dvol_idx = 0; //记录音量通道供数字音量控制使用
+
+
+
+#if (RCSP_MODE && RCSP_ADV_EQ_SET_ENABLE)
+    extern bool rcsp_set_volume(s8 volume);
+    if (rcsp_set_volume(volume)) {
+        return;
+    }
+#endif
+
+
     switch (state) {
     case APP_AUDIO_STATE_IDLE:
     case APP_AUDIO_STATE_MUSIC:
@@ -1178,12 +1191,6 @@ static const u16 phone_call_dig_vol_tab[] = {
 */
 void app_audio_init_dig_vol(u8 state, s16 volume, u8 fade, dvol_handle *dvol_hdl)
 {
-#if (RCSP_MODE && RCSP_ADV_EQ_SET_ENABLE)
-    extern bool rcsp_set_volume(s8 volume);
-    if (rcsp_set_volume(volume)) {
-        return;
-    }
-#endif
     switch (state) {
     case APP_AUDIO_STATE_IDLE:
     case APP_AUDIO_STATE_MUSIC:

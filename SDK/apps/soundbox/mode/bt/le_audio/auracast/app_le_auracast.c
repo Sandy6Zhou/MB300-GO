@@ -16,8 +16,11 @@
 #include "linein.h"
 #include "spdif_file.h"
 #include "spdif.h"
+#include "btstack/le/auracast_delegator_api.h"
+#include "btstack/le/att.h"
+#include "btstack/le/ble_api.h"
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
 
 /**************************************************************************************************
   Macros
@@ -60,7 +63,11 @@ auracast_user_config_t user_config = {
     .config_variant = AURACAST_BIS_VARIANT,
     .encryption = AURACAST_BIS_ENCRYPTION_ENABLE,
     .broadcast_id = 0x123456,
-    .broadcast_name = "JL_auracast",
+    .broadcast_name = "JL_wilson_auracast",
+};
+auracast_advanced_config_t user_advanced_config = {
+    .iso_interval = 20000,  // ISO interval(uints:us).
+    .rtn = 3,
 };
 
 /**************************************************************************************************
@@ -79,6 +86,27 @@ struct app_auracast_info_t {
     struct le_audio_player_hdl rx_player;
 };
 
+struct broadcast_source_endpoint_notify {
+    uint8_t prd_delay[3];
+    uint8_t num_subgroups;
+    uint8_t num_bis;
+    uint8_t codec_id[5];
+    uint8_t codec_spec_length;
+    uint8_t codec_spec_data[0];
+    uint8_t metadata_length;
+    uint8_t bis_data[0];
+} __attribute__((packed));
+
+struct auracast_adv_info {
+    uint16_t length;
+    uint8_t flag;
+    uint8_t op;
+    uint8_t sn;
+    //uint8_t seq;
+    uint8_t data[0];
+    uint8_t crc[0];
+} __attribute__((packed));
+
 struct app_auracast_t {
     u8 status;
     u8 role;
@@ -87,6 +115,39 @@ struct app_auracast_t {
     u16 latch_bis_hdl;
     struct app_auracast_info_t bis_hdl_info[MAX_BIS_NUMS];
 };
+
+struct broadcast_featrue_notify {
+    uint8_t feature;
+    uint8_t metadata_len;
+    uint8_t metadata[20];
+} __attribute__((packed));
+
+struct broadcast_base_info_notify {
+    uint8_t address_type;
+    uint8_t address[6];
+    uint8_t adv_sid;
+    uint16_t pa_interval;
+} __attribute__((packed));
+
+struct broadcast_codec_info {
+    uint8_t nch;
+    u32 coding_type;
+    s16 frame_len;
+    s16 sdu_period;
+    int sample_rate;
+    int bit_rate;
+} __attribute__((packed));
+
+typedef struct {
+    uint8_t  save_auracast_addr[NO_PAST_MAX_BASS_NUM_SOURCES][6];
+    uint8_t encryp_addr[NO_PAST_MAX_BASS_NUM_SOURCES][6];
+    uint8_t  broadcast_name[28];
+    uint32_t  broadcast_id;
+    uint8_t enc;
+    struct  broadcast_featrue_notify fea_data;
+    struct broadcast_base_info_notify base_data;
+    struct broadcast_codec_info codec_data;
+} bass_no_past_source_t;
 
 const struct _auracast_code_list_t {
     u32 sample_rate;
@@ -133,6 +194,8 @@ static int auracast_sink_media_close();
 /**************************************************************************************************
   Local Global Variables
 **************************************************************************************************/
+static OS_MUTEX mutex;
+static u8 app_auracast_init_flag = 0;
 static u8 auracast_app_mode_exit = 0;  /*!< 音源模式退出标志 */
 static u8 config_auracast_as_master = 0;   /*!< 配置广播强制做主机 */
 static int cur_deal_scene = -1; /*< 当前系统处于的运行场景 */
@@ -149,7 +212,109 @@ static unsigned char errpacket[2] = {
     0x02, 0x00
 };
 
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+static u8 add_source_state = 0;
+static u8 add_source_mac[6];
+static u8 no_past_broadcast_num = 0;
+static u8 encry_lock = 0;
+static u8 ccc[100];
+static bass_no_past_source_t no_past_broadcast_sink_notify;
+static const struct conn_update_param_t con_param = {
+    .interval_min = 86,
+    .interval_max = 86,
+    .latency = 2,
+    .timeout = 500,
+};
+#endif
+
 u8 lea_cfg_support_ll_hci_cmd_in_lea_lib = 1;
+
+
+#define AURACAST_SINK_MAX_RECORD_NUM  3
+#define AURACAST_SINK_RECORDED_WIRTE_VM     0
+#define AURACAST_SINK_FILTER_TIMEOUT  10*1000L
+
+static u8 auracast_sink_start_record = 0;
+static u8 auracast_sink_curr_connect_mac_addr[6];
+static u8 auracast_sink_last_connect_mac_addr[6];
+static u8 auracast_sink_record_connect_mac_addr[AURACAST_SINK_MAX_RECORD_NUM][6];
+static u8 auarcast_sink_mac_addr_filter = 0;
+static u32 auracast_sink_connect_timeout = 0;
+
+static int auracast_sink_record_mac_addr(u8 *mac_addr);
+static int auracast_sink_get_mac_addr_is_recorded(u8 *mac_addr);
+static int auracast_sink_get_recorded_addr_num(void);
+static void auracast_sink_connect_filter_timeout(void *priv);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 广播资源初始化
+ */
+/* ----------------------------------------------------------------------------*/
+void app_auracast_init(void)
+{
+    if (!g_bt_hdl.init_ok) {
+        return;
+    }
+
+    if (app_auracast_init_flag) {
+        return;
+    }
+
+    int os_ret = os_mutex_create(&mutex);
+    if (os_ret != OS_NO_ERR) {
+        log_error("%s %d err, os_ret:0x%x", __FUNCTION__, __LINE__, os_ret);
+        ASSERT(0);
+    }
+
+    app_auracast_init_flag = 1;
+}
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 申请互斥量，用于保护临界区代码，与app_broadcast_mutex_post成对使用
+ *
+ * @param mutex:已创建的互斥量指针变量
+ */
+/* ----------------------------------------------------------------------------*/
+static inline void app_auracast_mutex_pend(OS_MUTEX *mutex, u32 line)
+{
+    if (!app_auracast_init_flag) {
+        log_error("%s err, mutex uninit", __FUNCTION__);
+        return;
+    }
+
+    int os_ret;
+    os_ret = os_mutex_pend(mutex, 0);
+    if (os_ret != OS_NO_ERR) {
+        log_error("%s err, os_ret:0x%x", __FUNCTION__, os_ret);
+        ASSERT(os_ret != OS_ERR_PEND_ISR, "line:%d err, os_ret:0x%x", line, os_ret);
+    }
+}
+
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 释放互斥量，用于保护临界区代码，与app_broadcast_mutex_pend成对使用
+ *
+ * @param mutex:已创建的互斥量指针变量
+ */
+/* ----------------------------------------------------------------------------*/
+static inline void app_auracast_mutex_post(OS_MUTEX *mutex, u32 line)
+{
+    if (!app_auracast_init_flag) {
+        log_error("%s err, mutex uninit", __FUNCTION__);
+        return;
+    }
+
+    int os_ret;
+    os_ret = os_mutex_post(mutex);
+    if (os_ret != OS_NO_ERR) {
+        log_error("%s err, os_ret:0x%x", __FUNCTION__, os_ret);
+        ASSERT(os_ret != OS_ERR_PEND_ISR, "line:%d err, os_ret:0x%x", line, os_ret);
+    }
+}
+
+
+
 /**************************************************************************************************
   Function Declarations
 **************************************************************************************************/
@@ -394,8 +559,262 @@ static bool match_name(char *target_name, char *source_name, size_t target_len)
     return FALSE;
 }
 
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+static void auracast_sync_start(uint8_t *packet, uint16_t length)
+{
+    auracast_sink_source_info_t *config = (auracast_sink_source_info_t *)packet;
+    ASSERT(config, "config is NULL");
+    printf("sync create\n");
+
+    put_buf(add_source_mac, 6);
+    put_buf(config->source_mac_addr, 6);
+    u8 status;
+    if (add_source_state == DELEGATOR_SYNCHRONIZED_TO_PA && !encry_lock) {
+        status = memcmp(config->source_mac_addr, add_source_mac, 6);
+        if (!status) {
+            auracast_sink_big_sync_create(config);
+        }
+    } else {
+        for (u8 i = 0; i < NO_PAST_MAX_BASS_NUM_SOURCES; i++) {
+            status = memcmp(no_past_broadcast_sink_notify.save_auracast_addr[i], config->source_mac_addr, 6);
+            if (!status) {
+                return;
+            }
+        }
+        no_past_broadcast_num += 1;
+        if (no_past_broadcast_num >= NO_PAST_MAX_BASS_NUM_SOURCES) {
+            no_past_broadcast_num = 0;
+        }
+        memset(no_past_broadcast_sink_notify.broadcast_name, 0, sizeof(no_past_broadcast_sink_notify.broadcast_name));
+        memcpy(no_past_broadcast_sink_notify.broadcast_name, config->broadcast_name, strlen((void *)config->broadcast_name));
+        no_past_broadcast_sink_notify.broadcast_id = config->broadcast_id;
+        no_past_broadcast_sink_notify.base_data.address_type = config->Address_Type;
+        memcpy(no_past_broadcast_sink_notify.base_data.address, config->source_mac_addr, 6);
+        memcpy(no_past_broadcast_sink_notify.save_auracast_addr[no_past_broadcast_num], config->source_mac_addr, 6);
+        no_past_broadcast_sink_notify.base_data.adv_sid = config->Advertising_SID;
+        no_past_broadcast_sink_notify.fea_data.feature = config->feature;
+        printf("Advertising_SID[%d]Address_Type[%d]ADDR:\n", config->Advertising_SID, config->Address_Type);
+        put_buf(config->source_mac_addr, 6);
+        printf("auracast name:%s\n", config->broadcast_name);
+        auracast_sink_big_sync_create(config);
+    }
+}
+
+static u8 make_auracast_ltv_data(u8 *buf, u8 data_type, u8 *data, u8 data_len)
+{
+    buf[0] = data_len + 1;
+    buf[1] = data_type;
+    memcpy(buf + 2, data, data_len);
+    return data_len + 2;
+}
+
+static void auracast_big_info(uint8_t *packet, uint16_t length)
+{
+    auracast_sink_source_info_t *config = (auracast_sink_source_info_t *)packet;
+    ASSERT(config, "config is NULL");
+    if (add_source_state == DELEGATOR_SYNCHRONIZED_TO_PA) {
+        auracast_sink_big_create();
+    } else {
+
+        no_past_broadcast_sink_notify.enc = config->enc;
+        printf("%s\n", no_past_broadcast_sink_notify.broadcast_name);
+        printf("%d\n", no_past_broadcast_sink_notify.base_data.address_type);
+        put_buf(no_past_broadcast_sink_notify.base_data.address, 6);
+        printf("%d\n", no_past_broadcast_sink_notify.base_data.adv_sid);
+        printf("%d\n", no_past_broadcast_sink_notify.broadcast_id);
+        printf("%d\n", no_past_broadcast_sink_notify.enc);
+        auracast_delegator_notify_t notify;
+        notify.att_send_len = 100;
+        if (auracast_delegator_event_notify(DELEGATOR_ATT_CHECK_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t))) {
+            u8 build_notify_data[200];
+            u8 offset = 0;
+            struct auracast_adv_info *info = (struct auracast_adv_info *)build_notify_data;
+            info->flag = 1;
+            info->op = 3;
+            info->sn = 2;
+            offset += 5;
+
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x1, no_past_broadcast_sink_notify.broadcast_name, strlen((void *)no_past_broadcast_sink_notify.broadcast_name));
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x2, (u8 *)&no_past_broadcast_sink_notify.broadcast_id, 3);
+            struct broadcast_featrue_notify data;
+            if (no_past_broadcast_sink_notify.enc) {
+                data.feature = 0x7;
+                memcpy(no_past_broadcast_sink_notify.encryp_addr[no_past_broadcast_num], no_past_broadcast_sink_notify.base_data.address, 6);
+            } else {
+                data.feature = 0x6;
+            }
+            data.metadata_len = 0;
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x3, (u8 *)&data, 2);
+#if 1
+            struct broadcast_source_endpoint_notify *codec_data = (struct broadcast_source_endpoint_notify *)ccc;
+            u8 codec_offset = 0;
+            codec_data->prd_delay[0] = 0;
+            codec_data->prd_delay[1] = 0;
+            codec_data->prd_delay[2] = 0;
+            codec_data->num_subgroups = 1;
+            codec_data->num_bis = 1;
+            u8 codec_id[5] = {0x6, 0x0, 0x0, 0x0, 0x0};
+            memcpy(codec_data->codec_id, codec_id, 5);
+
+            codec_offset += 11;
+            u8 save_offset = codec_offset;
+            u8 frequency = 0x8;
+            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x1, &frequency, 1);
+            u8 frame_duration = 0x1;
+            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x2, &frame_duration, 1);
+            u16 octets_frame = 0x0064;
+            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x4, (u8 *)&octets_frame, 2);
+
+            codec_data->codec_spec_length = codec_offset - save_offset;
+
+            u8 meta_len = 0;
+            ccc[codec_offset] = meta_len;
+            codec_offset += 1;
+            u8 bis_index = 1;
+            ccc[codec_offset] = bis_index;
+            codec_offset += 1;
+            u8 bis_codec_len = 6;
+            ccc[codec_offset] = bis_codec_len;
+            codec_offset += 1;
+
+            u8 bis_codec[4] = {0x1, 0x0, 0x0, 0x0};
+            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x3, bis_codec, sizeof(bis_codec));
+
+            put_buf(ccc, codec_offset);
+
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, ccc, codec_offset);
+#else
+            biginfo_notify_data[biginfo_size - 1] = 0;
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, biginfo_notify_data, biginfo_size);
+
+            if (biginfo_notify_data) {
+                free(biginfo_notify_data);
+            }
+#endif
+            no_past_broadcast_sink_notify.base_data.pa_interval = 0xffff;
+            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x5, (u8 *)&no_past_broadcast_sink_notify.base_data, sizeof(struct broadcast_base_info_notify));
+            info->length = offset;
+            u16 crc = CRC16(build_notify_data, offset);
+            memcpy(&build_notify_data[offset], &crc, 2);
+            offset += 2;
+            put_buf(build_notify_data, offset);
+
+            for (u8 i = 0; i < 2; i++) {
+                auracast_delegator_notify_t notify;
+                notify.big_len = offset;
+                notify.big_data = build_notify_data;
+                auracast_delegator_event_notify(DELEGATOR_ATT_SEND_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t));
+                mdelay(100);
+            }
+        }
+        auracast_sink_set_scan_filter(1, no_past_broadcast_num, config->source_mac_addr);
+        auracast_sink_rescan();
+    }
+}
+
+static void auracast_att_init(uint8_t *packet, uint16_t length)
+{
+    auracast_sink_source_info_t *config = (auracast_sink_source_info_t *)packet;
+    ASSERT(config, "config is NULL");
+    printf("att init\n");
+    auracast_delegator_notify_t notify;
+    notify.con_handle = config->con_handle;
+    auracast_delegator_event_notify(DELEGATOR_ATT_PROFILE_START_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t));
+    ble_user_cmd_prepare(BLE_CMD_REQ_CONN_PARAM_UPDATE, 2, config->con_handle, &con_param);
+}
+
+static void auracast_key_add(uint8_t *packet, uint16_t length)
+{
+    auracast_delegator_info_t *data = (auracast_delegator_info_t *)packet;
+    ASSERT(data, "data is NULL");
+    auracast_sink_set_broadcast_code(data->broadcast_code);
+    put_buf(data->broadcast_code, 16);
+    encry_lock = 0;
+    auracast_sink_rescan();
+}
+
+static void auracast_device_add(uint8_t *packet, uint16_t length)
+{
+    auracast_delegator_info_t *data = (auracast_delegator_info_t *)packet;
+    ASSERT(data, "data is NULL");
+    u8 encry;
+    for (u8 i = 0; i < NO_PAST_MAX_BASS_NUM_SOURCES; i++) {
+        encry = memcmp(no_past_broadcast_sink_notify.encryp_addr[i], data->source_addr, 6);
+        if (!encry) {
+            break;
+        }
+    }
+    if (!encry) {
+        printf("auracast is encryption!!\n");
+        encry_lock = 1;
+    } else {
+        printf("auracast is not encry!!\n");
+        encry_lock = 0;
+        auracast_sink_rescan();
+    }
+
+    auracast_delegator_notify_t notify;
+    notify.encry = encry;
+    notify.bass_source_id = data->bass_source_id;
+    auracast_delegator_event_notify(DELEGATOR_BASS_ADD_SOURCE_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t));
+
+    add_source_state = DELEGATOR_SYNCHRONIZED_TO_PA;
+    memcpy(add_source_mac, data->source_addr, 6);
+    auracast_sink_set_source_filter(1, data->source_addr);
+    auracast_sink_set_scan_filter(0, 0, 0);
+}
+
+static void auracast_delegator_event_callback(uint16_t event, uint8_t *packet, uint16_t length)
+{
+    switch (event) {
+    case DELEGATOR_SCAN_START_EVENT:
+        g_printf("scan start\n");
+        auracast_sink_rescan();
+        break;
+    case DELEGATOR_SCAN_STOP_EVENT:
+        g_printf("scan stop\n");
+        app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+        no_past_broadcast_num = 0;
+        for (u8 i = 0; i < NO_PAST_MAX_BASS_NUM_SOURCES; i++) {
+            memset(no_past_broadcast_sink_notify.save_auracast_addr[i], 0, 6);
+            auracast_sink_set_source_filter(i, no_past_broadcast_sink_notify.save_auracast_addr[i]);
+        }
+        auracast_sink_set_source_filter(0, 0);
+        auracast_sink_set_scan_filter(0, 0, 0);
+        add_source_state = 0;
+        break;
+    case DELEGATOR_DEVICE_ADD_EVENT:
+        g_printf("device add\n");
+        auracast_device_add(packet, length);
+        break;
+    case DELEGATOR_DEVICE_KEY_ADD_EVENT:
+        g_printf("device key add\n");
+        auracast_key_add(packet, length);
+        break;
+    case DELEGATOR_DEVICE_MODIFY_EVENT:
+        g_printf("device modify\n");
+        app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+        /* auracast_sink_set_audio_state(0); */
+        /* auracast_sink_big_sync_terminate(); */
+        /* auracast_sink_media_close(); */
+        /* auracast_sink_scan_stop(); */
+        break;
+    default:
+        break;
+    }
+}
+#endif
+
 static void auracast_sync_info_report(uint8_t *packet, uint16_t length)
 {
+    if (!app_auracast_init_flag) {
+        return;
+    }
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return ;
+    }
     auracast_sink_source_info_t *config = (auracast_sink_source_info_t *)packet;
     ASSERT(config, "config is NULL");
     printf("sync create\n");
@@ -405,21 +824,92 @@ static void auracast_sync_info_report(uint8_t *packet, uint16_t length)
 #if 1
     //不匹配设备名，搜到直接同步，如需匹配设备名，请#if 0
     auracast_sink_big_sync_create(config);
+    app_auracast_mutex_post(&mutex, __LINE__);
     return ;
 #endif
+
+#if 0
+    printf("last_connect_addr:\n");
+    put_buf(auracast_sink_last_connect_mac_addr, 6);
+
+    if ((!memcmp(auracast_sink_last_connect_mac_addr, config->source_mac_addr, 6)) && auracast_sink_start_record) {
+#if AURACAST_SINK_FILTER_TIMEOUT
+        if (!auracast_sink_connect_timeout) {
+            auracast_sink_connect_timeout = sys_timeout_add(NULL, auracast_sink_connect_filter_timeout, AURACAST_SINK_FILTER_TIMEOUT);
+        }
+#endif
+        app_auracast_mutex_post(&mutex, __LINE__);
+        auracast_sink_rescan();
+        return ;
+    }
+
+    if (auarcast_sink_mac_addr_filter) {
+        /* for(int i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++){ */
+        /*     printf("recorded_addr[%d]:", i); */
+        /*     put_buf(auracast_sink_record_connect_mac_addr[i],6); */
+        /* } */
+        if ((auracast_sink_get_mac_addr_is_recorded(config->source_mac_addr))) {
+#if AURACAST_SINK_FILTER_TIMEOUT
+            if (auracast_sink_connect_timeout) {
+                sys_timeout_del(auracast_sink_connect_timeout);
+                auracast_sink_connect_timeout =  0;
+            }
+#endif
+            auracast_sink_big_sync_create(config);
+        } else {
+            app_auracast_mutex_post(&mutex, __LINE__);
+            auracast_sink_rescan();
+            return ;
+        }
+    } else {
+#if AURACAST_SINK_FILTER_TIMEOUT
+        if (auracast_sink_connect_timeout) {
+            sys_timeout_del(auracast_sink_connect_timeout);
+            auracast_sink_connect_timeout =  0;
+        }
+#endif
+        auracast_sink_big_sync_create(config);
+    }
+    ;
+    if (auracast_sink_start_record) {
+        auracast_sink_record_mac_addr(config->source_mac_addr);
+    }
+
+    memcpy(auracast_sink_curr_connect_mac_addr, config->source_mac_addr, 6);
+    app_auracast_mutex_post(&mutex, __LINE__);
+    return;
+
+#endif
+
+
     printf("match auracast name:%s[%d]\n", match_aurcast_name[match_auracast_num], (int)strlen((void *)match_aurcast_name[match_auracast_num]));
     if (match_name((void *)config->broadcast_name, (void *)match_aurcast_name[match_auracast_num], strlen((void *)match_aurcast_name[match_auracast_num]))) {
         printf("auracast name match\n");
         auracast_sink_big_sync_create(config);
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return;
     } else {
         printf("auracast name no match\n");
+        app_auracast_mutex_post(&mutex, __LINE__);
+        auracast_sink_rescan();
+        return;
     }
+
 }
 
 static int auracast_sink_sync_create(uint8_t *packet, uint16_t length)
 {
     u8 i;
     auracast_sink_source_info_t *config = (auracast_sink_source_info_t *)packet;
+
+    if (!app_auracast_init_flag) {
+        return -1;
+    }
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return -1;
+    }
 
     if (config->Num_BIS > SINK_MAX_BIS_MUMS) {
         app_auracast.bis_num = SINK_MAX_BIS_MUMS;
@@ -439,6 +929,7 @@ static int auracast_sink_sync_create(uint8_t *packet, uint16_t length)
         app_auracast.bis_hdl_info[i].init_ok = 1;
     }
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
@@ -446,6 +937,14 @@ static int auracast_sink_sync_terminate(uint8_t *packet, uint16_t length)
 {
     u8 i;
 
+    if (!app_auracast_init_flag) {
+        return -1;
+    }
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return -1;
+    }
     for (i = 0; i < app_auracast.bis_num; i++) {
         app_auracast.bis_hdl_info[i].init_ok = 0;
     }
@@ -460,11 +959,16 @@ static int auracast_sink_sync_terminate(uint8_t *packet, uint16_t length)
     auracast_sink_big_sync_terminate();
     auracast_sink_rescan();
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
 static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16_t length)
 {
+
+    if (!app_auracast_init_flag) {
+        return ;
+    }
     switch (event) {
     case AURACAST_SINK_BIG_SYNC_CREATE_EVENT:
         //建立同步
@@ -481,17 +985,41 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
         break;
     case AURACAST_SINK_SOURCE_INFO_REPORT_EVENT:
         //获取远端设备信息
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+        auracast_sync_start(packet, length);
+#else
         auracast_sync_info_report(packet, length);
+#endif
         break;
     case AURACAST_SINK_BIG_INFO_REPORT_EVENT:
-        printf("sink BIG_INFO_REPORT\n");
+        app_auracast_mutex_pend(&mutex, __LINE__);
+        if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
+            app_auracast_mutex_post(&mutex, __LINE__);
+            return ;
+        }
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+        auracast_big_info(packet, length);
+#else
         auracast_sink_big_create();
+#endif
+        app_auracast_mutex_post(&mutex, __LINE__);
         break;
     case AURACAST_SINK_BIG_SYNC_LOST_EVENT:
         //被动解除同步
         g_printf("sink BIG_SYNC_LOST");
         auracast_sink_sync_terminate(packet, length);
         break;
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+    case AURACAST_SINK_BLE_CONNECT_EVENT:
+        g_printf("sink BLE_CONNECT_EVENT");
+        auracast_att_init(packet, length);
+        break;
+    case AURACAST_SINK_DISCONNECT_EVENT:
+        g_printf("sink DISCONNECT_EVENT\n");
+        auracast_sink_scan_stop();
+        auracast_delegator_adv_enable(1);
+        break;
+#endif
     default:
         break;
     }
@@ -510,6 +1038,10 @@ int app_auracast_sink_open()
         return -EPERM;
     }
 
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
+
     if (app_auracast.status != APP_AURACAST_STATUS_STOP && app_auracast.status != APP_AURACAST_STATUS_SUSPEND) {
         return -EPERM;
     }
@@ -520,15 +1052,24 @@ int app_auracast_sink_open()
         return -EPERM;
     }
 
+    app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_sink_open");
 
     auracast_sink_init();
     auracast_sink_event_callback_register(auracast_sink_event_callback);
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+    auracast_delegator_server_init();
+    auracast_delegator_init();
+    auracast_delegator_event_callback_register(auracast_delegator_event_callback);
+    auracast_delegator_adv_enable(1);
+#else
     auracast_sink_scan_start();
+#endif
 
     app_auracast.role = APP_AURACAST_AS_SINK;
     app_auracast.status = APP_AURACAST_STATUS_SCAN;
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
@@ -547,10 +1088,15 @@ int app_auracast_sink_close(u8 status)
         return -EPERM;
     }
 
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
     u8 i;
 
+    app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_sink_close");
 
+    auracast_sink_set_audio_state(0);
     if (app_auracast.status == APP_AURACAST_STATUS_SYNC) {
         auracast_sink_big_sync_terminate();
     }
@@ -569,18 +1115,22 @@ int app_auracast_sink_close(u8 status)
         memset(&app_auracast.bis_hdl_info[i], 0, sizeof(struct app_auracast_info_t));
     }
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
-static void auracast_source_app_send_callback(uint8_t bis_index, uint8_t *buff, uint16_t length)
+static void auracast_source_app_send_callback(uint8_t *buff, uint16_t length)
 {
     u8 i;
     int rlen = 0;
     u32 timestamp;
-
-    timestamp = (auracast_source_read_iso_tx_sync(bis_index) + auracast_source_get_sync_delay()) & 0xfffffff;
-    if (app_auracast.bis_hdl_info[bis_index].recorder) {
-        rlen = le_audio_stream_tx_data_handler(app_auracast.bis_hdl_info[bis_index].recorder, buff, length, timestamp, TCFG_LE_AUDIO_PLAY_LATENCY);
+    auracast_event_send_t *send_packet = (auracast_event_send_t *)buff;
+    u32 sdu_interval_us = auracast_code_list[user_config.config_sampling_frequency][user_config.config_variant].SDU_interval;
+    timestamp = (auracast_source_read_iso_tx_sync(send_packet->bis_index) \
+                 + auracast_source_get_sync_delay()) & 0xfffffff;
+    timestamp += ((send_packet->bis_sub_event_counter - 1) * sdu_interval_us);
+    if (app_auracast.bis_hdl_info[send_packet->bis_index].recorder) {
+        rlen = le_audio_stream_tx_data_handler(app_auracast.bis_hdl_info[send_packet->bis_index].recorder, send_packet->buffer, length, timestamp, TCFG_LE_AUDIO_PLAY_LATENCY);
         if (!rlen) {
             putchar('^');
         }
@@ -589,6 +1139,15 @@ static void auracast_source_app_send_callback(uint8_t bis_index, uint8_t *buff, 
 
 static void auracast_source_create(uint8_t *packet, uint16_t length)
 {
+
+    if (!app_auracast_init_flag) {
+        return ;
+    }
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return ;
+    }
     app_auracast.role = APP_AURACAST_AS_SOURCE;
     app_auracast.bis_num = AURACAST_BIS_NUM;
     app_auracast.latch_bis_hdl = auracast_source_get_bis_hdl(0);
@@ -597,26 +1156,26 @@ static void auracast_source_create(uint8_t *packet, uint16_t length)
         auracast_source_media_open(i);
         app_auracast.bis_hdl_info[i].init_ok = 1;
     }
+
+    app_auracast_mutex_post(&mutex, __LINE__);
 }
 
 static void auracast_source_app_event_callback(uint16_t event, uint8_t *packet, uint16_t length)
 {
-    uint8_t bis_index;
-
-    if (event >= AURACAST_SOURCE_BIG_CREATED) {
-        switch (event) {
-        case AURACAST_SOURCE_BIG_CREATED:
-            g_printf("AURACAST_SOURCE_BIG_CREATED\n");
-            auracast_source_create(packet, length);
-            break;
-        case AURACAST_SOURCE_BIG_TERMINATED:
-            g_printf("AURACAST_SOURCE_BIG_TERMINATED\n");
-            break;
-        }
-        return;
-    } else {
-        bis_index = (uint8_t)event;
-        auracast_source_app_send_callback(bis_index, packet, length);
+    switch (event) {
+    case AURACAST_SOURCE_BIG_CREATED:
+        g_printf("AURACAST_SOURCE_BIG_CREATED\n");
+        auracast_source_create(packet, length);
+        break;
+    case AURACAST_SOURCE_BIG_TERMINATED:
+        g_printf("AURACAST_SOURCE_BIG_TERMINATED\n");
+        break;
+    case AURACAST_SOURCE_SEND_CALLBACK:
+        auracast_source_app_send_callback(packet, length);
+        break;
+    default:
+        printf("auracast source unknow event %x\n", event);
+        break;
     }
 }
 
@@ -633,6 +1192,10 @@ int app_auracast_source_open()
         return -EPERM;
     }
 
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
+
     if (app_auracast.status != APP_AURACAST_STATUS_STOP && app_auracast.status != APP_AURACAST_STATUS_SUSPEND) {
         return -EPERM;
     }
@@ -643,15 +1206,18 @@ int app_auracast_source_open()
         return -EPERM;
     }
 
+    app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_source_open");
 
     auracast_source_init();
     auracast_source_config(&user_config);
+    auracast_source_advanced_config(&user_advanced_config);
     auracast_source_event_callback_register(auracast_source_app_event_callback);
     auracast_source_start();
 
     app_auracast.status = APP_AURACAST_STATUS_BROADCAST;
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
@@ -670,6 +1236,7 @@ int app_auracast_source_close(u8 status)
         return -EPERM;
     }
 
+    app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_source_close");
 
     auracast_source_stop();
@@ -687,6 +1254,7 @@ int app_auracast_source_close(u8 status)
         memset(&app_auracast.bis_hdl_info[i], 0, sizeof(struct app_auracast_info_t));
     }
 
+    app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
 
@@ -846,7 +1414,8 @@ int app_auracast_deal(int scene)
 #endif
 
         if (is_need_resume_auracast()) {
-            app_auracast_resume();
+            /* app_auracast_resume(); */
+            app_auracast_source_open();
             ret = 1;
         }
         break;
@@ -871,7 +1440,8 @@ int app_auracast_deal(int scene)
         }
 #endif
         if (is_need_resume_auracast()) {
-            app_auracast_resume();
+            /* app_auracast_resume(); */
+            app_auracast_sink_open();
             ret = 1;
         }
         break;
@@ -895,7 +1465,8 @@ int app_auracast_deal(int scene)
         }
         //当前处于蓝牙模式并且挂起前广播，恢复广播并作为接收设备
         if (is_need_resume_auracast()) {
-            app_auracast_resume();
+            /* app_auracast_resume(); */
+            app_auracast_sink_open();
         }
         break;
 
@@ -910,7 +1481,8 @@ int app_auracast_deal(int scene)
             app_auracast_suspend();
         }
         if (is_need_resume_auracast()) {
-            app_auracast_resume();
+            /* app_auracast_resume(); */
+            app_auracast_sink_open();
         }
         break;
 
@@ -930,6 +1502,7 @@ int app_auracast_deal(int scene)
 /* ----------------------------------------------------------------------------*/
 void app_auracast_open_in_other_mode()
 {
+    app_auracast_init();
     if (is_need_resume_auracast()) {
         struct app_mode *mode = app_get_current_mode();
         if (mode) {
@@ -1153,6 +1726,250 @@ static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
         }
     }
 }
+
+
+int app_auracast_sink_start_record(void)
+{
+
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
+
+
+    if (app_auracast.role != APP_AURACAST_AS_SINK) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    auracast_sink_start_record = 1;
+
+
+#if AURACAST_SINK_RECORDED_WIRTE_VM
+    for (int i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++) {
+        syscfg_read(VM_WIRELESS_RECORDED_ADDR0 + i, auracast_sink_record_connect_mac_addr[i], 6);
+    }
+#endif
+
+    u8 temp[6] = {0};
+    if (memcmp(auracast_sink_curr_connect_mac_addr, temp, 6)) {
+        auracast_sink_record_mac_addr(auracast_sink_curr_connect_mac_addr);
+    }
+
+    return 0;
+}
+
+int app_auracast_sink_stop_record(void)
+{
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
+
+
+    if (app_auracast.role != APP_AURACAST_AS_SINK) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (auracast_sink_start_record) {
+        auracast_sink_start_record = 0;
+    }
+
+    if (auarcast_sink_mac_addr_filter) {
+        auarcast_sink_mac_addr_filter = 0;
+    }
+
+    memset(auracast_sink_last_connect_mac_addr, 0, 6);
+
+    app_auracast_mutex_post(&mutex, __LINE__);
+
+    return 0;
+
+}
+
+
+static int auracast_sink_get_mac_addr_is_recorded(u8 *mac_addr)
+{
+
+    int ret = 0;
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    for (int i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++) {
+        if (!(memcmp(auracast_sink_record_connect_mac_addr[i], mac_addr, 6))) {
+            ret = 1;
+        }
+    }
+
+    app_auracast_mutex_post(&mutex, __LINE__);
+    return ret;
+
+}
+
+static int auracast_sink_get_recorded_addr_num(void)
+{
+
+    int num = 0;
+    u8 temp[6] = {0};
+
+    app_auracast_mutex_pend(&mutex, __LINE__);
+
+    for (int i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++) {
+        if ((memcmp(auracast_sink_record_connect_mac_addr[i], temp, 6))) {
+            num++;
+        }
+    }
+    app_auracast_mutex_post(&mutex, __LINE__);
+
+    return num;
+}
+
+
+int app_auracast_sink_switch_source_device(u8 switch_mode) //0:切换设备后不过滤设备；1：切换设备后过滤处理只连接记录的设备
+{
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if (!app_auracast_init_flag) {
+        return -EPERM;
+    }
+
+    if (app_auracast.role != APP_AURACAST_AS_SINK) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    u8 temp[6] = {0};
+    u8 recorded_num = 0;
+
+    if (!auracast_sink_start_record) {
+        app_auracast_sink_start_record();
+    }
+
+    recorded_num = auracast_sink_get_recorded_addr_num();
+    if (!recorded_num) {
+        return -EPERM;
+    }
+
+    app_auracast_mutex_pend(&mutex, __LINE__);
+    if (recorded_num >= 2 && switch_mode) {
+        auarcast_sink_mac_addr_filter = switch_mode;
+    } else if (switch_mode) {
+        printf("[error]The current number of records is insufficient");
+        auarcast_sink_mac_addr_filter = 0;
+    } else {
+        auarcast_sink_mac_addr_filter = 0;
+    }
+
+    memcpy(auracast_sink_last_connect_mac_addr, auracast_sink_curr_connect_mac_addr, 6);
+
+    app_auracast_mutex_post(&mutex, __LINE__);
+
+    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+    app_auracast_sink_open();
+
+    return 0;
+}
+
+
+static int auracast_sink_record_mac_addr(u8 *mac_addr)
+{
+
+    int ret = 0;
+    u8 temp[6] = {0};
+    static u8 discard_cnt = 0;
+    int i = 0;
+    if (!mac_addr) {
+        return -EPERM;
+    }
+
+    if (!memcmp(mac_addr, temp, 6)) {
+        return -EPERM;
+    }
+
+    app_auracast_mutex_pend(&mutex, __LINE__);
+
+    for (i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++) {
+        if (!memcmp(mac_addr, auracast_sink_record_connect_mac_addr[i], 6)) {
+            ret = 1;
+            break;
+        }
+        if ((memcmp(auracast_sink_record_connect_mac_addr[i], temp, 6))) {
+            memcpy(auracast_sink_record_connect_mac_addr[i], mac_addr, 6);
+            ret = 2;
+            break;
+        }
+
+    }
+
+    if (i == AURACAST_SINK_MAX_RECORD_NUM) {
+        printf("reached maxixmum number of records, discard [%d] addr:", discard_cnt);
+        put_buf(auracast_sink_record_connect_mac_addr[discard_cnt], 6);
+        memcpy(auracast_sink_record_connect_mac_addr[discard_cnt], mac_addr, 6);
+        i =  discard_cnt;
+        discard_cnt++;
+        discard_cnt = (discard_cnt >= 3) ? 0 : discard_cnt;
+    }
+#if AURACAST_SINK_RECORDED_WIRTE_VM
+    syscfg_write(VM_WIRELESS_RECORDED_ADDR0 + i, auracast_sink_record_connect_mac_addr[i], 6);
+#endif
+
+    app_auracast_mutex_post(&mutex, __LINE__);
+
+    return ret;
+}
+
+void app_auracast_sink_discard_record(void)
+{
+
+    app_auracast_mutex_pend(&mutex, __LINE__);
+
+    for (int i = 0; i < AURACAST_SINK_MAX_RECORD_NUM; i++) {
+        memset(auracast_sink_record_connect_mac_addr[i], 0, 6);
+#if AURACAST_SINK_RECORDED_WIRTE_VM
+        syscfg_write(VM_WIRELESS_RECORDED_ADDR0 + i, auracast_sink_record_connect_mac_addr[i], 6);
+#endif
+    }
+
+    auarcast_sink_mac_addr_filter = 0;
+
+    memset(auracast_sink_last_connect_mac_addr, 0, 6);
+
+    app_auracast_mutex_post(&mutex, __LINE__);
+
+}
+
+
+static void auracast_sink_connect_filter_timeout(void *priv)
+{
+    memset(auracast_sink_last_connect_mac_addr, 0, 6);
+
+    auarcast_sink_mac_addr_filter = 0;
+}
+
+
 
 #endif
 

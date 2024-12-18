@@ -162,6 +162,7 @@
 <Add directory="apps/common/third_party_profile/swift_pair" />
 <Add directory="apps/common/third_party_profile/dma_protocol" />
 <Add directory="apps/common/third_party_profile/gfps_protocol" />
+<Add directory="apps/common/third_party_profile/custom_protocol_demo" />
 <Add directory="apps/common/cJSON" />
 <Add directory="interface/btstack" />
 <Add directory="interface/media/cpu/br28" />
@@ -239,6 +240,8 @@
 <Add option="cpu/br28/liba/btstack.a" />
 <Add option="cpu/br28/liba/rcsp_stack.a" />
 <Add option="cpu/br28/liba/tme_stack.a" />
+<Add option="cpu/br28/liba/google_fps.a" />
+<Add option="cpu/br28/liba/swift_pair.a" />
 <Add option="cpu/br28/liba/btctrler.a" />
 <Add option="cpu/br28/liba/aec.a" />
 <Add option="cpu/br28/liba/media.a" />
@@ -257,6 +260,7 @@
 <Add option="cpu/br28/liba/noisegate.a" />
 <Add option="cpu/br28/liba/sbc_eng_lib.a" />
 <Add option="cpu/br28/liba/lib_mp3_dec.a" />
+<Add option="cpu/br28/liba/lib_speex_codec.a" />
 <Add option="cpu/br28/liba/lib_m4a_dec.a" />
 <Add option="cpu/br28/liba/mp3_decstream_lib.a" />
 <Add option="cpu/br28/liba/lib_mty_dec.a" />
@@ -279,6 +283,7 @@
 <Add option="cpu/br28/liba/DynamicEQPro.a" />
 <Add option="cpu/br28/liba/lib_ape_dec.a" />
 <Add option="cpu/br28/liba/VirtualBass.a" />
+<Add option="cpu/br28/liba/lib_virtual_bass_classic.a" />
 <Add option="cpu/br28/liba/lib_plateReverb_adv.a" />
 <Add option="cpu/br28/liba/lib_reverb_cal.a" />
 <Add option="cpu/br28/liba/lib_Reverb.a" />
@@ -320,6 +325,9 @@
 <Add option="cpu/br28/liba/lib_jl_codec_common.a" />
 <Add option="cpu/br28/liba/lib_lc3_codec.a" />
 <Add option="cpu/br28/liba/lib_jla_codec.a" />
+<Add option="cpu/br28/liba/lib_jla_ll_codec.a" />
+<Add option="cpu/br28/liba/lib_jlalw_codec.a" />
+<Add option="cpu/br28/liba/lib_jla_v2_codec.a" />
 <Add option="cpu/br28/liba/libFFT_pi32v2_OnChip.a" />
 <Add option="cpu/br28/liba/lib_wtg_dec.a" />
 <Add option="cpu/br28/liba/bfilterfun_lib.a" />
@@ -487,6 +495,8 @@
 <Unit filename="apps/common/le_audio/wireless_trans_manager.h" />
 <Unit filename="apps/common/music/breakpoint.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/music/breakpoint.h" />
+<Unit filename="apps/common/music/general_player.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/music/general_player.h" />
 <Unit filename="apps/common/music/music_decrypt.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/music/music_decrypt.h" />
 <Unit filename="apps/common/music/music_id3.c"><Option compilerVer="CC"/></Unit>
@@ -501,11 +511,14 @@
 <Unit filename="apps/common/third_party_profile/common/3th_profile_api.h" />
 <Unit filename="apps/common/third_party_profile/common/custom_cfg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/common/custom_cfg.h" />
+<Unit filename="apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/custom_protocol_demo/custom_protocol.h" />
 <Unit filename="apps/common/third_party_profile/dma_protocol/dma_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/dma_protocol/dma_platform_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/dma_protocol/dma_platform_api.h" />
 <Unit filename="apps/common/third_party_profile/dma_protocol/dma_protocol.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/gfps_protocol/gfps_platform_api.h" />
+<Unit filename="apps/common/third_party_profile/gfps_protocol/gfps_protocol.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_api.h" />
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_common.c"><Option compilerVer="CC"/></Unit>
@@ -560,8 +573,12 @@
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_linein_func.h" />
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_music_func.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_music_func.h" />
+<Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_pc_func.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_pc_func.h" />
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_rtc_func.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_rtc_func.h" />
+<Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_spdif_func.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_spdif_func.h" />
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.h" />
 <Unit filename="apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.c"><Option compilerVer="CC"/></Unit>
@@ -859,7 +876,6 @@
 <Unit filename="apps/soundbox/mode/bt/dual_conn.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/kws_voice_event_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast_phone_select_mode.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c"><Option compilerVer="CC"/></Unit>
@@ -1005,6 +1021,7 @@
 <Unit filename="audio/common/bt_audio_energy_detection.h" />
 <Unit filename="audio/common/debug/audio_debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/debug/audio_debug.h" />
+<Unit filename="audio/common/demo/audio_eq_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/demo/codec_demo/audio_enc_file_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/demo/codec_demo/audio_file_dec_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/demo/codec_demo/audio_frame_codec_demo.c"><Option compilerVer="CC"/></Unit>
@@ -1092,10 +1109,14 @@
 <Unit filename="audio/effect/effects_adj.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/effects_default_param.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/effects_default_param.h" />
+<Unit filename="audio/effect/effects_dev.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/effect/effects_dev.h" />
 <Unit filename="audio/effect/eq_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/esco_ul_voice_changer.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/node_param_update.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/node_param_update.h" />
+<Unit filename="audio/effect/scene_update.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/effect/scene_update.h" />
 <Unit filename="audio/effect/spatial_effect/spatial_effect.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/effect/spatial_effect/spatial_effect.h" />
 <Unit filename="audio/effect/spatial_effect/spatial_effect_imu.c"><Option compilerVer="CC"/></Unit>
@@ -1479,6 +1500,7 @@
 <Unit filename="interface/media/effects/DynamicEQ_Detection_api.h" />
 <Unit filename="interface/media/effects/DynamicEQ_api.h" />
 <Unit filename="interface/media/effects/Effect_delay_api.h" />
+<Unit filename="interface/media/effects/HowlingGate_api.h" />
 <Unit filename="interface/media/effects/UpmixSystem.h" />
 <Unit filename="interface/media/effects/VirtualBass_api.h" />
 <Unit filename="interface/media/effects/audio_autotune.h" />
@@ -1491,12 +1513,14 @@
 <Unit filename="interface/media/effects/audio_frequency_shift_howling.h" />
 <Unit filename="interface/media/effects/audio_gain_process.h" />
 <Unit filename="interface/media/effects/audio_harmonic_exciter.h" />
+<Unit filename="interface/media/effects/audio_howling_gate.h" />
 <Unit filename="interface/media/effects/audio_hw_crossover.h" />
 <Unit filename="interface/media/effects/audio_limiter.h" />
 <Unit filename="interface/media/effects/audio_multiband_crossover.h" />
 <Unit filename="interface/media/effects/audio_multiband_drc.h" />
 <Unit filename="interface/media/effects/audio_multiband_limiter.h" />
 <Unit filename="interface/media/effects/audio_noisegate.h" />
+<Unit filename="interface/media/effects/audio_noisegate_pro.h" />
 <Unit filename="interface/media/effects/audio_notch_howling.h" />
 <Unit filename="interface/media/effects/audio_pitch.h" />
 <Unit filename="interface/media/effects/audio_pitchspeed.h" />
@@ -1507,6 +1531,7 @@
 <Unit filename="interface/media/effects/audio_stereo_widener.h" />
 <Unit filename="interface/media/effects/audio_surround.h" />
 <Unit filename="interface/media/effects/audio_vbass.h" />
+<Unit filename="interface/media/effects/audio_virtual_bass_classic.h" />
 <Unit filename="interface/media/effects/audio_virtual_surround_pro.h" />
 <Unit filename="interface/media/effects/audio_vocal_remove.h" />
 <Unit filename="interface/media/effects/audio_voice_changer.h" />
@@ -1527,6 +1552,7 @@
 <Unit filename="interface/media/effects/limiter_api.h" />
 <Unit filename="interface/media/effects/multi_ch_mix.h" />
 <Unit filename="interface/media/effects/noisegate_api.h" />
+<Unit filename="interface/media/effects/noisegate_pro_api.h" />
 <Unit filename="interface/media/effects/notch_howling_api.h" />
 <Unit filename="interface/media/effects/pcm_delay.h" />
 <Unit filename="interface/media/effects/pitchshifter_api.h" />
@@ -1539,6 +1565,7 @@
 <Unit filename="interface/media/effects/spectrum/spectrum_fft.h" />
 <Unit filename="interface/media/effects/spectrum/visual_tool.h" />
 <Unit filename="interface/media/effects/stereo_widen_api.h" />
+<Unit filename="interface/media/effects/virtual_bass_classic_api.h" />
 <Unit filename="interface/media/effects/voiceChanger_api.h" />
 <Unit filename="interface/media/framework/include/dac_node.h" />
 <Unit filename="interface/media/framework/include/decoder_node.h" />

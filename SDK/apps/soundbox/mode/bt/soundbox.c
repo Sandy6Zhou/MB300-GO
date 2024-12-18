@@ -65,6 +65,7 @@
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "app_le_auracast.h"
+#include "btstack_rcsp_user.h"
 
 #if TCFG_APP_BT_EN
 
@@ -331,6 +332,19 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         } else if (bt->value == AVC_PAUSE) {
             bt_music_player_time_timer_deal(0);
         }
+        break;
+
+    case BT_STATUS_AVRCP_VOL_CHANGE:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            /* log_info("BT_STATUS_AVRCP_VOL_CHANGE %d,%d\n", bt->value, bt->value * 16 / 127); */
+            u8 max_vol = app_audio_get_max_volume();
+            u8 sync_volume = (int)(bt->value * 16 / 127);
+            u8 cur_music_vol = sync_volume * max_vol / 16;
+            /* log_info("cur_vol is:%d,sync_vol %d, max:%d\n", cur_music_vol, sync_volume, app_audio_get_max_volume()); */
+            app_audio_set_volume(APP_AUDIO_STATE_MUSIC, cur_music_vol, 1);
+        }
+#endif
         break;
     default:
         log_info(" BT STATUS DEFAULT\n");
@@ -617,8 +631,16 @@ static void bt_no_background_exit_check(void *priv)
     multi_protocol_bt_exit();
 #endif
 
-    btstack_exit();
     sys_timer_del(g_bt_hdl.exit_check_timer);
+
+#if (TCFG_KBOX_1T3_MODE_EN == 0)       //如果需要维持LE_AUDIO,则不能退出协议栈
+    trim_timer_del();
+    btstack_exit();
+    g_bt_hdl.init_ok = 0;
+#else
+    btstack_exit_edr();
+#endif
+
     g_bt_hdl.init_ok = 0;
     g_bt_hdl.init_start = 0;
     g_bt_hdl.exit_check_timer = 0;
@@ -663,13 +685,10 @@ static u8 bt_nobackground_exit()
 #endif
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    app_auracast_close_in_other_mode();
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
-    app_auracast_source_close(APP_AURACAST_STATUS_STOP);
-#endif
 
     bt_cmd_prepare(USER_CTRL_POWER_OFF, 0, NULL);
     if (g_bt_hdl.auto_connection_timer) {
@@ -723,9 +742,10 @@ static int app_bt_init()
         tone_player_stop();
 #if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
         ret = local_tws_enter_mode(get_tone_files()->bt_mode, NULL);
+        if (ret != 0)
 #endif //TCFG_LOCAL_TWS_ENABLE
 
-        if (ret != 0) {
+        {
 #if TCFG_TWS_INIT_AFTER_POWERON_TONE_PLAY_END
             play_tone_file_callback(get_tone_files()->bt_mode, NULL, bt_tone_play_end_callback);
 #else
@@ -745,17 +765,34 @@ static int app_bt_init()
     bt_background_init(bt_hci_event_handler, bt_connction_status_event_handler);
 #endif  //endif TCFG_BLUETOOTH_BACK_MODE
 
-    bt_function_select_init();
-    bredr_handle_register();
-    EARPHONE_STATE_INIT();
-    btstack_init();
+    if (g_bt_hdl.init_ok == 0) {
+        bt_function_select_init();
+        bredr_handle_register();
+        EARPHONE_STATE_INIT();
+        if (!g_bt_hdl.initializing) {
+            btstack_init();
+        }
 #if TCFG_USER_TWS_ENABLE
-    tws_profile_init();
+
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+        tws_api_esco_rssi_role_switch(1);//通话根据信号强度主从切换使能
+#endif
+        tws_profile_init();
+#if TCFG_KBOX_1T3_MODE_EN
+        set_tws_task_add_run_slot(6);
+        tws_api_pure_monitor_enable(1);
 #endif
 
-    void bt_sniff_feature_init();
-    bt_sniff_feature_init();
-    app_var.dev_volume = -1;
+#endif
+        void bt_sniff_feature_init();
+        bt_sniff_feature_init();
+        app_var.dev_volume = -1;
+    } else {
+        //协议栈已初始化
+#if TCFG_KBOX_1T3_MODE_EN
+        btstack_int_edr();
+#endif
+    }
 
 #if TCFG_PITCH_SPEED_NODE_ENABLE
     app_var.pitch_mode = PITCH_0;    //设置变调初始模式
@@ -885,7 +922,7 @@ int bt_nobackground_status_event_handler(int *msg)
         g_bt_hdl.init_ok = 1;
         g_bt_hdl.initializing = 0;
 
-
+        extern int trim_timer_add();
         trim_timer_add();
 
 
@@ -930,9 +967,8 @@ APP_MSG_HANDLER(bt_nobackground_msg_entry) = {
     .handler = bt_nobackground_status_event_handler,
 };
 
-void btstack_init_in_other_mode(void)
+void btstack_init_for_app(void)
 {
-#if (TCFG_BT_BACKGROUND_ENABLE == 0)
     if (g_bt_hdl.initializing) {
         return;
     }
@@ -952,12 +988,10 @@ void btstack_init_in_other_mode(void)
 #endif
 #endif
     }
-#endif
 }
 
-void btstack_exit_in_other_mode(void)
+void btstack_exit_for_app(void)
 {
-#if (TCFG_BT_BACKGROUND_ENABLE == 0)
     if (g_bt_hdl.init_ok) {
 #if TCFG_USER_TWS_ENABLE
         tws_dual_conn_close();
@@ -973,6 +1007,19 @@ void btstack_exit_in_other_mode(void)
         btstack_exit();
         g_bt_hdl.init_ok = 0;
     }
+}
+
+void btstack_init_in_other_mode(void)
+{
+#if (TCFG_BT_BACKGROUND_ENABLE == 0)
+    btstack_init_for_app();
+#endif
+}
+
+void btstack_exit_in_other_mode(void)
+{
+#if (TCFG_BT_BACKGROUND_ENABLE == 0)
+    btstack_exit_for_app();
 #endif
 }
 

@@ -11,6 +11,7 @@
 #include "fm_player.h"
 #include "scene_switch.h"
 #include "mic_effect.h"
+#include "rcsp_fm_func.h"
 
 #if (TCFG_SPI_LCD_ENABLE)
 #include "ui/ui_api.h"
@@ -111,6 +112,10 @@ int fm_app_msg_handler(int *msg)
         app_common_key_msg_handler(msg);
         break;
     }
+
+#if (RCSP_MODE)
+    rcsp_fm_msg_deal(msg[0]);
+#endif
 
     return 0;
 }

@@ -16,6 +16,7 @@
 #include "user_cfg.h"
 #include "fm.h"
 #include "fm_manage.h"
+#include "fm_player.h"
 #include "fm_rw.h"
 #include "ui/ui_api.h"
 #include "clock.h"
@@ -36,6 +37,11 @@
 #include "app_le_connected.h"
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
+#include "rcsp_device_status.h"
+#include "rcsp_fm_func.h"
+#include "rcsp_config.h"
+#include "bt_key_func.h"
+#include "btstack_rcsp_user.h"
 
 #define LOG_TAG             "[APP_FM]"
 #define LOG_ERROR_ENABLE
@@ -249,6 +255,9 @@ static void __fm_scan_all(void *priv)
         app_send_message(APP_MSG_FM_REFLASH, 0);
         __fm_reverb_resume();
         fm_last_ch_save(1);
+#if RCSP_MODE
+        rcsp_device_status_update(FM_FUNCTION_MASK, BIT(FM_INFO_ATTR_STATUS) | BIT(FM_INFO_ATTR_FRE));
+#endif
         return;
     }
 
@@ -437,6 +446,29 @@ void fm_clear_all_station()
     app_send_message(APP_MSG_FM_REFLASH, 0);
 }
 
+static int le_audio_fm_volume_pp(void)
+{
+    int ret = 0;
+
+    if (__this->fm_dev_mute) {
+        ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+#if (LEA_BIG_FIX_ROLE==1)
+        if (__this->fm_local_audio_resume_onoff) {
+            __this->fm_local_audio_resume_onoff = 0;
+        }
+#endif
+    } else {
+        ret = le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+#if (LEA_BIG_FIX_ROLE==1)
+        if (__this->fm_local_audio_resume_onoff == 0) {
+            __this->fm_local_audio_resume_onoff = 1;
+        }
+#endif
+    }
+
+    return ret;
+}
+
 void fm_volume_pp(void)
 {
     log_info("KEY_MUSIC_PP\n");
@@ -445,7 +477,7 @@ void fm_volume_pp(void)
     }
     //广播角色为接收端，不让控制fm的播放、暂停
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-#if (LEA_BIG_FIX_ROLE == 2)
+#if (LEA_BIG_FIX_ROLE == 2) && !TCFG_KBOX_1T3_MODE_EN
     //固定为接收端
     u8 fm_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
     if (get_broadcast_role()) {	//如果连接上了
@@ -652,7 +684,15 @@ void fm_volume_up()
         return;
     }
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+        bt_key_rcsp_vol_up();
+    } else {
+        app_audio_volume_up(1);
+    }
+#else
     app_audio_volume_up(1);
+#endif
     log_info("fm vol+: %d", app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
     if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == app_audio_get_max_volume()) {
         if (tone_player_runing() == 0) {
@@ -674,7 +714,15 @@ void fm_volume_down()
     if (!__this || __this->scan_flag) {
         return;
     }
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+        bt_key_rcsp_vol_down();
+    } else {
+        app_audio_volume_down(1);
+    }
+#else
     app_audio_volume_down(1);
+#endif
     log_info("fm vol-: %d", app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
 
     vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
@@ -736,6 +784,9 @@ void fm_api_init()
     os_time_dly(1);
     fm_app_mute(0);
 
+#if RCSP_MODE
+    rcsp_device_status_update(FM_FUNCTION_MASK, BIT(FM_INFO_ATTR_STATUS) | BIT(FM_INFO_ATTR_FRE));
+#endif
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1037,28 +1088,6 @@ static int fm_rx_le_audio_close(void *rx_audio)
     return 0;
 }
 
-static int le_audio_fm_volume_pp(void)
-{
-    int ret = 0;
-
-    if (__this->fm_dev_mute) {
-        ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
-#if (LEA_BIG_FIX_ROLE==1)
-        if (__this->fm_local_audio_resume_onoff) {
-            __this->fm_local_audio_resume_onoff = 0;
-        }
-#endif
-    } else {
-        ret = le_audio_scene_deal(LE_AUDIO_MUSIC_START);
-#if (LEA_BIG_FIX_ROLE==1)
-        if (__this->fm_local_audio_resume_onoff == 0) {
-            __this->fm_local_audio_resume_onoff = 1;
-        }
-#endif
-    }
-
-    return ret;
-}
 
 const struct le_audio_mode_ops le_audio_fm_ops = {
     .local_audio_open = fm_local_audio_open,

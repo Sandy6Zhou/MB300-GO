@@ -153,10 +153,19 @@ const int CONFIG_LNA_CHECK_VAL = -80;
 		const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 8;
 	#endif
 #endif
+#elif TCFG_KBOX_1T3_MODE_EN
+        const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 63;
+    #if (defined CONFIG_CPU_BR29) && (TCFG_USER_TWS_ENABLE)
+        const int CONFIG_A2DP_MAX_BUF_SIZE          = 18 * 1024;
+    #else
+        const int CONFIG_A2DP_MAX_BUF_SIZE          = 20 * 1024;
+    #endif
 #else
- const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
- const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 4;
+        const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
+        const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 4;
 #endif
+
+const int CONFIG_BT_DUAL_MODE_MANAGER_ENABLE = 0;
 
 #if 0
 // 可重写函数实时调试qos硬件开关状态，判断当前qos是开还是关
@@ -190,7 +199,7 @@ u8 auto_check_a2dp_play_control_qos(u16 cur_delay_timer,u16 delay_set_timer,u16 
 }
 #endif
 const int CONFIG_TWS_SUPER_TIMEOUT          = 2000;
-const int CONFIG_BTCTLER_QOS_ENABLE         = 1;
+const int CONFIG_BTCTLER_QOS_ENABLE         = 0;
 const int CONFIG_A2DP_DATA_CACHE_LOW_AAC    = 100;
 const int CONFIG_A2DP_DATA_CACHE_HI_AAC     = 250;
 const int CONFIG_A2DP_DATA_CACHE_LOW_SBC    = 150;
@@ -465,6 +474,7 @@ const int sniff_support_reset_anchor_point = 0;   //sniff状态下是否支持re
 const int sniff_long_interval = (500 / 0.625);    //sniff状态下进入long interval的通信间隔(ms)
 const int config_rf_oob = 0;
 
+const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmission; 0:for ll bqb mode
 // *INDENT-ON*
 /*-----------------------------------------------------------*/
 

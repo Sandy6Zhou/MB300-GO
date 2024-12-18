@@ -172,6 +172,7 @@ typedef struct {
             audio_param_t   enc;
             uint8_t         rtn;            // The number of retransmitted times.
             uint8_t         nInterval;
+            uint16_t        pairSwMs;       // Pair switch time               (uints:ms).
         } bst;
     };
 } big_parameter_t;
@@ -206,6 +207,7 @@ typedef struct {
     /* For transmitter, get bis last sent packet's clock. */
     int (*get_tx_sync)(void *priv);
 
+    /* BIS mode. */
     /* For transmitter, set padv data. */
     void (*padv_set_data)(void *p, uint8_t *data, size_t size);
 
@@ -217,6 +219,11 @@ typedef struct {
 
     /* Get current remote dev rssi. */
     s8(*get_rssi)(uint16_t hdl);
+
+    /* BST mode. */
+    /* Get pair code. */
+    void (*get_pair_code)(uint8_t *pair_code, uint8_t privacy);
+    void (*set_pair_code)(uint8_t *pair_code);
 } big_ops_t;
 
 /* Big api ops for upper layer. */

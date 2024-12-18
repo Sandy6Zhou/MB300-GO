@@ -321,7 +321,7 @@
 // ------------蓝牙配置.json------------
 
 // ------------公共配置.json------------
-#define LE_AUDIO_CODEC_TYPE 0x00400000 // 编解码格式
+#define LE_AUDIO_CODEC_TYPE 0x8 // 编解码格式
 #define LE_AUDIO_CODEC_CHANNEL 1 // 编解码声道数
 #define LE_AUDIO_CODEC_FRAME_LEN 100 // 帧持续时间
 #define LE_AUDIO_CODEC_SAMPLERATE 48000 // 采样率

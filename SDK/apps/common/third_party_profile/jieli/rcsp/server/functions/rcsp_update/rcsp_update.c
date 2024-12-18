@@ -30,7 +30,7 @@
 #include "rcsp_setting_opt.h"
 #endif
 
-#if (RCSP_MODE == RCSP_MODE_EARPHONE)
+#if	TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
 #endif
 

@@ -9,6 +9,7 @@
 #include "AudioEffect_DataType.h"
 #include "media/framework/include/jlstream.h"
 #include "media_memory.h"
+#include "media/audio_general.h"
 
 #define TOOL_CTRL_BYPASS  	(0 << 4)
 #define USER_CTRL_BYPASS  	(1 << 4)
@@ -220,4 +221,8 @@ void eff_node_send_packet(u32 id, u8 sq, u8 *packet, int size);
  * */
 void jlstream_module_node_get_name(char *name_son, char *name_father, char *name_out);
 
+/*
+ *获取流程图中节点数据
+ * */
+int jlstream_read_pipeline_data(u16 pipeline, u8 **pipeline_data);
 #endif/*__EFFECTS_ADJ__H*/

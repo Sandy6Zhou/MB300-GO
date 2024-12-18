@@ -13,6 +13,8 @@
 #include "uartPcmSender.h"
 #include "debug/audio_debug.h"
 #include "audio_config_def.h"
+#include "scene_update.h"
+#include "effects/voiceChanger_api.h"
 
 #if TCFG_USER_TWS_ENABLE
 const int config_media_tws_en = 1;
@@ -73,11 +75,188 @@ const int const_audio_codec_wav_dec_bitDepth_set_en = 0;
 
 /*
  *******************************************************************
+ *						Audio SYNCTS Config
+ *******************************************************************
+ */
+const float FRAME_DURATION_THREAD = 1.5f;//范围1.5f~2,采样率和时间戳抖动阈值倍数(丢帧检测阈值,时间戳间隔超过1.5帧，判定丢帧)
+
+/*
+ *******************************************************************
  *						Audio Effects Config
  *******************************************************************
  */
 //输出级限幅使能
 const int config_out_dev_limiter_enable = 0;
+
+const float config_bandmerge_node_fade_step = 0.0f;//淡入步进 0:默认不淡入 非0：淡入步进，范围：0.01f~10.0f，建议值0.1f,步进越大，更新越快
+const int config_bandmerge_node_processing_method = 0;//0：bandmerge 拿到所有iport的数据后，一次性叠加完成。 1：逐个叠加到目标地址，不做等待
+
+
+/*控制 eq_design.c中的butterworth 函数 设计的系数是定点还是浮点 */
+#if defined(EQ_CORE_V1)
+const int butterworth_iir_filter_coeff_type_select = 0;//虚拟低音根据此变量使用相应的滤波器设计函数 0:float  1:int
+#else
+const int butterworth_iir_filter_coeff_type_select = 1;//虚拟低音根据此变量使用相应的滤波器设计函数 0:float  1:int
+#endif
+
+#ifdef TCFG_AUDIO_EFX_4E5B_RUN_MODE
+const int limiter_run_mode = TCFG_AUDIO_EFX_4E5B_RUN_MODE;
+#else
+const int limiter_run_mode = 0xFFFF;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_6195_RUN_MODE
+const  int frequency_shift_run_mode      = TCFG_AUDIO_EFX_6195_RUN_MODE;
+#else
+const  int frequency_shift_run_mode      = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
+#endif
+
+#ifdef TCFG_AUDIO_EFX_A48F_RUN_MODE
+const  int plate_reverb_lite_run_mode    = TCFG_AUDIO_EFX_A48F_RUN_MODE;
+#else
+const  int plate_reverb_lite_run_mode    = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
+#endif
+
+#ifdef TCFG_AUDIO_EFX_98A4_RUN_MODE
+const  int echo_run_mode                 = TCFG_AUDIO_EFX_98A4_RUN_MODE;
+#else
+const  int echo_run_mode                 = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
+#endif
+
+#ifdef TCFG_AUDIO_EFX_7293_RUN_MODE
+const  int voicechanger_run_mode         = TCFG_AUDIO_EFX_7293_RUN_MODE;
+#else
+const  int voicechanger_run_mode         = EFx_BW_16t16 | EFx_BW_32t32;//变声位宽控制
+#endif
+
+#ifdef TCFG_AUDIO_EFX_C07A_RUN_MODE
+const  int autotune_run_mode             = TCFG_AUDIO_EFX_C07A_RUN_MODE;
+#else
+const  int autotune_run_mode             = EFx_BW_16t16 | EFx_BW_32t32;//autoTune位宽控制
+#endif
+
+#ifdef TCFG_AUDIO_EFX_24AB_RUN_MODE
+const  int reverb_run_mode               = TCFG_AUDIO_EFX_24AB_RUN_MODE;
+#else
+const  int reverb_run_mode               = EFx_BW_16t16 | EFx_BW_32t32;//lib_Reverb.a
+#endif
+
+#ifdef TCFG_AUDIO_EFX_5101_RUN_MODE
+const  int plate_reverb_run_mode         = TCFG_AUDIO_EFX_5101_RUN_MODE;
+#else
+const  int plate_reverb_run_mode         = EFx_BW_16t16 | EFx_BW_32t32;//lib_reverb_cal.a
+#endif
+#ifdef TCFG_AUDIO_EFX_0753_RUN_MODE
+const  int plate_reverb_adv_run_mode     = TCFG_AUDIO_EFX_0753_RUN_MODE;
+#else
+const  int plate_reverb_adv_run_mode     = EFx_BW_16t16 | EFx_BW_32t32;//lib_plateReverb_adv.a
+#endif
+
+#ifdef TCFG_AUDIO_EFX_E955_RUN_MODE
+const  int noisegate_pro_run_mode        = TCFG_AUDIO_EFX_E955_RUN_MODE;
+#else
+const  int noisegate_pro_run_mode        = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_B7C4_RUN_MODE
+const  int noisegate_run_mode            = TCFG_AUDIO_EFX_B7C4_RUN_MODE;
+#else
+const  int noisegate_run_mode            = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_B0D5_RUN_MODE
+const  int virtual_bass_run_mode         = TCFG_AUDIO_EFX_B0D5_RUN_MODE;
+#else
+const  int virtual_bass_run_mode         = EFx_BW_16t16 | EFx_BW_16t32 | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_55C9_RUN_MODE
+const  int virtual_bass_classic_run_mode = TCFG_AUDIO_EFX_55C9_RUN_MODE;
+#else
+const  int virtual_bass_classic_run_mode = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_4250_RUN_MODE
+const  int drc_advance_run_mode          = TCFG_AUDIO_EFX_4250_RUN_MODE;
+#else
+const  int drc_advance_run_mode          = EFx_BW_16t16 | EFx_BW_32t16 | EFx_PRECISION_NOR | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_9A58_RUN_MODE
+const  int drc_detect_run_mode           = TCFG_AUDIO_EFX_9A58_RUN_MODE;
+#else
+const  int drc_detect_run_mode           = EFx_BW_16t16 | EFx_BW_32t16 | EFx_PRECISION_NOR | EFx_BW_32t32;
+#endif
+
+#ifdef TCFG_AUDIO_EFX_DEFE_RUN_MODE
+const  int drc_run_mode                  = TCFG_AUDIO_EFX_DEFE_RUN_MODE;
+#else
+const  int drc_run_mode                  = EFx_BW_16t16 | EFx_BW_32t16 | EFx_PRECISION_NOR | EFx_BW_32t32;
+#endif
+
+
+
+
+
+#ifdef TCFG_AUDIO_EFX_540E_RUN_MODE
+const int pitch_speed_run_mode       = TCFG_AUDIO_EFX_540E_RUN_MODE;
+#else
+const int pitch_speed_run_mode       = EFx_BW_32t32 | EFx_BW_16t16;
+#endif
+const int resample_fast_cal_run_mode = EFx_BW_16t16 | EFx_BW_32t32;
+
+#ifdef TCFG_AUDIO_EFX_A8F4_RUN_MODE
+const int pcm_delay_run_mode         = TCFG_AUDIO_EFX_A8F4_RUN_MODE;
+#else
+const int pcm_delay_run_mode         = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+#ifdef TCFG_AUDIO_EFX_1B2A_RUN_MODE
+const int harmonic_exciter_run_mode  = TCFG_AUDIO_EFX_1B2A_RUN_MODE;
+#else
+const int harmonic_exciter_run_mode  = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+#ifdef TCFG_AUDIO_EFX_ED7F_RUN_MODE
+const int lfaudio_plc_run_mode       = TCFG_AUDIO_EFX_ED7F_RUN_MODE;
+#else
+const int lfaudio_plc_run_mode       = EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+
+
+
+/*变声模式使能*/
+const int voicechanger_effect_v_config = (0
+        | BIT(EFFECT_VOICECHANGE_PITCHSHIFT)
+        /* | BIT(EFFECT_VOICECHANGE_CARTOON) */
+        /* | BIT(EFFECT_VOICECHANGE_SPECTRUM) */
+        /* | BIT(EFFECT_VOICECHANGE_ROBORT) */
+        /* | BIT(EFFECT_VOICECHANGE_MELODY) */
+        /* | BIT(EFFECT_VOICECHANGE_WHISPER) */
+        /* | BIT(EFFECT_VOICECHANGE_F0_DOMAIN) */
+        /* | BIT(EFFECT_VOICECHANGE_F0_TD) */
+        /* | BIT(EFFECT_VOICECHANGE_FEEDBACK) */
+                                         );
+
+/*mb limiter 3带使能(1.2k) */
+const int mb_limiter_3band_run_en       = 1;
+/*
+ *******************************************************************
+ *						Audio Mic Capless Config
+ *******************************************************************
+ */
+/*
+ *          用于debug需要配置多长的mic_capless_delay
+ * 部分mic 需要更多延时才能达到稳定的电压值
+ * debug步骤：
+ * 1、打开 const_mic_capless_open_delay_debug，可打印打开adc后，mic_bias需要多长时间才能达到/接近稳定的电压值
+ * 2、将该延时配置到 open_delay_ms 中
+ * 3、关闭 const_mic_capless_open_delay_debug
+
+ * 4、打开 const_mic_capless_trim_delay_debug，可打印第一次trim后，mic_bias需要多长时间才能达到/接近稳定的电压值
+ * 5、将该延时配置到 trim_delay_ms 中
+ * 6、关闭 const_mic_capless_trim_delay_debug
+ */
+const u8 const_mic_capless_open_delay_debug = 0;
+const u8 const_mic_capless_trim_delay_debug = 0;
 
 
 
@@ -139,6 +318,14 @@ int audio_general_in_dev_bit_width()
 
 int audio_general_init()
 {
+#if defined(TCFG_SCENE_UPDATE_ENABLE) && TCFG_SCENE_UPDATE_ENABLE
+    //若流程中有较多音效模块（或渲染封装节点），会导致此处遍历模块耗时较长
+    get_music_pipeline_node_uuid();
+#if TCFG_MIC_EFFECT_ENABLE
+    get_mic_pipeline_node_uuid();
+#endif
+#endif
+
 #if ((defined TCFG_AUDIO_DATA_EXPORT_DEFINE) && (TCFG_AUDIO_DATA_EXPORT_DEFINE == AUDIO_DATA_EXPORT_VIA_UART))
     uartSendInit();
 #endif/*TCFG_AUDIO_DATA_EXPORT_DEFINE*/
@@ -147,6 +334,7 @@ int audio_general_init()
     audio_config_trace_setup(TCFG_AUDIO_CONFIG_TRACE_INTERVAL);
 #endif/*TCFG_AUDIO_CONFIG_TRACE*/
 
+#if MEDIA_24BIT_ENABLE
     struct stream_bit_width stream_par = {0};
     if (get_system_stream_bit_width(&stream_par)) {
         audio_general_param.system_bit_width = stream_par.bit_width;
@@ -167,6 +355,7 @@ int audio_general_init()
     if (get_usb_audio_stream_bit_width(&stream_par)) {
         audio_general_param.usb_audio_bit_width = stream_par.bit_width;
     }
+#endif
 
 #if defined(TCFG_AUDIO_GLOBAL_SAMPLE_RATE) &&TCFG_AUDIO_GLOBAL_SAMPLE_RATE
     audio_general_param.sample_rate = TCFG_AUDIO_GLOBAL_SAMPLE_RATE;

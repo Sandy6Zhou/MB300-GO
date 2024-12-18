@@ -99,9 +99,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
                 pcspk_open_player_by_taskq();
             }
         } else {
-            if (get_pc_le_audio_flag()) {
-                pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
-            }
+            pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
         }
 #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         if (!get_auracast_role()) {
@@ -110,9 +108,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
                 pcspk_open_player_by_taskq();
             }
         } else {
-            if (get_pc_le_audio_flag()) {
-                pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
-            }
+            pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
         }
 #else
         if (pc_spk_player_runing() == 0) {

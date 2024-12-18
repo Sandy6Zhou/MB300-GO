@@ -11,6 +11,8 @@
 #include "file_player.h"
 #include "music/music_player.h"
 #include "app_music.h"
+#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_MUSIC_EN
 #if (TCFG_UI_ENABLE&&(CONFIG_UI_STYLE == STYLE_JL_LED7))
@@ -195,28 +197,33 @@ static void ui_music_main(void *hd, void *private) //主界面显示
         }
     }
 #else
-    if (music_player_runing()) {
-        u8 paly_status = music_file_get_player_status(get_music_file_player());
-        if (paly_status == FILE_PLAYER_PAUSE) {
-            led7_show_pause(hd);
-        } else if (paly_status == FILE_PLAYER_START) {
-            int play_second = music_file_get_cur_time(get_music_file_player());
-            if (-1 == play_second) {
-                play_second = 0;
-            }
-            ui_led7_show_music_time(hd, (u16)play_second);
-            led7_show_music_dev(hd);
-            /* printf("sec = %d \n", play_second); */
-        }
-    } else {
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+    if (get_le_audio_curr_role() == 2) {
         led7_show_le(hd);
-#else
-        printf("!!! %s %d\n", __FUNCTION__, __LINE__);
+    } else
 #endif
-    }
+        if (music_player_runing()) {
+            u8 paly_status = music_file_get_player_status(get_music_file_player());
+            if (paly_status == FILE_PLAYER_PAUSE) {
+                led7_show_pause(hd);
+            } else if (paly_status == FILE_PLAYER_START) {
+                int play_second = music_file_get_cur_time(get_music_file_player());
+                if (-1 == play_second) {
+                    play_second = 0;
+                }
+                ui_led7_show_music_time(hd, (u16)play_second);
+                led7_show_music_dev(hd);
+                /* printf("sec = %d \n", play_second); */
+            }
+        } else {
+            if (!get_music_le_audio_flag()) {
+                led7_show_pause(hd);
+            } else {
+                printf("!!! %s %d\n", __FUNCTION__, __LINE__);
+            }
+        }
 #endif
 }
 

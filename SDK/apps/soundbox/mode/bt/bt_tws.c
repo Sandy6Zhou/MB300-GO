@@ -56,7 +56,7 @@
 #if TCFG_LOCAL_TWS_ENABLE
 #define    CONFIG_BT_TWS_SNIFF                  0       //[WIP]
 #else
-#define    CONFIG_BT_TWS_SNIFF                  1       //[WIP]
+#define    CONFIG_BT_TWS_SNIFF                  0       //[WIP]
 #endif
 
 #define    BT_TWS_UNPAIRED                      0x0001

@@ -19,6 +19,8 @@
 #include "poweroff.h"
 #include "bt_background.h"
 #include "app_le_auracast.h"
+#include "app_le_connected.h"
+#include "app_le_broadcast.h"
 
 #if(TCFG_USER_TWS_ENABLE == 0)
 
@@ -190,12 +192,8 @@ void sys_enter_soft_poweroff(enum poweroff_reason reason)
     app_connected_uninit();
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
-#endif
-
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
-    app_auracast_source_close(APP_AURACAST_STATUS_STOP);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    app_auracast_close_in_other_mode();
 #endif
 
     app_send_message(APP_MSG_POWER_OFF, 0);

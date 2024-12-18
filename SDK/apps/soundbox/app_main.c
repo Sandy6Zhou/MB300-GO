@@ -48,6 +48,7 @@
 #include "app_mode_sink.h"
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
+#include "rcsp_device_status.h"
 
 #if TCFG_LP_TOUCH_KEY_ENABLE
 #include "asm/lp_touch_key_api.h"
@@ -349,6 +350,8 @@ static struct app_mode *app_task_init()
     cfg_file_parse(0);
     key_driver_init();
 
+    key_wakeup_init();
+
     do_initcall();
     do_module_initcall();
     do_late_initcall();
@@ -570,8 +573,13 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
                 msg[1] = key_msg;
 #endif
             } else {
-                msg[0] = MSG_FROM_APP;
-                msg[1] = key_msg;
+                if (msg[0] == MSG_FROM_RTC) {
+                    msg[0] = MSG_FROM_RTC;
+                    msg[1] = key_msg;
+                } else {
+                    msg[0] = MSG_FROM_APP;
+                    msg[1] = key_msg;
+                }
             }
         }
     }
@@ -612,6 +620,12 @@ static void app_task_loop(void *p)
         }
 #endif //#if 0
 //
+
+
+#if (RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE)
+        function_change_inform(mode->name, 0);
+#endif
+
 
         switch (mode->name) {
         case APP_MODE_IDLE:

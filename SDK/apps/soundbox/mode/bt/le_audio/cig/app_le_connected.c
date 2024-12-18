@@ -1665,7 +1665,7 @@ WIRELESS_CUSTOM_DATA_STUB_REGISTER(cmd_status_sync) = {
     .task_name = "app_core",
     .func = remote_dev_cmd_status_sync_handler,
 };
-#if TCFG_KBOX_1T3_MODE_EN
+
 // 是否打开cis connect连接, 1T3 项目使用
 bool is_open_cis_connet(void)
 {
@@ -1680,6 +1680,5 @@ bool is_open_cis_connet(void)
 #endif
     return 0;
 }
-#endif
 #endif
 

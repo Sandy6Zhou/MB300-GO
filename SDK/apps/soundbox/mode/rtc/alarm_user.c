@@ -138,7 +138,7 @@ static int alarm_event_handler(int *msg)
 
 APP_MSG_PROB_HANDLER(alarm_msg_entry) = {
     .owner      = 0xff,
-    .from       = MSG_FROM_APP,
+    .from       = MSG_FROM_RTC,
     .handler    = alarm_event_handler,
 };
 

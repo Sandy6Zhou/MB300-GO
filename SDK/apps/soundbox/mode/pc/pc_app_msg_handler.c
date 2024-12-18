@@ -23,6 +23,7 @@
 #include "uac_stream.h"
 #include "app_le_auracast.h"
 #include "le_broadcast.h"
+#include "rcsp_pc_func.h"
 
 #if TCFG_APP_PC_EN
 int pc_app_msg_handler(int *msg)
@@ -32,7 +33,7 @@ int pc_app_msg_handler(int *msg)
     }
     printf("pc_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2)
+#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -124,6 +125,10 @@ int pc_app_msg_handler(int *msg)
         app_common_key_msg_handler(msg);
         break;
     }
+
+#if (RCSP_MODE && TCFG_USB_SLAVE_AUDIO_SPK_ENABLE)
+    rcsp_pc_msg_deal(msg[0]);
+#endif
 
     return 0;
 }

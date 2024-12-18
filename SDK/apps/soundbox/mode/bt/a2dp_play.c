@@ -184,7 +184,22 @@ static int a2dp_bt_status_event_handler(int *event)
         break;
     case BT_STATUS_A2DP_MEDIA_STOP:
         puts("BT_STATUS_A2DP_MEDIA_STOP\n");
-        a2dp_play_send_cmd(CMD_A2DP_CLOSE, bt->args, 6, 1);
+
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+        if (get_le_audio_curr_role() == 1) {
+            void *device = btstack_get_conn_device(bt->args);
+            if ((btstack_get_device_a2dp_state(device) != BT_MUSIC_STATUS_STARTING)) {
+                a2dp_play_send_cmd(CMD_A2DP_CLOSE, bt->args, 6, 1);
+            }
+        } else
+#endif
+        {
+            a2dp_play_send_cmd(CMD_A2DP_CLOSE, bt->args, 6, 1);
+        }
         break;
     case BT_STATUS_AVRCP_VOL_CHANGE:
         //判断是当前地址的音量值才更新

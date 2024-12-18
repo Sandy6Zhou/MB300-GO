@@ -53,4 +53,5 @@ set TONE_EN_ENABLE=1
 
 
 set TONE_ZH_ENABLE=1
+set UI_RESOURCE_EN=1
 call download/soundbox/download.bat

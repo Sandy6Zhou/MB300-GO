@@ -142,6 +142,8 @@ int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
 
     /*memcpy(&fmt, arg, sizeof(struct stream_enc_fmt));*/
 
+    memcpy(g_a2dp_recorder->btaddr, btaddr, 6);
+
     err = jlstream_ioctl(g_a2dp_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
     if (err == 0) {
         err = jlstream_start(g_a2dp_recorder->stream);
@@ -157,7 +159,6 @@ int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
         g_a2dp_recorder = NULL;
         return err;
     }
-    memcpy(g_a2dp_recorder->btaddr, btaddr, 6);
     return 0;
 }
 
@@ -182,6 +183,7 @@ void le_audio_a2dp_recorder_close(u8 *btaddr)
         sys_timer_del(g_a2dp_recorder->retry_timer);
         g_a2dp_recorder->retry_timer = 0;
     }
+
     free(a2dp_recorder);
     g_a2dp_recorder = NULL;
 

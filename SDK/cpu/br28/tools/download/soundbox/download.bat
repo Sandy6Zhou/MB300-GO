@@ -35,8 +35,7 @@ if %UI_RESOURCE_EN%A==1A (
 )
 
 @echo on
-echo %UI_RESOURCE_EN%
-..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev br28 -boot 0x120000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin  -tone %TONE_FILES% %UI_RESOURCE_FILE% -res cfg_tool.bin ..\..\p11_code.bin stream.bin %CONFIG_DATA% %KEY_FILE% -uboot_compress %FORMAT% -output-fw jl_isd.fw -output-ufw update.ufw
+..\..\isd_download.exe ..\..\isd_config.ini -tonorflash -dev br28 -boot 0x120000 -div8 -wait 300 -uboot ..\..\uboot.boot -app ..\..\app.bin  -tone %TONE_FILES% -res %UI_RESOURCE_FILE% cfg_tool.bin ..\..\p11_code.bin stream.bin %CONFIG_DATA% %KEY_FILE% -uboot_compress %FORMAT% -output-fw jl_isd.fw -output-ufw update.ufw
 @echo off
 
 

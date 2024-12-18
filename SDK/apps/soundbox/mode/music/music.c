@@ -30,7 +30,10 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
-
+#include "app_le_auracast.h"
+#include "rcsp_device_status.h"
+#include "rcsp_music_func.h"
+#include "rcsp_config.h"
 
 #if TCFG_APP_MUSIC_EN
 
@@ -369,6 +372,13 @@ static void music_player_play_success(void *priv, int parm)
     music_save_breakpoint(0);
     app_send_message2(APP_MSG_MUSIC_FILE_NUM_CHANGED, __this->player_hd->fsn->file_counter, __this->player_hd->fsn->file_number);
     app_send_message(APP_MSG_MUSIC_PLAY_SUCCESS, 0);
+
+
+
+#if (TCFG_APP_MUSIC_EN && !RCSP_APP_MUSIC_EN)
+    rcsp_device_status_update(MUSIC_FUNCTION_MASK,
+                              BIT(MUSIC_INFO_ATTR_STATUS) | BIT(MUSIC_INFO_ATTR_FILE_NAME) | BIT(MUSIC_INFO_ATTR_FILE_PLAY_MODE));
+#endif
 
 }
 

@@ -18,10 +18,13 @@
 #include "le_broadcast.h"
 #include "audio_config.h"
 
+#include "rcsp_linein_func.h"
 
 #if TCFG_APP_LINEIN_EN
 
 static u8 linein_last_onoff = (u8) - 1;
+
+extern u8 linein_get_status(void);
 
 int linein_app_msg_handler(int *msg)
 {
@@ -31,7 +34,7 @@ int linein_app_msg_handler(int *msg)
 
     printf("linein_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2)
+#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -48,7 +51,6 @@ int linein_app_msg_handler(int *msg)
     }
 #endif
 
-
     switch (msg[0]) {
     case APP_MSG_CHANGE_MODE:
         printf("app msg key change mode\n");
@@ -60,13 +62,12 @@ int linein_app_msg_handler(int *msg)
             linein_last_onoff = 1;
             break;
         }
-
         linein_start();
         linein_last_onoff = 1;
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */
         break;
     case APP_MSG_MUSIC_PP:
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_broadcast_role() == 2) {
@@ -146,7 +147,15 @@ int linein_app_msg_handler(int *msg)
         break;
     }
 
+
+#if RCSP_MODE
+    rcsp_linein_msg_deal(msg[0], 0);
+#endif
+
     return 0;
 }
+
+
+
 
 #endif

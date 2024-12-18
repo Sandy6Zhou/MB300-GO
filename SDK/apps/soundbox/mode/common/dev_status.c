@@ -250,8 +250,8 @@ int dev_status_event_filter(int *msg)
             app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
         }
     }
-#if RCSP_MODE
-//    RCSP_UPDATE(COMMON_FUNCTION, BIT(COMMON_FUNCTION_ATTR_TYPE_DEV_INFO));
+#if (RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE && TCFG_DEV_MANAGER_ENABLE)
+    rcsp_device_status_update(COMMON_FUNCTION, BIT(RCSP_DEVICE_STATUS_ATTR_TYPE_DEV_INFO));
 #endif
     return ret;
 }

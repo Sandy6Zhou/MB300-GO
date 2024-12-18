@@ -236,6 +236,7 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/dma_protocol \
 	-Iapps/common/third_party_profile/gfps_protocol \
+	-Iapps/common/third_party_profile/custom_protocol_demo \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
 	-Iinterface/media/cpu/br28 \
@@ -356,6 +357,7 @@ c_SRC_FILES := \
 	apps/common/le_audio/cig.c \
 	apps/common/le_audio/wireless_trans_manager.c \
 	apps/common/music/breakpoint.c \
+	apps/common/music/general_player.c \
 	apps/common/music/music_decrypt.c \
 	apps/common/music/music_id3.c \
 	apps/common/music/music_player.c \
@@ -363,9 +365,11 @@ c_SRC_FILES := \
 	apps/common/test/fs_test.c \
 	apps/common/third_party_profile/common/3th_profile_api.c \
 	apps/common/third_party_profile/common/custom_cfg.c \
+	apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c \
 	apps/common/third_party_profile/dma_protocol/dma_config.c \
 	apps/common/third_party_profile/dma_protocol/dma_platform_api.c \
 	apps/common/third_party_profile/dma_protocol/dma_protocol.c \
+	apps/common/third_party_profile/gfps_protocol/gfps_protocol.c \
 	apps/common/third_party_profile/interface/app_protocol_api.c \
 	apps/common/third_party_profile/interface/app_protocol_common.c \
 	apps/common/third_party_profile/interface/app_protocol_dma.c \
@@ -394,7 +398,9 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_fm_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_linein_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_music_func.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_pc_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_rtc_func.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_spdif_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_cmd.c \
@@ -537,7 +543,6 @@ c_SRC_FILES := \
 	apps/soundbox/mode/bt/dual_conn.c \
 	apps/soundbox/mode/bt/kws_voice_event_deal.c \
 	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c \
-	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast_phone_select_mode.c \
 	apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c \
@@ -665,6 +670,7 @@ c_SRC_FILES := \
 	audio/common/audio_volume_mixer.c \
 	audio/common/bt_audio_energy_detection.c \
 	audio/common/debug/audio_debug.c \
+	audio/common/demo/audio_eq_demo.c \
 	audio/common/demo/codec_demo/audio_enc_file_demo.c \
 	audio/common/demo/codec_demo/audio_file_dec_demo.c \
 	audio/common/demo/codec_demo/audio_frame_codec_demo.c \
@@ -720,9 +726,11 @@ c_SRC_FILES := \
 	audio/effect/demo/voice_changer_demo.c \
 	audio/effect/effects_adj.c \
 	audio/effect/effects_default_param.c \
+	audio/effect/effects_dev.c \
 	audio/effect/eq_config.c \
 	audio/effect/esco_ul_voice_changer.c \
 	audio/effect/node_param_update.c \
+	audio/effect/scene_update.c \
 	audio/effect/spatial_effect/spatial_effect.c \
 	audio/effect/spatial_effect/spatial_effect_imu.c \
 	audio/effect/spatial_effect/spatial_effect_tws.c \
@@ -925,6 +933,8 @@ LFLAGS := \
 	cpu/br28/liba/btstack.a \
 	cpu/br28/liba/rcsp_stack.a \
 	cpu/br28/liba/tme_stack.a \
+	cpu/br28/liba/google_fps.a \
+	cpu/br28/liba/swift_pair.a \
 	cpu/br28/liba/btctrler.a \
 	cpu/br28/liba/aec.a \
 	cpu/br28/liba/media.a \
@@ -943,6 +953,7 @@ LFLAGS := \
 	cpu/br28/liba/noisegate.a \
 	cpu/br28/liba/sbc_eng_lib.a \
 	cpu/br28/liba/lib_mp3_dec.a \
+	cpu/br28/liba/lib_speex_codec.a \
 	cpu/br28/liba/lib_m4a_dec.a \
 	cpu/br28/liba/mp3_decstream_lib.a \
 	cpu/br28/liba/lib_mty_dec.a \
@@ -965,6 +976,7 @@ LFLAGS := \
 	cpu/br28/liba/DynamicEQPro.a \
 	cpu/br28/liba/lib_ape_dec.a \
 	cpu/br28/liba/VirtualBass.a \
+	cpu/br28/liba/lib_virtual_bass_classic.a \
 	cpu/br28/liba/lib_plateReverb_adv.a \
 	cpu/br28/liba/lib_reverb_cal.a \
 	cpu/br28/liba/lib_Reverb.a \
@@ -1006,6 +1018,9 @@ LFLAGS := \
 	cpu/br28/liba/lib_jl_codec_common.a \
 	cpu/br28/liba/lib_lc3_codec.a \
 	cpu/br28/liba/lib_jla_codec.a \
+	cpu/br28/liba/lib_jla_ll_codec.a \
+	cpu/br28/liba/lib_jlalw_codec.a \
+	cpu/br28/liba/lib_jla_v2_codec.a \
 	cpu/br28/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br28/liba/lib_wtg_dec.a \
 	cpu/br28/liba/bfilterfun_lib.a \

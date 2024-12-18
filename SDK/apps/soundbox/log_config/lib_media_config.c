@@ -334,6 +334,13 @@ const int const_audio_wma_dec16_fifo_precision = 16;  //  24 或者 16  控制16
 //***********************
 const int OPUS_SRINDEX = 0; //选择opus解码文件的帧大小，0代表一帧40字节，1代表一帧80字节，2代表一帧160字节
 //***********************
+//***********************
+//*		SPEEX Codec      *
+//***********************
+const int SPEEX_QUALITY = 5; //选择speex的码率,范围0到9,值越大,质量越好,编解码越慢
+const int speex_max_framelen = 70; //设置speex编码库最大读数大小
+//***********************
+
 //*		APE Codec      *
 //***********************
 const u32 APE_DEC_SUPPORT_LEVEL = 1;    //最高支持的层数  0:Fast   1:Normal    2:High
@@ -377,8 +384,8 @@ const char  LC3_SAMPLE_RATE_SUPPORT_32K = 1;  	//32K采样率使能
 const char  LC3_SAMPLE_RATE_SUPPORT_48K = 1;  	//48K/44.1K采样率使能
 
 //LC3 编解码  24bit使能控制常量:
-const int LC3_ENCODE_I24bit_ENABLE = 0;   //编码输入pcm数据位宽24比特,符号扩展到S32.   1使能，结合if_s24=1生效.
-const int LC3_DECODE_O24bit_ENABLE = 0;   //解码输出pcm数据位宽24比特,符号扩展到S32.   1使能，结合if_s24=1生效.
+const int LC3_ENCODE_I24bit_ENABLE = MEDIA_24BIT_ENABLE;   //编码输入pcm数据位宽24比特,符号扩展到S32.   1使能，结合if_s24=1生效.
+const int LC3_DECODE_O24bit_ENABLE = MEDIA_24BIT_ENABLE;   //解码输出pcm数据位宽24比特,符号扩展到S32.   1使能，结合if_s24=1生效.
 //***********************
 //* 	JLA Codec      *
 //***********************
@@ -416,11 +423,87 @@ const int JLA_PLC_FADE_OUT_POINTS = 120 * 5;    //丢包维持指定点数后,�
 const int JLA_PLC_FADE_IN_POINTS = 120 * 5;     //丢包后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.
 
 //JLA 编解码  24bit使能控制常量:
-const int JLA_ENCODE_I24bit_ENABLE = 0;
-const int JLA_DECODE_O24bit_ENABLE = 0;
+const int JLA_ENCODE_I24bit_ENABLE = MEDIA_24BIT_ENABLE;
+const int JLA_DECODE_O24bit_ENABLE = MEDIA_24BIT_ENABLE;
 
 const int JLA_CODEC_HARD_DECISION_ENABLE = 0;
 const int JLA_CODEC_SOFT_DECISION_ENABLE = 0;
+
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
+
+//{32, 40, 48, 60, 64, 80, 96, 120, 128, 160, 240, 320, 480}; 0~12. 编码支持得输入点数
+
+//0~12位: 编码支持得输入点数配置, 代码优化使用，可以禁用掉不用的点数,节省代码量
+//最高位： 延时模式配置 	1: 延时=帧长点数.  0:延时1/4帧点.  注意： 160,240,320,480 固定延时1/4帧 不受配置影响.
+const unsigned short JLA_V2_FRAMELEN_MASK = 0xffff;
+
+//是否支持24bit编解码
+const int JLA_V2_ENCODE_I24bit_ENABLE = MEDIA_24BIT_ENABLE;
+const int JLA_V2_DECODE_O24bit_ENABLE = MEDIA_24BIT_ENABLE;
+
+//HW_FFT配置  支持非2的指数次幂点的硬件FFT版本 可以设置为1调用硬件FFT加速运算
+//不支持的点数    fr_idx = 0/2/6.  对应帧长32/48/96点.
+#if(HW_FFT_VERSION == FFT_EXT) 			//支持非2的指数次幂点数的fft 时 置1
+const  int  JLA_V2_HW_FFT = 1;           //br27/br28置1，其他芯片置0
+#else
+const  int  JLA_V2_HW_FFT = 0;           //br27/br28置1，其他芯片置0
+#endif
+
+const int JLA_V2_PLC_EN = 1;     //pcl类型配置：0_fade,1_时域plc,2_频域plc,3补静音包;
+const int JLA_V2_PLC_FADE_OUT_START_POINT = 480;   //plc维持音量的点数.
+const int JLA_V2_PLC_FADE_OUT_POINTS = 120 * 5;    //plc维持指定点数后,淡出的速度,音量从满幅到0需要的点数.
+const int JLA_V2_PLC_FADE_IN_POINTS = 120 * 5;     //plc后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.
+
+#endif
+
+//***********************
+//* 	JLA_LL Codec      *
+//***********************
+
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
+
+#define JLA_LL_ORDER1  0 //jla_ll 一阶编码
+#define JLA_LL_ORDER2  1 //jla_ll 二阶编码
+
+#define JLA_LL_CODING_ORDER_TYPE    JLA_LL_ORDER1 //JLA_LL 编码阶数类型配置
+
+#define JLA_LL_CODEC_INPUT_POINT  	(LE_AUDIO_CODEC_SAMPLERATE * LE_AUDIO_CODEC_FRAME_LEN  * LE_AUDIO_CODEC_CHANNEL / 10 / 1000)
+#if (JLA_LL_CODING_ORDER_TYPE == JLA_LL_ORDER1)
+//编码压缩比配置。0 ~ JLA_LL_CODEC_INPUT_POINT,  0 :压缩率最高,
+//长度需要减少N个byte ,则((JLA_LL_CODEC_INPUT_POINT - 8 * 2 * (N >> 1) - (N & 1) * 4) )
+#define JLA_LL_CODEC_CR_CONFIG      ((JLA_LL_CODEC_INPUT_POINT - 8 * 2 * (0 >> 1) - (0 & 1) * 4) )
+#else
+//长度需要减少N个byte ,则(JLA_LL_CODEC_INPUT_POINT - 8 * N)
+#define JLA_LL_CODEC_CR_CONFIG  	(JLA_LL_CODEC_INPUT_POINT - 8 * 0)
+
+#endif//JLA_LL_CODING_ORDER_TYPE == JLA_LL_ORDER1
+
+
+const int JLA_LL_CODING_TYPE = JLA_LL_CODING_ORDER_TYPE;
+const int JLA_LL_CODEC_POINT = JLA_LL_CODEC_INPUT_POINT;
+const int JLA_LL_CODEC_CR = JLA_LL_CODEC_CR_CONFIG;
+
+const int JLA_LL_PLC_EN = 1;
+const int JLA_LL_PLC_FSPEED = 120;//PLC连续丢包时的衰减系数，建议 70到124，不得超过127， 越小衰减越快
+
+#endif
+
+
+//***********************
+//* 	JLA_LW Codec      *
+//***********************
+
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW)
+const int JLA_LW_PLC_EN = 1;
+const int JLA_LW_PLC_FADE_OUT_START_POINT = 120;
+const int JLA_LW_PLC_FADE_OUT_POINTS = 120;
+const int JLA_LW_PLC_FADE_IN_POINTS = 120;
+
+//调参数影响对应频带位流分配,分别对应频率{0 ~ sample/2}
+//+X 表示压制，-X 标志提升,建议±10以内.最高±100以内
+//编解码必须要配置一致。
+const int JLA_LW_BITSTREAM_WEIGHT_TAB[8] = { -2, 0, 0, 0, 4, 7, 9, 12 };
+#endif
 
 //***********************
 //* 	LE Audio        *
@@ -639,12 +722,13 @@ const int audio_effect_nsgate_pro_enable = 0;
 //***********************
 const int audio_vocal_remover_low_cut_enable = 1;
 const int audio_vocal_remover_high_cut_enable = 1;
+const int audio_vocal_remover_preset_mode = 0; //预设参数模式
 
 //***********************
 //*   	Others          *
 //***********************
 const int RS_FAST_MODE_QUALITY = 2;	//软件变采样 滤波阶数配置，范围2到8， 8代表16阶的变采样模式 ,速度跟它的大小呈正相关
-const int TWS_TONE_PLAYER_REFERENCE_CLOCK = 0; // 0 - 默认使用经典蓝牙时钟，1 - 使用经典蓝牙网络转为本地参考时钟(避免时钟域的冲突)
+const int TWS_TONE_PLAYER_REFERENCE_CLOCK = 1; // 0 - 默认使用经典蓝牙时钟，1 - 使用经典蓝牙网络转为本地参考时钟(避免时钟域的冲突)
 /*
  *******************************************************************
  *						Audio Smart Voice Config

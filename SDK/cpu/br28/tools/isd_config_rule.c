@@ -181,7 +181,9 @@ EX_FLASH_IO = 2_PC01_PC02_PC04_PC05_PC00;	//data_width / CLK_pin / DO_pin / DI_p
 #endif
 
 //配置需要锁住的IO
-LATCH_IO = PB01 & 0_PB02 & 1; //&0\1表示输出低或者高
+/* #if (defined CONFIG_UPDATE_JUMP_TO_MASK) && (CONFIG_UPDATE_JUMP_TO_MASK == 1) */
+/* LATCH_IO = PB01 & 0_PB02 & 1; //&0\1表示输出低或者高 */
+/* #endif */
 
 /* #0:disable */
 /* #1:PA9 PA10  */

@@ -38,7 +38,7 @@ static void led7_enter_mode(u8 mode)
         break;
     case APP_MODE_LINEIN:
         UI_SHOW_WINDOW(ID_WINDOW_LINEIN);
-        UI_SHOW_MENU(MENU_AUX, 0, 0, NULL);
+        /* UI_SHOW_MENU(MENU_AUX, 0, 0, NULL); */
         break;
     case APP_MODE_RTC:
         UI_SHOW_WINDOW(ID_WINDOW_CLOCK);

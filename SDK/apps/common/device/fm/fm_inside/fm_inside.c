@@ -18,6 +18,9 @@
 #include "mic_effect.h"
 #include "fm_api.h"
 #include "tone_player.h"
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#include "app_le_broadcast.h"
+#endif
 
 #if TCFG_APP_FM_EN
 #if(TCFG_FM_INSIDE_ENABLE == ENABLE)

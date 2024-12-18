@@ -193,6 +193,8 @@ void tone_ring_player_stop();
 bool bt_check_already_initializes(void);
 void btstack_init_in_other_mode(void);
 void btstack_exit_in_other_mode(void);
+void btstack_init_for_app(void);
+void btstack_exit_for_app(void);
 
 void bt_work_mode_switch_to_next(void);
 

@@ -23,6 +23,7 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
+#include "app_le_auracast.h"
 #include "soundbox.h"
 
 #define LOG_TAG_CONST       PC

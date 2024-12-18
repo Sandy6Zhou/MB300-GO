@@ -71,6 +71,13 @@ static void write_scan_conn_enable(bool scan_enable, bool conn_enable)
             return;
         }
     }
+
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+    if (bt_get_total_connect_dev()) {
+        return;
+    }
+#endif
+
 #if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && LEA_BIG_RX_CLOSE_EDR_EN)
     if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
         return;
@@ -307,6 +314,12 @@ static void dual_conn_page_device()
     if (!g_dual_conn.page_head_inited) {
         return;
     }
+
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+    if (bt_get_total_connect_dev()) {
+        return;
+    }
+#endif
 
     list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
         if (info->timer) {

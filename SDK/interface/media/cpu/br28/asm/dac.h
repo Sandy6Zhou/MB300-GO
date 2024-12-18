@@ -11,6 +11,14 @@
 #include "audio_def.h"
 #include "audio_output_dac.h"
 
+/***************************************************************************
+  							Audio DAC Features
+Notes:以下为芯片规格定义，不可修改，仅供引用
+***************************************************************************/
+#define AUDIO_DAC_CHANNEL_NUM				2	//DAC通道数
+#define AUDIO_ADDA_IRQ_MULTIPLEX_ENABLE			//DAC和ADC中断入口复用使能
+
+
 #define DACVDD_LDO_1_20V        0
 #define DACVDD_LDO_1_25V        1
 #define DACVDD_LDO_1_30V        2

@@ -40,6 +40,16 @@
 #endif
 	*(.jla_codec_c_data)
 	*(.jl_codec_c_data)
+	*(.jla_lw_codec_data)
+	*(.jla_lw.data)
+	*(.jla_ll_codec.data)
+	*(.jla_ll.data)
+
+	*(.jla_v2_dec_data)
+	*(.jla_v2_enc_data)
+	*(.jla_v2_codec_c_data)
+	*(.jla_v2_codec_ari_c_data)
+
 
 	*(.mp3_dec.data)
 	*(.mp3.data)

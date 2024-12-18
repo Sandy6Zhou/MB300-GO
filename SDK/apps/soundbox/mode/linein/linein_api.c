@@ -39,6 +39,8 @@
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
+#include "bt_key_func.h"
+#include "btstack_rcsp_user.h"
 /*************************************************************
   此文件函数主要是linein实现api
  **************************************************************/
@@ -120,6 +122,7 @@ int linein_start(void)
     __this->audio_state = APP_AUDIO_STATE_MUSIC;
     __this->volume = app_audio_get_volume(__this->audio_state);
     __this->onoff = 1;
+
     /* UI_REFLASH_WINDOW(false);//刷新主页并且支持打断显示 */
     return true;
 }
@@ -254,6 +257,15 @@ void linein_key_vol_up()
 #endif
         }
     }
+
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+        bt_key_rcsp_vol_up();
+    }
+#endif
+
+
     vol = __this->volume;
     app_send_message(APP_MSG_VOL_CHANGED, vol);
     log_info("vol+:%d\n", __this->volume);
@@ -269,6 +281,15 @@ void linein_key_vol_down()
         __this->volume --;
         linein_volume_set(__this->volume);
     }
+
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+        bt_key_rcsp_vol_down();
+    }
+#endif
+
+
     vol = __this->volume;
     app_send_message(APP_MSG_VOL_CHANGED, vol);
     log_info("vol-:%d\n", __this->volume);
@@ -295,47 +316,12 @@ static int get_linein_play_status(void)
     if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_role() == 2) {
-        //如果是作为接收端
-        if (__this->last_run_local_audio_close) {
-            if (__this->onoff_as_broadcast_receive == 1) {
-                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-            } else {
-                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-            }
-            __this->last_run_local_audio_close = 0;
-        }
-    }
-#if (LEA_BIG_FIX_ROLE==1)
-    if (get_broadcast_role()) {
-        if (__this->last_run_local_audio_close) {
-            __this->last_run_local_audio_close = 0;
-            if (__this->linein_local_audio_resume_onoff) {
-                __this->linein_local_audio_resume_onoff = 0;
-                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-            } else {
-                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-            }
-        }
-    }
-#endif
-#endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-    if (get_auracast_role() == 2) {
-        //如果是作为接收端
-        if (__this->last_run_local_audio_close) {
-            if (__this->onoff_as_broadcast_receive == 1) {
-                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-            } else {
-                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-            }
-            __this->last_run_local_audio_close = 0;
-        }
-    }
-#if (LEA_BIG_FIX_ROLE==1)
-    if (get_auracast_role()) {
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == 1)
+    if (get_le_audio_curr_role()) {
         if (__this->last_run_local_audio_close) {
             __this->last_run_local_audio_close = 0;
             if (__this->linein_local_audio_resume_onoff) {
@@ -344,6 +330,27 @@ static int get_linein_play_status(void)
             } else {
                 return LOCAL_AUDIO_PLAYER_STATUS_STOP;
             }
+        }
+    }
+#elif (LEA_BIG_FIX_ROLE == 2)
+    //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
+    if (get_le_audio_curr_role()) {
+        if (__this->last_run_local_audio_close) {
+            return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+        } else {
+            return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+        }
+    }
+#else
+    if (get_le_audio_curr_role() == 2) {
+        //如果是作为接收端
+        if (__this->last_run_local_audio_close) {
+            if (__this->onoff_as_broadcast_receive == 1) {
+                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+            } else {
+                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+            }
+            __this->last_run_local_audio_close = 0;
         }
     }
 #endif

@@ -17,6 +17,7 @@
 #include "ui/ui_api.h"
 #include "ui/ui_style.h"
 #include "ui_manage.h"
+#include "rcsp_rtc_func.h"
 
 #if TCFG_APP_RTC_EN
 
@@ -537,6 +538,8 @@ static int app_rtc_init()
     extern u8 rcsp_rtc_ring_tone(void);
     if (rcsp_rtc_ring_tone()) {
         play_tone_file_callback(get_tone_files()->rtc_mode, NULL, rtc_tone_play_end_callback);
+    } else {
+        rtc_task_start();
     }
 #else
     tone_player_stop();

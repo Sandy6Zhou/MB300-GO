@@ -271,6 +271,14 @@ opus_dec_plug
 ogg_dec_plug
 #endif
 
+#if TCFG_DEC_SPEEX_ENABLE
+speex_dec_plug
+#endif
+
+#if TCFG_ENC_SPEEX_ENABLE
+speex_encoder_plug
+#endif
+
 #if TCFG_DEC_AMR_ENABLE
 amr_dec_plug
 #endif
@@ -333,8 +341,10 @@ fat_vfs_ops
 big_tx_op
 big_rx_op
 #endif
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if LEA_CIG_CENTRAL_EN
 cig_central_op
+#endif
+#if LEA_CIG_PERIPHERAL_EN
 cig_perip_op
 #endif
 wireless_custom_data_trans
@@ -351,6 +361,11 @@ jla_lw_dec_plug
 jla_ll_encoder_plug
 #endif
 jla_ll_dec_plug
+#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
+#if (TCFG_KBOX_1T3_MODE_EN == 0)
+jla_v2_enc_plug
+#endif
+jla_v2_dec_plug
 #endif
 le_audio_file_plug
 #endif
@@ -631,4 +646,8 @@ multi_ch_tdm_file_plug
 
 #if TCFG_SPLIT_GAIN_NODE_ENABLE
 split_gain_node_adapter
+#endif
+
+#if TCFG_VIRTUAL_BASS_CLASSIC_NODE_ENABLE
+virtual_bass_classic_node_adapter
 #endif

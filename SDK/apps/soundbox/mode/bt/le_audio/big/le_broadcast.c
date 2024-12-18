@@ -1042,6 +1042,10 @@ static void broadcast_rx_iso_callback(const void *const buf, size_t length, void
 
 static int broadcast_rx_padv_data_callback(const void *const buf, size_t length, u8 big_hdl)
 {
+#if ((!LEA_BIG_CUSTOM_DATA_EN) || TCFG_KBOX_1T3_MODE_EN)
+    return -EPERM;
+#endif
+
     int ret = 0;
 
     if (!length) {

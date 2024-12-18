@@ -76,6 +76,12 @@ static void write_scan_conn_enable(bool scan_enable, bool conn_enable)
         }
     }
 
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+    if (bt_get_total_connect_dev()) {
+        return;
+    }
+#endif
+
 #if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && LEA_BIG_RX_CLOSE_EDR_EN)
     if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
         return;
@@ -270,12 +276,19 @@ static void tws_pair_new_tws(void *p)
 
     tws_api_cancle_create_connection();
     if (tws_active) {
+        if (bt_get_total_connect_dev() == 0) {
 #if TCFG_BT_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_AUTO
-        tws_api_auto_pair(0);
+            tws_api_auto_pair(0);
 #else
-        tws_api_wait_pair_by_code(0, NULL, 0);
+            tws_api_wait_pair_by_code(0, NULL, 0);
 #endif
-        g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 3000);
+            g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 3000);
+        } else {
+#if CONFIG_TWS_USE_COMMMON_ADDR == 0
+            tws_api_search_sibling_by_code();
+            g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 3000);
+#endif
+        }
     }
 }
 
@@ -390,8 +403,15 @@ void tws_dual_conn_state_handler()
 
 #if CONFIG_TWS_AUTO_PAIR_WITHOUT_UNPAIR
         if (tws_active) {
+#if CONFIG_TWS_USE_COMMMON_ADDR         //使用公共地址的情况,连接手机不允许去配对新的设备
+            if (connect_device == 0) {
+                g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_new_tws,
+                                                    TCFG_TWS_CONN_TIMEOUT * 1000);
+            }
+#else
             g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_new_tws,
                                                 TCFG_TWS_CONN_TIMEOUT * 1000);
+#endif
         }
         return;
 #endif
@@ -531,6 +551,12 @@ static void dual_conn_page_device()
         return;
     }
 
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+    if (bt_get_total_connect_dev()) {
+        return;
+    }
+#endif
+
     list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
         if (info->timer) {
             return;
@@ -634,7 +660,7 @@ static int dual_conn_btstack_event_handler(int *_event)
         if (tws_active) {
             if ((state & TWS_STA_TWS_PAIRED) && (state & TWS_STA_SIBLING_DISCONNECTED)) {
                 tws_api_wait_connection(0);
-#if CONFIG_TWS_AUTO_PAIR_WITHOUT_UNPAIR
+#if CONFIG_TWS_AUTO_PAIR_WITHOUT_UNPAIR && (CONFIG_TWS_USE_COMMMON_ADDR == 0)
                 g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_new_tws,
                                                     TCFG_TWS_CONN_TIMEOUT * 1000);
 #endif
@@ -1121,6 +1147,10 @@ static int dual_conn_app_event_handler(int *msg)
 #if (TCFG_LOCAL_TWS_ENABLE == 0 && TCFG_BT_BACKGROUND_ENABLE)
     if (bt_background_active()) {
         tws_active = 0;
+    }
+#elif TCFG_BT_BACKGROUND_ENABLE == 0
+    if (g_bt_hdl.wait_exit) {       //处理非后台已经退出蓝牙模式还响应tws消息导致打开tws_page/pagescan触发异常
+        return 0;
     }
 #endif
 

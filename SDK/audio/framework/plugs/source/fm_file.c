@@ -25,10 +25,6 @@
 
 #if TCFG_AUDIO_FM_ENABLE
 
-#define FM_ADC_BUF_NUM        2		//linein_adc采样buf个数
-#define FM_ADC_IRQ_POINTS     256	//linein adc 中断点数
-#define FM_ADC_SAMPLE_RATE    44100	//linein adc 采样率
-
 struct fm_file_hdl {
     void *source_node;
     struct adc_linein_ch linein_ch;

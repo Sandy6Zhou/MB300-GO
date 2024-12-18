@@ -252,6 +252,19 @@ void bt_key_vol_up(void)
     }
     printf("music_vol:vol=%d, state:%d", vol, app_audio_get_state());
     app_send_message(APP_MSG_VOL_CHANGED, vol);
+
+}
+
+void bt_key_rcsp_vol_up(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    u8 vol;
+    u8 call_status;
+    if (bt_get_call_status() == BT_CALL_ACTIVE && bt_sco_state() == 0) {
+        return;
+    }
+    volume_up();
+#endif
 }
 
 /*************************************************************************************************/
@@ -281,6 +294,18 @@ void bt_key_vol_down(void)
     }
     printf("music_vol:vol=%d, state:%d", vol, app_audio_get_state());
     app_send_message(APP_MSG_VOL_CHANGED, vol);
+}
+
+void bt_key_rcsp_vol_down(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    u8 vol;
+    u8 call_status;
+    if (bt_get_call_status() == BT_CALL_ACTIVE && bt_sco_state() == 0) {
+        return;
+    }
+    volume_down();
+#endif
 }
 
 /*************************************************************************************************/

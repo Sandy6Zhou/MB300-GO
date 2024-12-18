@@ -37,8 +37,6 @@ void board_power_init(void)
 
     power_init(&power_param);
 
-    key_wakeup_init();
-
 #if (!TCFG_CHARGE_ENABLE)
     power_set_mode(TCFG_LOWPOWER_POWER_SEL);
 #endif

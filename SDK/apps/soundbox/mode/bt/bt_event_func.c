@@ -164,6 +164,11 @@ void bt_status_init_ok(void)
     }
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    app_auracast_init();
+#endif
+
+
 #if TCFG_TWS_INIT_AFTER_POWERON_TONE_PLAY_END
     if (tone_player_runing()) {
         return;

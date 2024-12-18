@@ -13,8 +13,12 @@
 #include "btstack_rcsp_user.h"
 #include "ble_rcsp_server.h"
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN)) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+#include "dma_platform_api.h"
+#endif
 
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN)) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
 #define ATT_RAM_BUFSIZE           (ATT_CTRL_BLOCK_SIZE + ATT_LOCAL_PAYLOAD_SIZE + ATT_SEND_CBUF_SIZE)                   //note:
@@ -159,6 +163,8 @@ extern int realme_protocol_exit(void);
 #if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
 extern int dma_protocol_init(void);
 extern int dma_protocol_exit(void);
+extern int dueros_process();
+extern int dueros_send_process();
 
 extern const u8 sdp_dueros_spp_service_data[];
 extern const u8 sdp_dueros_ota_service_data[];

@@ -10,6 +10,8 @@
 #include "fm_emitter/fm_emitter_manage.h"
 #endif
 #include "btstack/avctp_user.h"
+#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 #if (TCFG_APP_BT_EN)
 
@@ -22,6 +24,16 @@ static void led7_show_bt(void *hd)
     dis->clear();
     dis->setXY(0, 0);
     dis->show_string((u8 *)" bt");
+    dis->lock(0);
+}
+
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
     dis->lock(0);
 }
 
@@ -104,7 +116,16 @@ static void ui_bt_main(void *hd, void *private) //主界面显示
 #else
     if (BT_STATUS_TAKEING_PHONE == bt_get_connect_status()) {
         led7_show_call(hd);
-    } else {
+    }
+
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+    else if (get_le_audio_curr_role() == 2) {
+        led7_show_le(hd);
+    }
+#endif
+    else {
         led7_show_bt(hd);
     }
 #endif

@@ -29,6 +29,9 @@
 #include "effects/audio_multiband_limiter.h"
 #include "effects/pcm_delay.h"
 #include "effects/audio_vocal_remove.h"
+#include "effects/audio_virtual_bass_classic.h"
+#include "effects/audio_howling_gate.h"
+#include "effects/audio_noisegate_pro.h"
 
 /* 左右声道按照不同比例混合参数更新 */
 int stero_mix_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
@@ -36,8 +39,10 @@ int stero_mix_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int surround_effect_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 分频器参数更新 */
 int crossover_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
-/* 多带合并参数更新 */
+/* 3带合并参数更新 */
 int band_merge_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+/* 2带合并参数更新 */
+int two_band_merge_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* drc参数更新 */
 int drc_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 高低音参数更新 */
@@ -70,6 +75,8 @@ int spectrum_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int stereo_widener_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 虚拟低音参数更新 */
 int virtual_bass_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+/* Multi Frequency Generator参数更新 */
+int virtual_bass_classic_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 变声参数更新 */
 int voice_changer_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 声道扩展参数更新 */
@@ -96,4 +103,10 @@ int multiband_limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int pcm_delay_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /*Vocal Remover 参数更新*/
 int vocal_remover_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+/*啸叫门限参数更新*/
+int howling_gate_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+/*noisegate_pro参数更新*/
+int noisegate_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+/*limiter 参数更新*/
+int user_limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index, float threshold);
 #endif

@@ -19,7 +19,7 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
-
+#include "app_le_auracast.h"
 
 #if TCFG_APP_LINEIN_EN
 

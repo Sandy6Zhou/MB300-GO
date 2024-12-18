@@ -277,14 +277,16 @@ int get_cig_audio_coding_bit_rate(void);
 int get_cig_audio_coding_frame_duration(void);
 int get_cig_tx_rtn(void);
 int get_cig_tx_delay(void);
+u32 get_cig_tx_latency(void);
 u32 get_cig_play_latency(void);
 u8 get_cis_num(u8 role);
 void reset_cig_params(void);
 
 void le_audio_working_status_switch(u8 en);
 int le_audio_scene_deal(int scene);
+int update_le_audio_deal_scene(int scene);
 u8 get_le_audio_app_mode_exit_flag();
-
+u8 get_le_audio_curr_role();
 #ifdef __cplusplus
 };
 #endif

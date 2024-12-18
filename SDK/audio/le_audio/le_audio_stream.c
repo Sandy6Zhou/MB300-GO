@@ -63,6 +63,11 @@ struct le_audio_stream_context {
 extern int bt_audio_reference_clock_select(void *addr, u8 network);
 extern u32 bb_le_clk_get_time_us(void);
 extern void ll_config_ctrler_clk(uint16_t handle, uint8_t sel);
+
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
+extern const unsigned short JLA_V2_FRAMELEN_MASK;
+#endif
+
 void *le_audio_stream_create(u16 conn, struct le_audio_stream_format *fmt)
 {
     struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)zalloc(sizeof(struct le_audio_stream_context));
@@ -132,6 +137,17 @@ static int __le_audio_stream_tx_data_handler(void *stream, void *data, int len, 
         if ((tx_stream->coding_type == AUDIO_CODING_LC3 || tx_stream->coding_type == AUDIO_CODING_JLA) &&
             rx_stream->coding_type == AUDIO_CODING_PCM) {
             timestamp = (timestamp + (ctx->fmt.frame_dms == 75 ? 4000L : 2500L)) & 0xfffffff;
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
+        } else if (tx_stream->coding_type == AUDIO_CODING_JLA_V2 && rx_stream->coding_type == AUDIO_CODING_PCM) {
+            u16 input_point = ctx->fmt.frame_dms * ctx->fmt.sample_rate / 1000 / 10;
+            u32 time_diff = 0;
+            if (!(JLA_V2_FRAMELEN_MASK & 0x8000) || input_point >= 160) { //最高位是0或者点数大于160,jla_v2的延时是1/4帧
+                time_diff = ctx->fmt.frame_dms * 1000 / 10 /  4; //(us)
+            } else {
+                time_diff = ctx->fmt.frame_dms * 1000 / 10; //(us)
+            }
+            timestamp = (timestamp + time_diff) & 0xfffffff;
+#endif
         }
         timestamp = (timestamp + latency) & 0xfffffff;
         le_audio_stream_rx_frame(rx_stream, addr, rx_stream->sdu_period_len, timestamp);
@@ -196,6 +212,8 @@ void *le_audio_stream_tx_open(void *le_audio, int coding_type, void *priv, int (
     if (ctx->fmt.coding_type == AUDIO_CODING_LC3) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 ;
     } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA) {
+        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
+    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
     } else {
         //TODO : 其他格式的buffer设置
@@ -288,6 +306,8 @@ void *le_audio_stream_rx_open(void *le_audio, int coding_type)
     if (coding_type == AUDIO_CODING_LC3) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 ;
     } else if (coding_type == AUDIO_CODING_JLA) {
+        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
+    } else if (coding_type == AUDIO_CODING_JLA_V2) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
     } else if (coding_type == AUDIO_CODING_PCM) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.sample_rate * ctx->fmt.nch * (ctx->fmt.bit_width ? 4 : 2) / 10000;
@@ -436,7 +456,7 @@ static int le_audio_stream_rx_fill_frame(struct le_audio_rx_stream *rx_stream)
 {
     struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)rx_stream->parent;
 
-    if (rx_stream->coding_type == AUDIO_CODING_LC3 || rx_stream->coding_type == AUDIO_CODING_JLA) {
+    if (rx_stream->coding_type == AUDIO_CODING_LC3 || rx_stream->coding_type == AUDIO_CODING_JLA || rx_stream->coding_type == AUDIO_CODING_JLA_V2) {
         rx_stream->timestamp = (rx_stream->timestamp + ctx->fmt.sdu_period) & 0xfffffff;
         u8 jla_err_frame[2] = {0x02, 0x00};
         u8 err_packet[10] = {0};
@@ -479,7 +499,7 @@ get_frame:
     }
 
     if (!frame && !rx_stream->online) {
-        if (rx_stream->coding_type == AUDIO_CODING_LC3 || rx_stream->coding_type == AUDIO_CODING_JLA) {
+        if (rx_stream->coding_type == AUDIO_CODING_LC3 || rx_stream->coding_type == AUDIO_CODING_JLA || rx_stream->coding_type == AUDIO_CODING_JLA_V2) {
             le_audio_stream_rx_fill_frame(rx_stream);
             goto get_frame;
         }

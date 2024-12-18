@@ -107,7 +107,11 @@ void tws_disconn_dly_deal(void *priv)
 
     if (!g_bt_hdl.ignore_discon_tone) {
         tone_player_stop();
+#if TCFG_KBOX_1T3_MODE_EN
+        play_tone_file_alone(get_tone_files()->tws_disconnect);
+#else
         play_tone_file(get_tone_files()->tws_disconnect);
+#endif
     }
 }
 
@@ -160,7 +164,11 @@ static int tone_tws_event_handler(int *_event)
 #endif
         if (!g_bt_hdl.ignore_discon_tone) {
             tone_player_stop();
+#if TCFG_KBOX_1T3_MODE_EN
+            play_tone_file_alone(get_tone_files()->tws_disconnect);
+#else
             play_tone_file(get_tone_files()->tws_disconnect);
+#endif
         } else {
             g_bt_hdl.ignore_discon_tone --;
         }

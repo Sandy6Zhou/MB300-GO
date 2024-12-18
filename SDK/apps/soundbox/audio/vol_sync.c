@@ -169,7 +169,11 @@ void opid_play_vol_sync_fun(s16 *vol, u8 mode)
                 break;
             } else if (*vol < vol_sys_tab[i]) {
                 if (mode) {
-                    *vol = vol_sys_tab[i + 1];
+                    if (16 <= i) {
+                        *vol = vol_sys_tab[16];
+                    } else {
+                        *vol = vol_sys_tab[i + 1];
+                    }
                     app_var.opid_play_vol_sync = vol_sync_tab[i];
                 } else {
                     *vol = vol_sys_tab[i - 1];

@@ -27,6 +27,10 @@
 #include "app_le_connected.h"
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
+#include "local_tws.h"
+#include "rcsp_spdif_func.h"
+#include "bt_key_func.h"
+#include "btstack_rcsp_user.h"
 
 struct spdif_ctl {
     struct spdif_file_cfg *p_spdif_cfg;	//spdif的配置参数信息
@@ -150,6 +154,11 @@ int spdif_app_msg_handler(int *msg)
         spdif_io_loop_switch();
         printf("spdif switch source");
         break;
+    case APP_MSG_SPDIF_SET_SOURCE:
+        spdif_set_port_by_index(msg[1]);
+        app_send_message(APP_MSG_SPDIF_SOURCE_UPDATE, 0);
+        //printf("spdif set source %d\n",msg[1]);
+        break;
     case APP_MSG_CEC_VOL_UP:
         if (uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[0]) != get_spdif_source_io() &&
             uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[1]) != get_spdif_source_io()) {
@@ -158,7 +167,15 @@ int spdif_app_msg_handler(int *msg)
         }
     /* fall-through */
     case APP_MSG_VOL_UP:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_up();
+        } else {
+            app_audio_volume_up(1);
+        }
+#else
         app_audio_volume_up(1);
+#endif
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == app_audio_get_max_volume()) {
             if (tone_player_runing() == 0) {
 #if TCFG_MAX_VOL_PROMPT
@@ -183,7 +200,15 @@ int spdif_app_msg_handler(int *msg)
         }
     /* fall-through */
     case APP_MSG_VOL_DOWN:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_down();
+        } else {
+            app_audio_volume_down(1);
+        }
+#else
         app_audio_volume_down(1);
+#endif
         if (uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff) {
             if (uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[0]) == get_spdif_source_io() ||
                 uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[1]) == get_spdif_source_io()) {
@@ -250,6 +275,10 @@ int spdif_app_msg_handler(int *msg)
         break;
     }
 
+#if RCSP_MODE
+    rcsp_spdif_msg_deal(msg[0]);
+#endif
+
     return 0;
 }
 static int app_spdif_init()
@@ -280,6 +309,8 @@ static int app_spdif_init()
 
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_SPDIF);
     app_spdif_hd.p_spdif_cfg = audio_spdif_file_get_cfg();
+    app_send_message(APP_MSG_SPDIF_SOURCE_UPDATE, 0);
+    app_send_message(APP_MSG_SPDIF_STATUS_UPDATE, 0);
     return 0;
 }
 

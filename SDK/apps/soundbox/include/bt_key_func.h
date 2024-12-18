@@ -13,5 +13,7 @@ void bt_key_hid_control(void);
 void bt_key_call_three_way_answer1(void);
 void bt_key_call_three_way_answer2(void);
 void bt_key_call_switch(void);
+void bt_key_rcsp_vol_up(void);
+void bt_key_rcsp_vol_down(void);
 
 #endif

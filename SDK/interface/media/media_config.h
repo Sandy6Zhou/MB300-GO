@@ -11,6 +11,7 @@ extern const int CONFIG_SEAMLESS_RECORDER_ENABLE;
 extern const int config_ch_adapter_32bit_enable;
 extern const int config_mixer_32bit_enable;
 extern const int config_jlstream_fade_32bit_enable;
+extern const int config_audio_eq_xfade_enable;
 
 extern const int CONFIG_MAX_ENC_DATA_CACHE_SIZE;
 extern const int CONFIG_LOG_OUTPUT_ENABLE;
@@ -39,6 +40,15 @@ extern const int config_audio_dac_power_off_lite;
  *						EQ Configs
  *******************************************************************
  */
+extern const int config_audio_eq_hp_enable;		//High Pass
+extern const int config_audio_eq_lp_enable;		//Low Pass
+extern const int config_audio_eq_bp_enable;		//Band Pass(Peaking)
+extern const int config_audio_eq_hs_enable;		//High Shelf
+extern const int config_audio_eq_ls_enable;		//Low Shelf
+extern const int config_audio_eq_hs_q_enable;	//High Shelf Q
+extern const int config_audio_eq_ls_q_enable;	//Low Shelf Q
+extern const int config_audio_eq_hp_adv_enable;	//High Pass Advance
+extern const int config_audio_eq_lp_adv_enable;	//Low Pass Advance
 
 /*
  *******************************************************************
@@ -54,7 +64,11 @@ extern const int config_audio_dac_power_off_lite;
 extern const int config_audio_gain_enable;
 extern const int config_audio_split_gain_enable;
 extern const int config_audio_stereomix_enable;
-
+extern const int voicechanger_effect_v_config;
+extern const int mb_limiter_3band_run_en;
+extern const int limiter_run_mode;
+extern const int drc_advance_run_mode;
+extern const int drc_run_mode;
 
 /*
  *******************************************************************
@@ -68,6 +82,13 @@ extern const u8 config_wav_id3_enable;
 extern const u8 config_wma_id3_enable;
 
 
+/*
+ *******************************************************************
+ *						Audio Mic Capless Config
+ *******************************************************************
+ */
+extern const u8 const_mic_capless_open_delay_debug;
+extern const u8 const_mic_capless_trim_delay_debug;
 
 
 

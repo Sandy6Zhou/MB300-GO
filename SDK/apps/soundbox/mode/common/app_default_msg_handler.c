@@ -29,6 +29,10 @@
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "app_le_auracast.h"
+#include "le_audio_player.h"
+#include "rcsp_device_status.h"
+#include "btstack_rcsp_user.h"
+#include "bt_key_func.h"
 
 static u32 input_number = 0;
 static u16 input_number_timer = 0;
@@ -73,18 +77,23 @@ void app_common_key_msg_handler(int *msg)
     int from_tws = msg[1];
 
     switch (msg[0]) {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
     case APP_MSG_BT_WORK_MODE_CHANGE:
         if (msg[1] == APP_KEY_MSG_FROM_TWS) { //非后台不响应来自tws的切换模式消息
             return;
         }
         bt_work_mode_switch_to_next();
         break;
-#endif
     case APP_MSG_VOL_UP:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_up();
+        } else {
+            app_audio_volume_up(1);
+        }
+#else
         app_audio_volume_up(1);
+#endif
+
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == app_audio_get_max_volume()) {
             if (tone_player_runing() == 0) {
 #if TCFG_MAX_VOL_PROMPT
@@ -92,12 +101,102 @@ void app_common_key_msg_handler(int *msg)
 #endif
             }
         }
+
+
         app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
         break;
     case APP_MSG_VOL_DOWN:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_down();
+        } else {
+            app_audio_volume_down(1);
+        }
+#else
         app_audio_volume_down(1);
+#endif
         app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
         break;
+#if TCFG_KBOX_1T3_MODE_EN
+#if TCFG_MIC_EFFECT_ENABLE && (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN || LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+    case APP_MSG_SW_WIRED_MIC_OR_WIRELESS_MIC:
+        //有线Mic和无线Mic切换
+        if (app_get_current_mode()->name == APP_MODE_LINEIN) {
+            break;
+        }
+        if (app_get_current_mode()->name == APP_MODE_FM) {
+            //如果是FM模式，则只支持开关混响Mic，不支持打开cis
+            r_printf(">> FM Mode not support open Cis!\n");
+            if (!mic_effect_player_runing()) {
+                //开混响，卸载FM第二段代码, 节省ram资源
+                mic_effect_player_open();
+            } else {
+                //关混响，加载FM第二段代码, 提高FM性能
+                mic_effect_player_close();
+            }
+            break;
+        }
+        if (!mic_effect_player_runing()) {
+            y_printf("----- Close Wireless Mic, Open Wired Mic\n");
+            //关闭 connect，打开mic_effect
+
+            if (app_get_current_mode()->name != APP_MODE_BT) {
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+                app_connected_close_in_other_mode();
+#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+                app_broadcast_close_in_other_mode();
+#endif
+            } else {
+                //蓝牙模式下关闭cig
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+                app_connected_close_all(APP_CONNECTED_STATUS_STOP);
+#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+                app_broadcast_close(APP_BROADCAST_STATUS_STOP);
+#endif
+            }
+            os_time_dly(5);
+            mic_effect_player_open();
+        } else {
+            //关闭混响, 打开 connect
+            mic_effect_player_close();
+            os_time_dly(5);
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+            app_connected_open_in_other_mode();
+#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+            app_broadcast_open_in_other_mode();
+#endif
+            y_printf("+++++ Open Wireless Mic, Close Wired Mic!\n");
+        }
+        break;
+#endif
+
+    case APP_MSG_WIRELESS_MIC_OPEN:
+        //r_printf("wir mic open\n");
+        le_audio_working_status_switch(1);
+        break;
+
+    case APP_MSG_WIRELESS_MIC_CLOSE:
+        //r_printf("wir mic close\n");
+        le_audio_working_status_switch(0);
+        break;
+    case APP_MSG_WIRELESS_MIC0_VOL_UP:
+        le_audio_dvol_up(0);
+        y_printf("[0] Up!");
+        break;
+    case APP_MSG_WIRELESS_MIC0_VOL_DOWN:
+        y_printf("[0] Down!");
+        le_audio_dvol_down(0);
+        break;
+    case APP_MSG_WIRELESS_MIC1_VOL_UP:
+        y_printf("[1] Up!");
+        le_audio_dvol_up(1);
+        break;
+    case APP_MSG_WIRELESS_MIC1_VOL_DOWN:
+        y_printf("[1] Down!");
+        le_audio_dvol_down(1);
+        break;
+#endif
+
     case APP_MSG_SWITCH_SOUND_EFFECT:
         effect_scene_switch();
         break;
@@ -214,14 +313,7 @@ void app_common_key_msg_handler(int *msg)
     case APP_MSG_LE_BROADCAST_SW:
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         g_printf("APP_MSG_LE_AURACAST_SW");
-
-#if 1
         app_auracast_switch();
-#else
-        extern void auracast_phone_select_mode(void);
-        auracast_phone_select_mode();
-#endif
-
 #elif ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN ) && (!TCFG_KBOX_1T3_MODE_EN))
         g_printf("APP_MSG_LE_BROADCAST_SW");
         app_broadcast_switch();
@@ -245,6 +337,15 @@ void app_common_key_msg_handler(int *msg)
         app_broadcast_exit_pair(BROADCAST_ROLE_UNKNOW);
 #endif
         break;
+
+
+    case APP_MSG_LE_AURACAST_SW_DEIVCE:
+        printf("---------%s %d--------", __FUNCTION__, __LINE__);
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN))
+        app_auracast_sink_switch_source_device(0);
+#endif
+        break;
+
     }
 }
 
@@ -337,6 +438,12 @@ void app_common_device_event_handler(int *msg)
         /* printf("unknow SYS_DEVICE_EVENT!!, %x\n", (u32)event->arg); */
         break;
     }
+
+
+#if RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE
+    rcsp_update_dev_state(msg[0], NULL);
+#endif
+
 
     if (app != 0xff) {
         /*一些情况不希望退出蓝牙模式*/

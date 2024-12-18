@@ -393,7 +393,9 @@ static int local_tws_msg_handler(int *msg)
         break;
 
     case CMD_TWS_VOL_REPORT:
-        app_audio_set_volume(APP_AUDIO_STATE_MUSIC, cmd[1], 1);
+        if (!app_in_mode(APP_MODE_BT)) {
+            app_audio_set_volume(APP_AUDIO_STATE_MUSIC, cmd[1], 1);
+        }
         break;
 
     case CMD_TWS_MUSIC_PP:

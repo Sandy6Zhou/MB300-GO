@@ -98,4 +98,5 @@ void alarm_update_info_after_isr(void);
 // void alarm_event_handler(struct sys_event *event, void *priv);
 u8 alarm_add(PT_ALARM p, u8 index);
 
+u8 alarm_get_active_index(void);
 #endif  //end of __ALARM_H__

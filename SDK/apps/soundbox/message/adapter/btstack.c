@@ -28,7 +28,10 @@ static void bt_stack_event_update_to_user(u8 *addr, u32 type, u8 event, u32 valu
     evt->value = value;
 
     int from = type == SYS_BT_EVENT_TYPE_CON_STATUS ? MSG_FROM_BT_STACK : MSG_FROM_BT_HCI;
-    os_taskq_post_type("app_core", from, sizeof(*evt) / 4, msg);
+    int err = os_taskq_post_type("app_core", from, sizeof(*evt) / 4, msg);
+    if (err != OS_NO_ERR) {
+        printf("bt_stack_event_update_to_user error:%d", err);
+    }
 
     /* 防止短时间内太多事件,app_core处理不过来导致qfull */
     os_time_dly(1);

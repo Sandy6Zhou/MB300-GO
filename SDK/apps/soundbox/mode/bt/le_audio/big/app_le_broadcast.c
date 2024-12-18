@@ -354,6 +354,21 @@ static int app_broadcast_conn_status_event_handler(int *msg)
 #if TCFG_KBOX_1T3_MODE_EN
         bis_connected_nums++;
         ASSERT(bis_connected_nums <= BIG_MAX_BIS_NUMS && bis_connected_nums >= 0, "bis_connected_nums:%d", bis_connected_nums);
+#if (TCFG_KBOX_1T3_BIND_EN == 2) //0-不配对，1-TX生成配对码，2-RX生成配对码
+        ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &pair_code, sizeof(u32));
+        if ((ret <= 0) || (pair_code == 0xFFFFFFFF)) {
+            wireless_trans_get_pair_code("big_rx", (u8 *)&pair_code, 1);
+            ret = syscfg_write(VM_WIRELESS_PAIR_CODE0, &pair_code, sizeof(u32));
+            if (ret <= 0) {
+                r_printf(">>>>>>wireless pair code save err, %d", __LINE__);
+            }
+        }
+        wireless_custom_data_send_to_sibling('P', &pair_code, sizeof(u32), remote_dev_identification);
+        wireless_trans_set_pair_code("big_rx", (u8 *)&pair_code);
+#elif (TCFG_KBOX_1T3_BIND_EN == 1)  //由于TX事件比较快，导致TX发送配对码时，RX仍未准备好，此处改为引导TX发配对码
+        pair_code = 0x55aa55aa;
+        wireless_custom_data_send_to_sibling('P', &pair_code, sizeof(u32), remote_dev_identification);
+#endif
 #endif
 
         ret = broadcast_receiver_connect_deal((void *)hdl);
@@ -743,6 +758,98 @@ int app_broadcast_open()
 
 /* --------------------------------------------------------------------------*/
 /**
+ * @brief 固定角色（0：接收端，1：发射端）开启广播
+ *
+ * @return >=0:success
+ */
+/* ----------------------------------------------------------------------------*/
+int app_broadcast_open_with_role(u8 role)
+{
+    u8 i;
+    u8 big_available_num = 0;
+    int temp_broadcast_hdl = 0;
+    big_parameter_t *params;
+    struct app_mode *mode;
+
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if (!app_broadcast_init_flag) {
+        return -EPERM;
+    }
+
+    for (i = 0; i < BIG_MAX_NUMS; i++) {
+        if (!app_big_hdl_info[i].used) {
+            big_available_num++;
+        }
+    }
+
+    if (!big_available_num) {
+        return -EPERM;
+    }
+
+    mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    log_info("broadcast_open_with_role %d", role);
+
+#if TCFG_KBOX_1T3_MODE_EN
+    le_audio_ops_register(APP_MODE_NULL);
+#endif
+
+#if defined(RCSP_MODE) && RCSP_MODE
+#if RCSP_BLE_MASTER
+    setRcspConnectBleAddr(NULL);
+#endif
+    setLeAudioModeMode(JL_LeAudioModeBig);
+    ble_module_enable(0);
+#endif
+    if (role) {
+        //初始化广播发送端参数
+        params = set_big_params(mode->name, BROADCAST_ROLE_TRANSMITTER, 0);
+
+        //打开big，打开成功后会在函数app_broadcast_conn_status_event_handler做后续处理
+        temp_broadcast_hdl = broadcast_transmitter(params);
+#if TRANSMITTER_AUTO_TEST_EN
+        //不定时切换模式
+        wireless_trans_auto_test3_init();
+        //不定时暂停播放
+        wireless_trans_auto_test4_init();
+#endif
+    } else {
+        //初始化广播接收端参数
+        params = set_big_params(mode->name, BROADCAST_ROLE_RECEIVER, 0);
+
+        //打开big，打开成功后会在函数app_broadcast_conn_status_event_handler做后续处理
+        temp_broadcast_hdl = broadcast_receiver(params);
+#if RECEIVER_AUTO_TEST_EN
+        //不定时切换模式
+        wireless_trans_auto_test3_init();
+        //不定时暂停播放
+        wireless_trans_auto_test4_init();
+#endif
+    }
+    if (temp_broadcast_hdl >= 0) {
+        for (i = 0; i < BIG_MAX_NUMS; i++) {
+            if (!app_big_hdl_info[i].used) {
+                app_big_hdl_info[i].big_hdl = temp_broadcast_hdl;
+                app_big_hdl_info[i].big_status = APP_BROADCAST_STATUS_START;
+                app_big_hdl_info[i].used = 1;
+                break;
+            }
+        }
+    }
+
+    return temp_broadcast_hdl;
+}
+
+
+/* --------------------------------------------------------------------------*/
+/**
  * @brief 关闭广播
  *
  * @param status:挂起还是停止
@@ -987,7 +1094,8 @@ int app_broadcast_deal(int scene)
 #endif
 
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(1);
             ret = 1;
         }
         break;
@@ -1014,7 +1122,8 @@ int app_broadcast_deal(int scene)
         }
 #endif
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
             ret = 1;
         }
         break;
@@ -1044,7 +1153,9 @@ int app_broadcast_deal(int scene)
         }
         //当前处于蓝牙模式并且挂起前广播，恢复广播并作为接收设备
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
+            ret = 1;
         }
         break;
 
@@ -1059,7 +1170,9 @@ int app_broadcast_deal(int scene)
             app_broadcast_suspend();
         }
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
+            ret = 1;
         }
         break;
 
