@@ -180,6 +180,12 @@ int app_protocol_sys_event_handler(struct sys_event *event);
 #define EARPHONE_STATE_ROLE_SWITCH(a)
 #endif
 
+enum {
+    DUAL_CONN_CLOSE = 0,
+    DUAL_CONN_SET_ONE,
+    DUAL_CONN_SET_TWO,
+
+};
 
 extern struct bt_mode_var g_bt_hdl;
 

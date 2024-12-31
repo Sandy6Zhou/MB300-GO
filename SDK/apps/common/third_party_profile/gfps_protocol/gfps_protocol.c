@@ -6,11 +6,6 @@
 #endif
 #include "sdk_config.h"
 #include "app_msg.h"
-#if (RCSP_MODE == RCSP_MODE_SOUNDBOX)
-#include "soundbox.h"
-#elif (RCSP_MODE == RCSP_MODE_EARPHONE)
-#include "earphone.h"
-#endif
 #include "bt_tws.h"
 #include "app_main.h"
 #include "battery_manager.h"

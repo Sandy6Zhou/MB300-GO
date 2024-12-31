@@ -217,7 +217,7 @@ int app_broadcast_send_custom_data(u8 device, void *data, size_t length);
  */
 /* ----------------------------------------------------------------------------*/
 u8 get_bis_connected_num(void);
-
+u8 get_bis_switch_onoff(void);
 #ifdef __cplusplus
 };
 #endif

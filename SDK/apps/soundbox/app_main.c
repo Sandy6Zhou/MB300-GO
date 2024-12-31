@@ -40,6 +40,7 @@
 #include "key/adkey.h"
 #include "key/iokey.h"
 #include "trim.h"
+#include "iis.h"
 #include "dev_manager.h"
 #include "app_mode_update.h"
 #include "sdfile.h"
@@ -125,7 +126,7 @@ const struct task_info task_info_table[] = {
     {"aec",					2,	   1,   768,   128 },
 
     {"aec_dbg",				3,	   0,   512,   128 },
-    {"update",				1,	   0,   256,   0   },
+    {"update",				1,	   0,   512,   0   },
     {"tws_ota",				2,	   0,   256,   0   },
     {"tws_ota_msg",			2,	   0,   256,   128 },
     {"dw_update",		 	2,	   0,   256,   128 },
@@ -683,6 +684,11 @@ static void app_task_loop(void *p)
         case APP_MODE_UPDATE:
             mode = app_enter_update_mode(g_mode_switch_arg);
             break;
+#if TCFG_APP_IIS_EN
+        case APP_MODE_IIS:
+            mode = app_enter_iis_mode(g_mode_switch_arg);
+            break;
+#endif
         case APP_MODE_SINK:
 #if TCFG_LOCAL_TWS_ENABLE
             mode = app_enter_sink_mode(g_mode_switch_arg);

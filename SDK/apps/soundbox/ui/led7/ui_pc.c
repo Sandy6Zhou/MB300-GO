@@ -6,7 +6,7 @@
 #endif
 #include "ui/ui_api.h"
 #include "system/includes.h"
-#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_PC_EN
 #if (TCFG_UI_ENABLE&&(CONFIG_UI_STYLE == STYLE_JL_LED7))
@@ -62,10 +62,10 @@ static void ui_pc_main(void *hd, void *private) //主界面显示
     if (!hd) {
         return;
     }
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
+    if (get_le_audio_curr_role() == 2) {
         led7_show_le(hd);
     } else {
         led7_show_pc(hd);

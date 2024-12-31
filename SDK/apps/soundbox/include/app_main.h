@@ -9,6 +9,7 @@
 #include "app_music.h"
 #include "app_default_msg_handler.h"
 #include "bt_background.h"
+#include "soundbox.h"
 
 enum {
     SYS_POWERON_BY_KEY = 1,
@@ -100,6 +101,7 @@ struct bt_mode_var {
     u8 ignore_discon_tone;  // 1-退出蓝牙模式， 不响应discon提示音
     background_var background;  //蓝牙后台相关变量
     volatile u8 work_mode;
+    u8 bt_dual_conn_config;
 };
 
 typedef struct _BT_USER_COMM_VAR {
@@ -135,6 +137,7 @@ enum app_mode_index {
     APP_MODE_RTC_INDEX,
     APP_MODE_PC_INDEX,
     APP_MODE_SPDIF_INDEX,
+    APP_MODE_IIS_INDEX,
 };
 
 #define earphone (&bt_user_priv_var)

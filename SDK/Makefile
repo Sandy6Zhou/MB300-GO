@@ -85,11 +85,9 @@ CFLAGS := \
 	-Wincompatible-pointer-types \
 	-Wreturn-type \
 	-Wimplicit-function-declaration \
-	-Werror \
 	-mllvm -pi32v2-large-program=true \
 	-fms-extensions \
 	-fdiscrete-bitfield-abi \
-	-w \
 
 
 # C++额外的编译参数
@@ -203,6 +201,7 @@ INCLUDES := \
 	-Iapps/common/ui \
 	-Iapps/common/config/include \
 	-Iapps/common/dev_manager \
+	-Iapps/common/temp_trim \
 	-Iapps/common/third_party_profile \
 	-Iapps/common/third_party_profile/common \
 	-Iapps/common/third_party_profile/interface \
@@ -513,6 +512,7 @@ c_SRC_FILES := \
 	apps/soundbox/board/rdeckey_config.c \
 	apps/soundbox/board/sdk_board_config.c \
 	apps/soundbox/board/tocuhkey_config.c \
+	apps/soundbox/demo/att_over_edr_demo.c \
 	apps/soundbox/demo/pbg_demo.c \
 	apps/soundbox/demo/trans_data_demo.c \
 	apps/soundbox/device_config.c \
@@ -572,6 +572,10 @@ c_SRC_FILES := \
 	apps/soundbox/mode/idle/idle.c \
 	apps/soundbox/mode/idle/idle_app_msg_handler.c \
 	apps/soundbox/mode/idle/idle_key_msg_table.c \
+	apps/soundbox/mode/iis/iis.c \
+	apps/soundbox/mode/iis/iis_api.c \
+	apps/soundbox/mode/iis/iis_app_msg_handler.c \
+	apps/soundbox/mode/iis/iis_key_msg_table.c \
 	apps/soundbox/mode/key_tone.c \
 	apps/soundbox/mode/linein/linein.c \
 	apps/soundbox/mode/linein/linein_api.c \
@@ -792,6 +796,7 @@ c_SRC_FILES := \
 	audio/interface/player/esco_player.c \
 	audio/interface/player/file_player.c \
 	audio/interface/player/fm_player.c \
+	audio/interface/player/iis_player.c \
 	audio/interface/player/key_tone_player.c \
 	audio/interface/player/le_audio_player.c \
 	audio/interface/player/linein_player.c \
@@ -1021,6 +1026,12 @@ LFLAGS := \
 	cpu/br28/liba/lib_jla_ll_codec.a \
 	cpu/br28/liba/lib_jlalw_codec.a \
 	cpu/br28/liba/lib_jla_v2_codec.a \
+	cpu/br28/liba/lib_phaser.a \
+	cpu/br28/liba/lib_flanger.a \
+	cpu/br28/liba/lib_chorus_adv.a \
+	cpu/br28/liba/lib_pingpong_echo.a \
+	cpu/br28/liba/libStereoSpatialWider_pi32v2_OnChip.a \
+	cpu/br28/liba/libdistortion.a \
 	cpu/br28/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br28/liba/lib_wtg_dec.a \
 	cpu/br28/liba/bfilterfun_lib.a \

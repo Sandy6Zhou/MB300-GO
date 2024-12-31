@@ -69,6 +69,11 @@ extern const int mb_limiter_3band_run_en;
 extern const int limiter_run_mode;
 extern const int drc_advance_run_mode;
 extern const int drc_run_mode;
+extern const int  stereo_phaser_run_mode;
+extern const int  stereo_flanger_run_mode;
+extern const int  stereo_chorus_run_mode;
+extern const int dynamic_eq_run_mode;
+extern const  int drc_detect_run_mode;
 
 /*
  *******************************************************************

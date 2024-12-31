@@ -53,6 +53,7 @@ int app_auracast_sink_stop_record(void);
 int app_auracast_sink_switch_source_device(u8 switch_mode); //0:切换设备后不过滤设备；1：切换设备后过滤处理只连接记录的设备
 void app_auracast_sink_discard_record(void);
 
+u8 get_auracast_switch_onoff(void);
 #ifdef __cplusplus
 };
 #endif

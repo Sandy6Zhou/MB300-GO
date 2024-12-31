@@ -20,6 +20,10 @@
 #include "btstack/le/att.h"
 #include "btstack/le/ble_api.h"
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#include "ble_rcsp_server.h"
+#endif
+
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
 
 /**************************************************************************************************
@@ -70,6 +74,7 @@ auracast_advanced_config_t user_advanced_config = {
     .rtn = 3,
 };
 
+static u8 auracast_switch_onoff = 0;
 /**************************************************************************************************
   Data Types
 **************************************************************************************************/
@@ -211,6 +216,8 @@ uint8_t match_aurcast_name[4][28] = {
 static unsigned char errpacket[2] = {
     0x02, 0x00
 };
+
+#define TCFG_AURACAST_SINK_CONNECT_BY_APP 0
 
 #if TCFG_AURACAST_SINK_CONNECT_BY_APP
 static u8 add_source_state = 0;
@@ -575,12 +582,14 @@ static void auracast_sync_start(uint8_t *packet, uint16_t length)
             auracast_sink_big_sync_create(config);
         }
     } else {
+#if 0
         for (u8 i = 0; i < NO_PAST_MAX_BASS_NUM_SOURCES; i++) {
             status = memcmp(no_past_broadcast_sink_notify.save_auracast_addr[i], config->source_mac_addr, 6);
             if (!status) {
                 return;
             }
         }
+#endif
         no_past_broadcast_num += 1;
         if (no_past_broadcast_num >= NO_PAST_MAX_BASS_NUM_SOURCES) {
             no_past_broadcast_num = 0;
@@ -625,88 +634,88 @@ static void auracast_big_info(uint8_t *packet, uint16_t length)
         printf("%d\n", no_past_broadcast_sink_notify.enc);
         auracast_delegator_notify_t notify;
         notify.att_send_len = 100;
-        if (auracast_delegator_event_notify(DELEGATOR_ATT_CHECK_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t))) {
-            u8 build_notify_data[200];
-            u8 offset = 0;
-            struct auracast_adv_info *info = (struct auracast_adv_info *)build_notify_data;
-            info->flag = 1;
-            info->op = 3;
-            info->sn = 2;
-            offset += 5;
+        //if (auracast_delegator_event_notify(DELEGATOR_ATT_CHECK_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t))) {
+        u8 build_notify_data[200];
+        u8 offset = 0;
+        struct auracast_adv_info *info = (struct auracast_adv_info *)build_notify_data;
+        info->flag = 1;
+        info->op = 3;
+        info->sn = 2;
+        offset += 5;
 
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x1, no_past_broadcast_sink_notify.broadcast_name, strlen((void *)no_past_broadcast_sink_notify.broadcast_name));
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x2, (u8 *)&no_past_broadcast_sink_notify.broadcast_id, 3);
-            struct broadcast_featrue_notify data;
-            if (no_past_broadcast_sink_notify.enc) {
-                data.feature = 0x7;
-                memcpy(no_past_broadcast_sink_notify.encryp_addr[no_past_broadcast_num], no_past_broadcast_sink_notify.base_data.address, 6);
-            } else {
-                data.feature = 0x6;
-            }
-            data.metadata_len = 0;
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x3, (u8 *)&data, 2);
-#if 1
-            struct broadcast_source_endpoint_notify *codec_data = (struct broadcast_source_endpoint_notify *)ccc;
-            u8 codec_offset = 0;
-            codec_data->prd_delay[0] = 0;
-            codec_data->prd_delay[1] = 0;
-            codec_data->prd_delay[2] = 0;
-            codec_data->num_subgroups = 1;
-            codec_data->num_bis = 1;
-            u8 codec_id[5] = {0x6, 0x0, 0x0, 0x0, 0x0};
-            memcpy(codec_data->codec_id, codec_id, 5);
-
-            codec_offset += 11;
-            u8 save_offset = codec_offset;
-            u8 frequency = 0x8;
-            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x1, &frequency, 1);
-            u8 frame_duration = 0x1;
-            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x2, &frame_duration, 1);
-            u16 octets_frame = 0x0064;
-            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x4, (u8 *)&octets_frame, 2);
-
-            codec_data->codec_spec_length = codec_offset - save_offset;
-
-            u8 meta_len = 0;
-            ccc[codec_offset] = meta_len;
-            codec_offset += 1;
-            u8 bis_index = 1;
-            ccc[codec_offset] = bis_index;
-            codec_offset += 1;
-            u8 bis_codec_len = 6;
-            ccc[codec_offset] = bis_codec_len;
-            codec_offset += 1;
-
-            u8 bis_codec[4] = {0x1, 0x0, 0x0, 0x0};
-            codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x3, bis_codec, sizeof(bis_codec));
-
-            put_buf(ccc, codec_offset);
-
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, ccc, codec_offset);
-#else
-            biginfo_notify_data[biginfo_size - 1] = 0;
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, biginfo_notify_data, biginfo_size);
-
-            if (biginfo_notify_data) {
-                free(biginfo_notify_data);
-            }
-#endif
-            no_past_broadcast_sink_notify.base_data.pa_interval = 0xffff;
-            offset += make_auracast_ltv_data(&build_notify_data[offset], 0x5, (u8 *)&no_past_broadcast_sink_notify.base_data, sizeof(struct broadcast_base_info_notify));
-            info->length = offset;
-            u16 crc = CRC16(build_notify_data, offset);
-            memcpy(&build_notify_data[offset], &crc, 2);
-            offset += 2;
-            put_buf(build_notify_data, offset);
-
-            for (u8 i = 0; i < 2; i++) {
-                auracast_delegator_notify_t notify;
-                notify.big_len = offset;
-                notify.big_data = build_notify_data;
-                auracast_delegator_event_notify(DELEGATOR_ATT_SEND_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t));
-                mdelay(100);
-            }
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x1, no_past_broadcast_sink_notify.broadcast_name, strlen((void *)no_past_broadcast_sink_notify.broadcast_name));
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x2, (u8 *)&no_past_broadcast_sink_notify.broadcast_id, 3);
+        struct broadcast_featrue_notify data;
+        if (no_past_broadcast_sink_notify.enc) {
+            data.feature = 0x7;
+            memcpy(no_past_broadcast_sink_notify.encryp_addr[no_past_broadcast_num], no_past_broadcast_sink_notify.base_data.address, 6);
+        } else {
+            data.feature = 0x6;
         }
+        data.metadata_len = 0;
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x3, (u8 *)&data, 2);
+#if 1
+        struct broadcast_source_endpoint_notify *codec_data = (struct broadcast_source_endpoint_notify *)ccc;
+        u8 codec_offset = 0;
+        codec_data->prd_delay[0] = 0;
+        codec_data->prd_delay[1] = 0;
+        codec_data->prd_delay[2] = 0;
+        codec_data->num_subgroups = 1;
+        codec_data->num_bis = 1;
+        u8 codec_id[5] = {0x6, 0x0, 0x0, 0x0, 0x0};
+        memcpy(codec_data->codec_id, codec_id, 5);
+
+        codec_offset += 11;
+        u8 save_offset = codec_offset;
+        u8 frequency = 0x8;
+        codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x1, &frequency, 1);
+        u8 frame_duration = 0x1;
+        codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x2, &frame_duration, 1);
+        u16 octets_frame = 0x0064;
+        codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x4, (u8 *)&octets_frame, 2);
+
+        codec_data->codec_spec_length = codec_offset - save_offset;
+
+        u8 meta_len = 0;
+        ccc[codec_offset] = meta_len;
+        codec_offset += 1;
+        u8 bis_index = 1;
+        ccc[codec_offset] = bis_index;
+        codec_offset += 1;
+        u8 bis_codec_len = 6;
+        ccc[codec_offset] = bis_codec_len;
+        codec_offset += 1;
+
+        u8 bis_codec[4] = {0x1, 0x0, 0x0, 0x0};
+        codec_offset += make_auracast_ltv_data(&ccc[codec_offset], 0x3, bis_codec, sizeof(bis_codec));
+
+        put_buf(ccc, codec_offset);
+
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, ccc, codec_offset);
+#else
+        biginfo_notify_data[biginfo_size - 1] = 0;
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x4, biginfo_notify_data, biginfo_size);
+
+        if (biginfo_notify_data) {
+            free(biginfo_notify_data);
+        }
+#endif
+        no_past_broadcast_sink_notify.base_data.pa_interval = 0xffff;
+        offset += make_auracast_ltv_data(&build_notify_data[offset], 0x5, (u8 *)&no_past_broadcast_sink_notify.base_data, sizeof(struct broadcast_base_info_notify));
+        info->length = offset;
+        u16 crc = CRC16(build_notify_data, offset);
+        memcpy(&build_notify_data[offset], &crc, 2);
+        offset += 2;
+        put_buf(build_notify_data, offset);
+
+        for (u8 i = 0; i < 2; i++) {
+            auracast_delegator_notify_t notify;
+            notify.big_len = offset;
+            notify.big_data = build_notify_data;
+            auracast_delegator_event_notify(DELEGATOR_ATT_SEND_NOTIFY, (void *)&notify, sizeof(auracast_delegator_notify_t));
+            mdelay(100);
+        }
+        //}
         auracast_sink_set_scan_filter(1, no_past_broadcast_num, config->source_mac_addr);
         auracast_sink_rescan();
     }
@@ -769,11 +778,18 @@ static void auracast_delegator_event_callback(uint16_t event, uint8_t *packet, u
     switch (event) {
     case DELEGATOR_SCAN_START_EVENT:
         g_printf("scan start\n");
+        auracast_delegator_adv_enable(0);
+        mdelay(2);
         auracast_sink_rescan();
         break;
     case DELEGATOR_SCAN_STOP_EVENT:
+        app_auracast_mutex_pend(&mutex, __LINE__);
         g_printf("scan stop\n");
-        app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+        //app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+        auracast_sink_set_audio_state(0);
+        auracast_sink_big_sync_terminate();
+        auracast_sink_media_close();
+        auracast_sink_scan_stop();
         no_past_broadcast_num = 0;
         for (u8 i = 0; i < NO_PAST_MAX_BASS_NUM_SOURCES; i++) {
             memset(no_past_broadcast_sink_notify.save_auracast_addr[i], 0, 6);
@@ -782,22 +798,27 @@ static void auracast_delegator_event_callback(uint16_t event, uint8_t *packet, u
         auracast_sink_set_source_filter(0, 0);
         auracast_sink_set_scan_filter(0, 0, 0);
         add_source_state = 0;
+        app_auracast_mutex_post(&mutex, __LINE__);
         break;
     case DELEGATOR_DEVICE_ADD_EVENT:
+        app_auracast_mutex_pend(&mutex, __LINE__);
         g_printf("device add\n");
         auracast_device_add(packet, length);
+        app_auracast_mutex_post(&mutex, __LINE__);
         break;
     case DELEGATOR_DEVICE_KEY_ADD_EVENT:
         g_printf("device key add\n");
         auracast_key_add(packet, length);
         break;
     case DELEGATOR_DEVICE_MODIFY_EVENT:
+        app_auracast_mutex_pend(&mutex, __LINE__);
         g_printf("device modify\n");
-        app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
-        /* auracast_sink_set_audio_state(0); */
-        /* auracast_sink_big_sync_terminate(); */
-        /* auracast_sink_media_close(); */
-        /* auracast_sink_scan_stop(); */
+        //app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+        auracast_sink_set_audio_state(0);
+        auracast_sink_big_sync_terminate();
+        auracast_sink_media_close();
+        auracast_sink_scan_stop();
+        app_auracast_mutex_post(&mutex, __LINE__);
         break;
     default:
         break;
@@ -986,11 +1007,20 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
     case AURACAST_SINK_SOURCE_INFO_REPORT_EVENT:
         //获取远端设备信息
 #if TCFG_AURACAST_SINK_CONNECT_BY_APP
+        app_auracast_mutex_pend(&mutex, __LINE__);
         auracast_sync_start(packet, length);
+        app_auracast_mutex_post(&mutex, __LINE__);
 #else
         auracast_sync_info_report(packet, length);
 #endif
         break;
+#if 0
+    case AURACAST_SINK_DISCONNECT_EVENT:
+        printf("disconnect\n");
+        auracast_sink_scan_stop();
+        auracast_delegator_adv_enable(1);
+        break;
+#endif
     case AURACAST_SINK_BIG_INFO_REPORT_EVENT:
         app_auracast_mutex_pend(&mutex, __LINE__);
         if (app_auracast.status == APP_AURACAST_STATUS_STOP || app_auracast.status == APP_AURACAST_STATUS_SUSPEND) {
@@ -1004,21 +1034,31 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
 #endif
         app_auracast_mutex_post(&mutex, __LINE__);
         break;
+    case AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT:
+        printf("periodic adv sync lost\n");
+#if TCFG_AURACAST_SINK_CONNECT_BY_APP
+        memset(no_past_broadcast_sink_notify.save_auracast_addr[no_past_broadcast_num], 0, 6);
+#endif
+        break;
     case AURACAST_SINK_BIG_SYNC_LOST_EVENT:
+        app_auracast_mutex_pend(&mutex, __LINE__);
         //被动解除同步
         g_printf("sink BIG_SYNC_LOST");
         auracast_sink_sync_terminate(packet, length);
+        app_auracast_mutex_post(&mutex, __LINE__);
         break;
 #if TCFG_AURACAST_SINK_CONNECT_BY_APP
     case AURACAST_SINK_BLE_CONNECT_EVENT:
         g_printf("sink BLE_CONNECT_EVENT");
         auracast_att_init(packet, length);
         break;
+#if 0
     case AURACAST_SINK_DISCONNECT_EVENT:
         g_printf("sink DISCONNECT_EVENT\n");
         auracast_sink_scan_stop();
         auracast_delegator_adv_enable(1);
         break;
+#endif
 #endif
     default:
         break;
@@ -1052,14 +1092,19 @@ int app_auracast_sink_open()
         return -EPERM;
     }
 
+    auracast_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+#endif
     app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_sink_open");
 
     auracast_sink_init();
     auracast_sink_event_callback_register(auracast_sink_event_callback);
 #if TCFG_AURACAST_SINK_CONNECT_BY_APP
-    auracast_delegator_server_init();
-    auracast_delegator_init();
+    auracast_delegator_user_config_t param;
+    param.adv_edr = 1;
+    auracast_delegator_config(&param);
     auracast_delegator_event_callback_register(auracast_delegator_event_callback);
     auracast_delegator_adv_enable(1);
 #else
@@ -1116,6 +1161,13 @@ int app_auracast_sink_close(u8 status)
     }
 
     app_auracast_mutex_post(&mutex, __LINE__);
+
+    auracast_switch_onoff = 0;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if (status != APP_AURACAST_STATUS_SUSPEND) {
+        ble_module_enable(1);
+    }
+#endif
     return 0;
 }
 
@@ -1206,12 +1258,16 @@ int app_auracast_source_open()
         return -EPERM;
     }
 
+    auracast_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+#endif
     app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_source_open");
 
     auracast_source_init();
     auracast_source_config(&user_config);
-    auracast_source_advanced_config(&user_advanced_config);
+    //auracast_source_advanced_config(&user_advanced_config);
     auracast_source_event_callback_register(auracast_source_app_event_callback);
     auracast_source_start();
 
@@ -1255,6 +1311,13 @@ int app_auracast_source_close(u8 status)
     }
 
     app_auracast_mutex_post(&mutex, __LINE__);
+
+    auracast_switch_onoff = 0;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if (status != APP_AURACAST_STATUS_SUSPEND) {
+        ble_module_enable(1);
+    }
+#endif
     return 0;
 }
 
@@ -1696,6 +1759,7 @@ static int auracast_sink_media_close()
 
 static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
 {
+    //putchar('o');
     bool plc_flag = 0;
     hci_iso_hdr_t hdr = {0};
     ll_iso_unpack_hdr(packet, &hdr);
@@ -1703,20 +1767,23 @@ static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
         if (hdr.packet_status_flag == 0b00) {
             /* log_error("SDU empty"); */
             putchar('m');
+            return;
             plc_flag = 1;
         } else {
             /* log_error("SDU lost"); */
             putchar('s');
+            return;
             plc_flag = 1;
         }
     }
     if (((hdr.pb_flag == 0b10) || (hdr.pb_flag == 0b00)) && (hdr.packet_status_flag == 0b01)) {
         //log_error("SDU invalid, len=%d", hdr.iso_sdu_length);
         putchar('p');
+        return;
         plc_flag = 1;
     }
-
     for (u8 i = 0; i < app_auracast.bis_num; i++) {
+        //printf("[%d][%d][%x]\n",app_auracast.bis_hdl_info[i].bis_hdl,hdr.handle,(u32)app_auracast.bis_hdl_info[i].rx_player.rx_stream);
         if (app_auracast.bis_hdl_info[i].bis_hdl == hdr.handle && app_auracast.bis_hdl_info[i].rx_player.rx_stream) {
             if (plc_flag) {
                 le_audio_stream_rx_frame(app_auracast.bis_hdl_info[i].rx_player.rx_stream, (void *)errpacket, 2, hdr.time_stamp + TCFG_LE_AUDIO_PLAY_LATENCY);
@@ -1970,6 +2037,10 @@ static void auracast_sink_connect_filter_timeout(void *priv)
 }
 
 
+u8 get_auracast_switch_onoff(void)
+{
+    return auracast_switch_onoff;
+}
 
 #endif
 

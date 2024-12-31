@@ -215,6 +215,7 @@ u8 is_cig_music_play();
 //3In1 项目专用
 bool is_open_cis_connet(void);
 
+u8 get_cis_switch_onoff(void);
 #ifdef __cplusplus
 };
 #endif

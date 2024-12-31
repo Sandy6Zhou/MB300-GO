@@ -452,3 +452,22 @@ u8 get_le_audio_curr_role() //1:transmitter; 2:recevier
 }
 
 
+u8 get_le_audio_switch_onoff() //1:on; 0:off
+{
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+    return get_bis_switch_onoff();
+#endif
+
+#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+    return get_cis_switch_onoff();
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    return get_auracast_switch_onoff();
+#endif
+
+    return 0;
+}
+
+
+

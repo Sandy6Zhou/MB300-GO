@@ -35,6 +35,7 @@ extern void tws_dual_conn_state_handler();
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #include "ble_rcsp_server.h"
+#include "btstack_rcsp_user.h"
 #endif
 
 #if LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN
@@ -103,6 +104,11 @@ static int cur_deal_scene = -1; /*< 当前系统处于的运行场景 */
 static u8 save_sync_status_table[5][2] = {0};
 #endif
 
+static u8 cis_switch_onoff = 0;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+static int rcsp_connect_dev_detect_timer = 0;
+#endif
 /**************************************************************************************************
   Function Declarations
 **************************************************************************************************/
@@ -520,9 +526,6 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_CONNECT:
         g_printf("CIG_EVENT_ACL_CONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-        rcsp_bt_ble_adv_enable(0);
-#endif
         acl_info = (cis_acl_info_t *)&event[1];
         if (acl_info->conn_type) {
             log_info("connect test box ble");
@@ -557,11 +560,6 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_DISCONNECT:
         g_printf("CIG_EVENT_ACL_DISCONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-        if (tws_api_get_role() != TWS_ROLE_SLAVE) {
-            rcsp_bt_ble_adv_enable(1);
-        }
-#endif
         acl_info = (cis_acl_info_t *)&event[1];
         if (acl_info->conn_type) {
             log_info("disconnect test box ble");
@@ -692,6 +690,14 @@ static void app_connected_suspend()
     }
 }
 
+static void app_connected_retry_open(void *priv)
+{
+    u8 pair_without_addr = (u8)priv;
+
+    app_connected_open(pair_without_addr);
+
+
+}
 /* --------------------------------------------------------------------------*/
 /**
  * @brief 开启CIG
@@ -739,8 +745,23 @@ void app_connected_open(u8 pair_without_addr)
         return;
     }
 
+
+    cis_switch_onoff = 1;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+    if (bt_rcsp_ble_conn_num() > 0) {
+        u32 addr = pair_without_addr;
+        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)addr, app_connected_retry_open, 250);//由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+        return;
+    } else {
+        rcsp_connect_dev_detect_timer = 0;
+    }
+#endif
+
     log_info("connected_open");
 
+    app_connected_mutex_pend(&mutex, __LINE__);
 #if TCFG_KBOX_1T3_MODE_EN
     le_audio_ops_register(APP_MODE_NULL);
 #endif
@@ -789,6 +810,7 @@ void app_connected_open(u8 pair_without_addr)
             }
         }
     }
+    app_connected_mutex_post(&mutex, __LINE__);
 }
 
 /* --------------------------------------------------------------------------*/
@@ -808,6 +830,11 @@ void app_connected_close(u8 cig_hdl, u8 status)
         return;
     }
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if (rcsp_connect_dev_detect_timer) {
+        sys_timeout_del(rcsp_connect_dev_detect_timer);
+    }
+#endif
     log_info("connected_close");
     //由于是异步操作需要加互斥量保护，避免和开启的流程同时运行,添加的流程请放在互斥量保护区里面
     app_connected_mutex_pend(&mutex, __LINE__);
@@ -847,6 +874,13 @@ void app_connected_close(u8 cig_hdl, u8 status)
 
     //释放互斥量
     app_connected_mutex_post(&mutex, __LINE__);
+    cis_switch_onoff = 0;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if ((status != APP_CONNECTED_STATUS_SUSPEND)) {
+        ll_set_private_access_addr_pair_channel(0);
+        ble_module_enable(1);
+    }
+#endif
 }
 
 bool get_connected_on_off(void)
@@ -1680,5 +1714,12 @@ bool is_open_cis_connet(void)
 #endif
     return 0;
 }
+
+u8 get_cis_switch_onoff(void)
+{
+    return cis_switch_onoff;
+}
+
+
 #endif
 

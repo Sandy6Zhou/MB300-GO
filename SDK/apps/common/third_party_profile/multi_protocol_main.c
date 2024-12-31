@@ -306,6 +306,11 @@ static void multi_protocol_profile_init(void)
     ble_op_multi_att_send_init(att_ram_buffer, ATT_RAM_BUFSIZE, ATT_LOCAL_PAYLOAD_SIZE);
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    extern int auracast_delegator_init(u8 addr_type);
+    auracast_delegator_init(0xfd);//BD_ADDR_TYPE_EDR_ATT
+#endif
+
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     bt_rcsp_interface_init(rcsp_profile_data);
     rcsp_ble_profile_init();

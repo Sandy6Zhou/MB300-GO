@@ -291,7 +291,7 @@ void aec_code_movable_unload(void)
 #endif
 }
 
-#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if defined(TCFG_HI_RES_AUDIO_ENEBALE) || TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
 //调整解码器输出帧长
 static const int frame_unit_size[] = { 64, 128, 256, 384, 512, 1024, 2048, 4096, 8192};
 int decoder_check_frame_unit_size(int dest_len)

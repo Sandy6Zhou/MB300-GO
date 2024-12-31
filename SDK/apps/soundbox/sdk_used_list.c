@@ -651,3 +651,29 @@ split_gain_node_adapter
 #if TCFG_VIRTUAL_BASS_CLASSIC_NODE_ENABLE
 virtual_bass_classic_node_adapter
 #endif
+
+#if TCFG_PHASER_NODE_ENABLE
+phaser_node_adapter
+#endif
+
+#if TCFG_FLANGER_NODE_ENABLE
+flanger_node_adapter
+#endif
+
+#if TCFG_CHORUS_ADVANCE_NODE_ENABLE
+chorus_advance_node_adapter
+#endif
+
+#if TCFG_PINGPONG_ECHO_NODE_ENABLE
+pingpong_echo_node_adapter
+#endif
+
+#if TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE
+stereo_spatial_wider_node_adapter
+#endif
+
+#if TCFG_DISTORTION_CLIPPING_NODE_ENABLE
+distortion_clipping_node_adapter
+#endif
+
+

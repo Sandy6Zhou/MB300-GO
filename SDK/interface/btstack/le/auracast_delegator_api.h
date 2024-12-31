@@ -3,6 +3,7 @@
 
 #include "typedef.h"
 
+
 enum {
     DELEGATOR_SCAN_START_EVENT,
     DELEGATOR_SCAN_STOP_EVENT,
@@ -54,10 +55,11 @@ extern int auracast_delegator_event_notify(uint16_t event, uint8_t *packet, uint
 
 typedef struct {
     u32 server_map;     // BASS、PACS、JL_private ......
+    u8  adv_edr;
 } auracast_delegator_user_config_t;
 
 extern void auracast_delegator_config(auracast_delegator_user_config_t *param);
-extern int auracast_delegator_init();
+extern int auracast_delegator_init(u8 addr_type);
 extern int auracast_delegator_uninit();
 extern int auracast_delegator_adv_enable(u8 en);
 

@@ -429,6 +429,15 @@ int le_audio_stream_rx_frame(void *stream, void *data, int len, u32 timestamp)
     struct le_audio_frame *frame = NULL;
 
     if (rx_stream->frames_len + len > rx_stream->frames_max_size) {
+        /*printf("frame no buffer.\n");*/
+        spin_lock(&ctx->lock);
+        if (!list_empty(&rx_stream->frames)) {
+            frame = list_first_entry(&rx_stream->frames, struct le_audio_frame, entry);
+            list_del(&frame->entry);
+            rx_stream->frames_len -= frame->len;
+            free(frame);
+        }
+        spin_unlock(&ctx->lock);
         putchar('H');
         return 0;
     }

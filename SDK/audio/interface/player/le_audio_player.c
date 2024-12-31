@@ -228,34 +228,6 @@ void le_audio_dvol_down(u8 le_audio_num)
 }
 #endif
 
-static void abandon_le_audio_data(void *p)
-{
-    struct le_audio_player *player = (struct le_audio_player *)p;
-    while (le_audio_stream_get_frame_num(player->le_audio) > 0) {
-        struct le_audio_frame *le_audio_frame = le_audio_stream_get_frame(player->le_audio);
-        if (le_audio_frame) {
-            le_audio_stream_free_frame(player->le_audio, le_audio_frame);
-        }
-    }
-}
-
-static void le_audio_player_start_abandon_data(struct le_audio_player *player)
-{
-    if (player->timer == 0) {
-        player->timer = sys_timer_add(player, abandon_le_audio_data, 50);
-        puts("start_abandon_le_audio_data\n");
-    }
-}
-
-static void le_audio_player_stop_abandon_data(struct le_audio_player *player)
-{
-    if (player->timer) {
-        puts("stop_abandon_le_audio_data\n");
-        abandon_le_audio_data(player);
-        sys_timer_del(player->timer);
-        player->timer = 0;
-    }
-}
 static void le_audio_player_callback(void *private_data, int event)
 {
     struct le_audio_player *player = g_le_audio_player;
@@ -302,11 +274,9 @@ static void le_audio_player_callback(void *private_data, int event)
         le_audio_set_dvol(player->le_audio_num, player->dvol);
         printf("le_audio_player_callback, le_audio_num:%d, dvol:%d\n", player->le_audio_num, player->dvol);
 #endif
-        le_audio_player_stop_abandon_data(player);
         break;
     case STREAM_EVENT_PREEMPTED:
 
-        le_audio_player_start_abandon_data(player);
 
         break;
     }
@@ -430,9 +400,6 @@ void le_audio_player_close(u8 *conn)
         return;
 
     }
-
-    le_audio_player_stop_abandon_data(player);
-
 
     if (player->le_audio != conn) {
         return;

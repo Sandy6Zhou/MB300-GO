@@ -30,7 +30,12 @@
 #include "spdif.h"
 #include "soundbox.h"
 /* #include "mic.h" */
-/* #include "iis.h" */
+#include "iis.h"
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#include "ble_rcsp_server.h"
+#include "btstack_rcsp_user.h"
+#endif
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
 
@@ -108,6 +113,11 @@ static const pair_callback_t pair_rx_cb = {
 static u8 save_sync_status_table[5][2] = {0};
 #endif
 
+static u8 bis_switch_onoff = 0;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+static int rcsp_connect_dev_detect_timer = 0;
+#endif
 /**************************************************************************************************
   Function Declarations
 **************************************************************************************************/
@@ -665,6 +675,20 @@ static void app_broadcast_suspend()
     }
 }
 
+
+
+static void app_broadcast_retry_open(void *priv)
+{
+    u32 role = (u32)priv;
+
+    if (role) {
+        app_broadcast_open_with_role(role - 1);
+    } else {
+        app_broadcast_open();
+    }
+
+
+}
 /* --------------------------------------------------------------------------*/
 /**
  * @brief 开启广播
@@ -704,19 +728,24 @@ int app_broadcast_open()
         return -EPERM;
     }
 
+
+    bis_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+    if (bt_rcsp_ble_conn_num() > 0) {
+        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)0, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+        return;
+    } else {
+        rcsp_connect_dev_detect_timer = 0;
+    }
+#endif
     log_info("broadcast_open");
 
+    app_broadcast_mutex_pend(&mutex, __LINE__);
 #if TCFG_KBOX_1T3_MODE_EN
     le_audio_ops_register(APP_MODE_NULL);
 #endif
 
-#if defined(RCSP_MODE) && RCSP_MODE
-#if RCSP_BLE_MASTER
-    setRcspConnectBleAddr(NULL);
-#endif
-    setLeAudioModeMode(JL_LeAudioModeBig);
-    ble_module_enable(0);
-#endif
     if (is_broadcast_as_transmitter()) {
         //初始化广播发送端参数
         params = set_big_params(mode->name, BROADCAST_ROLE_TRANSMITTER, 0);
@@ -753,6 +782,7 @@ int app_broadcast_open()
         }
     }
 
+    app_broadcast_mutex_post(&mutex, __LINE__);
     return temp_broadcast_hdl;
 }
 
@@ -795,19 +825,25 @@ int app_broadcast_open_with_role(u8 role)
         return -EPERM;
     }
 
+    bis_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+    if (bt_rcsp_ble_conn_num() > 0) {
+        u32 temp_role = role + 1;
+        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)temp_role, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+        return;
+    } else {
+        rcsp_connect_dev_detect_timer = 0;
+    }
+#endif
+
     log_info("broadcast_open_with_role %d", role);
 
+    app_broadcast_mutex_pend(&mutex, __LINE__);
 #if TCFG_KBOX_1T3_MODE_EN
     le_audio_ops_register(APP_MODE_NULL);
 #endif
 
-#if defined(RCSP_MODE) && RCSP_MODE
-#if RCSP_BLE_MASTER
-    setRcspConnectBleAddr(NULL);
-#endif
-    setLeAudioModeMode(JL_LeAudioModeBig);
-    ble_module_enable(0);
-#endif
     if (role) {
         //初始化广播发送端参数
         params = set_big_params(mode->name, BROADCAST_ROLE_TRANSMITTER, 0);
@@ -844,6 +880,8 @@ int app_broadcast_open_with_role(u8 role)
         }
     }
 
+    app_broadcast_mutex_post(&mutex, __LINE__);
+
     return temp_broadcast_hdl;
 }
 
@@ -869,6 +907,11 @@ int app_broadcast_close(u8 status)
 
     log_info("broadcast_close");
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if (rcsp_connect_dev_detect_timer) {
+        sys_timeout_del(rcsp_connect_dev_detect_timer);
+    }
+#endif
     //由于是异步操作需要加互斥量保护，避免和开启开广播的流程同时运行,添加的流程请放在互斥量保护区里面
     app_broadcast_mutex_pend(&mutex, __LINE__);
 
@@ -898,9 +941,11 @@ int app_broadcast_close(u8 status)
     //释放互斥量
     app_broadcast_mutex_post(&mutex, __LINE__);
 
-#if defined(RCSP_MODE) && RCSP_MODE
+    bis_switch_onoff = 0;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     if (status != APP_BROADCAST_STATUS_SUSPEND) {
-        setLeAudioModeMode(JL_LeAudioModeNone);
+        ll_set_private_access_addr_pair_channel(0);
         ble_module_enable(1);
     }
 #endif
@@ -1714,6 +1759,12 @@ WIRELESS_CUSTOM_DATA_STUB_REGISTER(cmd_status_sync) = {
 u8 get_bis_connected_num(void)
 {
     return bis_connected_nums;
+}
+
+
+u8 get_bis_switch_onoff(void)
+{
+    return bis_switch_onoff;
 }
 
 #endif

@@ -15,7 +15,7 @@ typedef  struct _MULIT_MIX_TOOL_SET {
 
 typedef struct _MixParam {
     void *data;        //每路数据
-    float gain;        //增益
+    float gain;        //增益 eq_db2mag(gain);
 } MixParam;
 
 void Mix16to16(MixParam *mix1, MixParam *mix2, MixParam *mix3, short *out, int channel, int way_num, int per_channel_npoint);
@@ -42,25 +42,29 @@ void Mix16to32(MixParam *mix1, MixParam *mix2, MixParam *mix3, int *out, int cha
 //out  数据输出   不带16bit饱和
 //per_channel_npoint   每个通道的样点数
 
-/*----------------------------------------------------------------------------*/
-/**@brief    16bit位宽，多带数据叠加
-   @param   drc:句柄
-   @param   *out_buf_tmp:输出目标地址
-   @param   point_per_channel:每通道点数
-   @return
-   @note
-*/
-/*----------------------------------------------------------------------------*/
+
+/*
+ *16bit位宽，多带数据叠加
+ **out_buf_tmp:输出目标地址
+ *point_per_channel:每通道点数
+ * */
 void band_merging_16bit(short *in0, short *in1, short *in2, short *out_buf_tmp, int points, u8 nband);
-/*----------------------------------------------------------------------------*/
-/**@brief    32bit位宽，多带数据叠加
-   @param   drc:句柄
-   @param   *out_buf_tmp:输出目标地址
-   @param   point_per_channel:每通道点数
-   @return
-   @note
-*/
-/*----------------------------------------------------------------------------*/
+
+/*32bit位宽，多带数据叠加
+ *out_buf_tmp:输出目标地址
+ *point_per_channel:每通道点数
+ * */
 void band_merging_32bit(int *in0, int *in1, int *in2, s32 *out_buf_tmp, int points, u8 nband);
+
+/*
+ *将数据叠加到输出buf
+ *mix:输入数据结构
+ *out:输出数据地址
+ *npoint:总的点数
+ * */
+void mix_data_16to16(MixParam *mix, short *out, int npoint);
+void mix_data_32to16(MixParam *mix, short *out, int npoint);
+void mix_data_32to32(MixParam *mix, int *out, int npoint);
+void mix_data_16to32(MixParam *mix, int *out, int npoint);
 
 #endif

@@ -28,7 +28,7 @@ static char *music_mode[] = {"Bt", "Aux", "File", "Fm", "Spd"};
 static char *father_name[] = {"VSPro", "3dPlus", "VBassPro"}; //模块节点名,如添加新的模块节点名，需对宏定义MEDIA_MODULE_NODE_UPDATE_EN进行配置使能
 static char *sur_name[] = {"Sur"};
 static char *crossover_name[] = {"Cross", "LRCross"};
-static char *band_merge_name[] = {"Band", "LRBand", "LSCBand", "RSCBand", "RLSCBand", "RRSCBand", "MixerGain"};
+static char *band_merge_name[] = {"Band", "LRBand", "LR3Band", "LSCBand", "RSCBand", "RLSCBand", "RRSCBand", "MixerGain"};
 static char *two_band_merge_name[] = {"Bandt"};
 static char *bass_treble_name[] = {"Bass"};
 static char *smix_name[] = {"Smix0", "Smix1", "MidSMix", "LowSMix"};
@@ -52,6 +52,7 @@ static char *effect_dev1_name[] = {"effdevx"};
 static char *effect_dev2_name[] = {"effdevx"};
 static char *effect_dev3_name[] = {"effdevx"};
 static char *effect_dev4_name[] = {"effdevx"};
+static char *stereo_spatial_wider_name[] = {"SPWider"};
 
 /* 混响模块命名 */
 static char *mic_name = "Eff";
@@ -530,6 +531,20 @@ void effect_scene_set(u8 scene)
         }
     }
 #endif
+
+#if TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE
+    for (int i = 0; i < ARRAY_SIZE(stereo_spatial_wider_name); i++) {
+        effects_name_sprintf(tar_name,  stereo_spatial_wider_name[i], music_mode[cur_mode]);
+        ret = stereo_spatial_wider_update_parm(scene, tar_name, 0);
+        if (ret < 0) {
+#if MEDIA_MODULE_NODE_UPDATE_EN
+            module_node_update_parm(stereo_spatial_wider_update_parm, scene, stereo_spatial_wider_name[i], 0);
+#endif
+        }
+    }
+#endif
+
+
 }
 
 /* 音乐模式：根据参数组个数顺序切换场景 */

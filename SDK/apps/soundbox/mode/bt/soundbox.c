@@ -35,6 +35,7 @@
 
 #include "bt_event_func.h"
 
+#include "dtemp_pll_trim.h"
 #if TCFG_AUDIO_ANC_ENABLE
 #include "audio_anc.h"
 #endif/*TCFG_AUDIO_ANC_ENABLE*/
@@ -69,7 +70,8 @@
 
 #if TCFG_APP_BT_EN
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+
 #include "multi_protocol_main.h"
 #endif
 
@@ -170,14 +172,95 @@ void bredr_handle_register()
 
 }
 
+#if TCFG_USER_TWS_ENABLE
+static void rx_dual_conn_info(u8 *data, int len)
+{
+    r_printf("tws_sync_dual_conn_info_func: %d, %d\n", data[0], data[1]);
+    if (data[0]) {
+        g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_TWO;
+    } else {
+        g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
+    }
+    syscfg_write(CFG_TWS_DUAL_CONFIG, &(g_bt_hdl.bt_dual_conn_config), 1);
+
+}
+static void tws_sync_dual_conn_info_func(void *_data, u16 len, bool rx)
+{
+    if (rx) {
+        u8 *data = malloc(len);
+        memcpy(data, _data, len);
+        int msg[4] = { (int)rx_dual_conn_info, 2, (int)data, len};
+        os_taskq_post_type("app_core", Q_CALLBACK, 4, msg);
+    }
+}
+REGISTER_TWS_FUNC_STUB(app_vol_sync_stub) = {
+    .func_id = 0x1A782C1B,
+    .func    = tws_sync_dual_conn_info_func,
+};
+void tws_sync_dual_conn_info()
+{
+    u8 data[2];
+    data[0] = g_bt_hdl.bt_dual_conn_config;
+    tws_api_send_data_to_slave(data, 2, 0x1A782C1B);
+
+}
+#endif
+
+u8 get_bt_dual_config()
+{
+    return g_bt_hdl.bt_dual_conn_config;
+}
+void set_dual_conn_config(u8 *addr, u8 dual_conn_en)
+{
+#if TCFG_BT_DUAL_CONN_ENABLE
+    if (dual_conn_en) {
+        g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_TWO;
+    } else {
+        g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
+        u8 *other_conn_addr;
+        other_conn_addr = btstack_get_other_dev_addr(addr);
+        if (other_conn_addr) {
+            btstack_device_detach(btstack_get_conn_device(other_conn_addr));
+        }
+        if (addr) {
+            updata_last_link_key(addr, get_remote_dev_info_index());
+        }
+    }
+#if TCFG_USER_TWS_ENABLE
+    tws_sync_dual_conn_info();
+#endif
+    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
+    bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? 2 : 1);
+    syscfg_write(CFG_TWS_DUAL_CONFIG, &(g_bt_hdl.bt_dual_conn_config), 1);
+    r_printf("set_dual_conn_config=%d\n", g_bt_hdl.bt_dual_conn_config);
+#endif
+
+}
+void test_set_dual_config()
+{
+    u8 *addr = bt_get_current_remote_addr();
+    set_dual_conn_config(addr, (get_bt_dual_config() == DUAL_CONN_SET_TWO ? 0 : 1));
+}
+
 void bt_function_select_init()
 {
-    /* set_bt_data_rate_acl_3mbs_mode(1); */
 #if TCFG_BT_DUAL_CONN_ENABLE
-    bt_set_user_ctrl_conn_num(2);
+    g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_TWO;//DUAL_CONN_SET_TWO:默认可以连接1t2  DUAL_CONN_SET_ONE:默认只支持一个连接
+    syscfg_read(CFG_TWS_DUAL_CONFIG, &(g_bt_hdl.bt_dual_conn_config), 1);
 #else
-    bt_set_user_ctrl_conn_num(1);
+    g_bt_hdl.bt_dual_conn_config = DUAL_CONN_CLOSE;
 #endif
+
+    g_printf("<<<<<<<<<<<<<<bt_dual_conn_config=%d>>>>>>>>>>\n", g_bt_hdl.bt_dual_conn_config);
+    if (g_bt_hdl.bt_dual_conn_config != DUAL_CONN_SET_TWO) {
+        set_tws_task_interval(120);
+    }
+
+    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
+    set_lmp_support_dual_con((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
+    bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? 2 : 1);
+
+    /* set_bt_data_rate_acl_3mbs_mode(1); */
     bt_set_support_msbc_flag(TCFG_BT_MSBC_EN);
 
 #if (!CONFIG_A2DP_GAME_MODE_ENABLE)
@@ -275,7 +358,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         rcsp_init();
 #endif
 #endif
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
         multi_protocol_bt_init();
 #endif
         break;
@@ -922,7 +1005,6 @@ int bt_nobackground_status_event_handler(int *msg)
         g_bt_hdl.init_ok = 1;
         g_bt_hdl.initializing = 0;
 
-        extern int trim_timer_add();
         trim_timer_add();
 
 
