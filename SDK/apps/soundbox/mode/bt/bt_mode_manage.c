@@ -6,6 +6,7 @@
 #include "local_tws_player.h"
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
+#include "app_le_auracast.h"
 
 #if TCFG_USER_TWS_ENABLE
 void bt_tws_onoff(u8 onoff)
@@ -32,8 +33,11 @@ int bt_work_mode_select(u8 mode)
     if (mode == g_bt_hdl.work_mode) {
         printf("same work mode  : %d", g_bt_hdl.work_mode);
         return 0;
-
     }
+    if (mode == 0) {
+        mode = BT_MODE_SIGLE_BOX;
+    }
+
     switch (g_bt_hdl.work_mode) {
     case BT_MODE_SIGLE_BOX:
 
@@ -50,15 +54,23 @@ int bt_work_mode_select(u8 mode)
         app_broadcast_uninit();
 #endif
         break;
+    case BT_MODE_AURACAST:
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        le_audio_scene_deal(LE_AUDIO_APP_CLOSE);
+        app_auracast_uninit();
+#endif
+        break;
     case BT_MODE_CIG:
 
         break;
     }
+
+    g_bt_hdl.last_work_mode = g_bt_hdl.work_mode;
     g_bt_hdl.work_mode = mode;
 
     switch (mode) {
     case BT_MODE_SIGLE_BOX:
-
+        dual_conn_page_device();
         break;
     case BT_MODE_TWS:
 #if TCFG_USER_TWS_ENABLE
@@ -66,9 +78,18 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_BROADCAST:
+        dual_conn_page_device();
 #if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
         app_broadcast_init();
         app_broadcast_open();
+        le_audio_scene_deal(LE_AUDIO_APP_OPEN);
+#endif
+        break;
+    case BT_MODE_AURACAST:
+        dual_conn_page_device();
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        app_auracast_init();
+        app_auracast_open();
         le_audio_scene_deal(LE_AUDIO_APP_OPEN);
 #endif
         break;
@@ -84,17 +105,28 @@ void bt_work_mode_switch_to_next(void)
     static u8 work_mode = BT_MODE_SIGLE_BOX;
     work_mode ++;
 #if TCFG_USER_TWS_ENABLE == 0
+#if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
     if (work_mode == BT_MODE_TWS) {
         work_mode = BT_MODE_BROADCAST;
     }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (work_mode == BT_MODE_TWS) {
+        work_mode = BT_MODE_AURACAST;
+    }
+#endif
 #endif
 
 #if (!(LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN))
     if (work_mode ==  BT_MODE_BROADCAST) {
-        work_mode =  BT_MODE_CIG;
+        work_mode =  BT_MODE_AURACAST;
     }
 #endif
 
+#if (!(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)))
+    if (work_mode ==  BT_MODE_AURACAST) {
+        work_mode =  BT_MODE_CIG;
+    }
+#endif
     if (work_mode == BT_MODE_CIG) {
         work_mode = BT_MODE_SIGLE_BOX;
     }

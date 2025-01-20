@@ -157,6 +157,9 @@ u8 get_pc_le_audio_flag(void)
 
 static int pc_mode_broadcast_deal_callback(int deal_music_status)
 {
+    if (!app_in_mode(APP_MODE_PC)) {
+        return 0;
+    }
     printf(">>>>>[PC] Enter %s Func! deal_music_status:%d!!\n", __func__, deal_music_status);
     wait_pc_open_broadcast_cb_deal_flag = 0;
     le_audio_scene_deal(deal_music_status);
@@ -194,12 +197,17 @@ static int get_pc_play_status(void)
     if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-    return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+
+    if (pc_get_status()) {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
 }
 
 static int pc_local_audio_open(void)
 {
-    if (1) {//(get_pc_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+    if (get_pc_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开本地播放
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
         pc_spk_player_open();

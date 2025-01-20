@@ -97,6 +97,11 @@ void bt_check_enter_sniff()
         return;
     }
 #endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (check_local_not_accept_sniff_by_remote()) {
+        return;
+    }
+#endif
 
     struct sniff_ctrl_config_t config;
     int conn_cnt = bt_api_enter_sniff_status_check(SNIFF_CNT_TIME, addr);

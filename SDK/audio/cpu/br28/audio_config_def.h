@@ -276,6 +276,14 @@
 //支持 ADC DIGITAL 按最大通道数开启, 中断拿数需按使用的ADC_CH拆分
 #define TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
 
+/*
+ * 2.1声道音量调节节点配置
+ */
+#define DVOL_2P1_CH_DVOL_ADJUST_TOTAL	    0	//2.1声道总增益
+#define DVOL_2P1_CH_DVOL_ADJUST_LR		    1	//2.1声道LR通路增益
+#define DVOL_2P1_CH_DVOL_ADJUST_SW		    2	//2.1声道低音通路增益
+#define DVOL_2P1_CH_DVOL_ADJUST_NODE		DVOL_2P1_CH_DVOL_ADJUST_TOTAL
+
 #define ANC_EXT_V1			1	//仅支持入耳
 #define ANC_EXT_V2			2	//支持入耳、半入耳
 //ANC耳道自适应版本

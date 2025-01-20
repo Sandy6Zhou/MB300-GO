@@ -47,6 +47,9 @@ void app_auracast_close_in_other_mode();
 int auracast_source_media_reset();
 
 void app_auracast_init(void);
+void app_auracast_uninit(void);
+
+int app_auracast_open();
 
 int app_auracast_sink_start_record(void);
 int app_auracast_sink_stop_record(void);

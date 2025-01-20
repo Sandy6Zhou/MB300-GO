@@ -44,7 +44,7 @@ int iis_player_open(void)
         return -ENOMEM;
     }
 
-    player->stream = jlstream_pipeline_parse_by_node_name(uuid, "IIS0_RX1");
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_IIS0_RX);
 
     if (!player->stream) {
         err = -ENOMEM;

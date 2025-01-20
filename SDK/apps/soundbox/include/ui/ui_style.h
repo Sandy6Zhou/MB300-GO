@@ -78,6 +78,7 @@
 #define ID_WINDOW_POWER_OFF    UI_IDLE_MENU_MAIN
 #define ID_WINDOW_SPDIF        UI_SPDIF_MENU_MAIN
 #define ID_WINDOW_SINK         UI_SINK_MENU_MAIN
+#define ID_WINDOW_IIS      	   UI_IIS_MENU_MAIN
 #define ID_WINDOW_IDLE         UI_IDLE_MENU_MAIN
 
 #endif
@@ -95,6 +96,7 @@
 #define ID_WINDOW_POWER_OFF    (0)
 #define ID_WINDOW_SPDIF        (0)
 #define ID_WINDOW_IDLE         (0)
+#define ID_WINDOW_IIS          (0)
 
 #endif
 

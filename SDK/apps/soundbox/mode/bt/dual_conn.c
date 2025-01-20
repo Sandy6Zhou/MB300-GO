@@ -49,8 +49,6 @@ void clr_page_mode_active(void)
     page_mode_active = 0;
 }
 
-static void dual_conn_page_device();
-
 static bool page_list_empty()
 {
     return list_empty(&g_dual_conn.page_head);
@@ -307,31 +305,31 @@ static void dual_conn_page_device_timeout(void *p)
     }
 }
 
-static void dual_conn_page_device()
+void dual_conn_page_device()
 {
     struct page_device_info *info, *n;
 
-    if (!g_dual_conn.page_head_inited) {
-        return;
-    }
-
-#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
-    if (bt_get_total_connect_dev()) {
-        return;
-    }
-#endif
-
-    list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
-        if (info->timer) {
+    if (page_mode_active == 0) {
+        if (!g_dual_conn.page_head_inited) {
             return;
         }
-        printf("start_page_device: %lu, %d\n", jiffies, info->timeout);
-        put_buf(info->mac_addr, 6);
-        info->timer = sys_timeout_add(info, dual_conn_page_device_timeout,
-                                      TCFG_BT_PAGE_TIMEOUT * 1000);
-        bt_cmd_prepare(USER_CTRL_START_CONNEC_VIA_ADDR, 6, info->mac_addr);
-        page_mode_active = 1;
-        return;
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+        if (bt_get_total_connect_dev()) {
+            return;
+        }
+#endif
+        list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
+            if (info->timer) {
+                return;
+            }
+            printf("start_page_device: %lu, %d\n", jiffies, info->timeout);
+            put_buf(info->mac_addr, 6);
+            info->timer = sys_timeout_add(info, dual_conn_page_device_timeout,
+                                          TCFG_BT_PAGE_TIMEOUT * 1000);
+            bt_cmd_prepare(USER_CTRL_START_CONNEC_VIA_ADDR, 6, info->mac_addr);
+            page_mode_active = 1;
+            return;
+        }
     }
 
     dual_conn_state_handler();
@@ -399,6 +397,9 @@ static int dual_conn_btstack_event_handler(int *_event)
 
     switch (event->event) {
     case BT_STATUS_INIT_OK:
+        if (!TCFG_BT_BACKGROUND_ENABLE && (app_in_mode(APP_MODE_BT) == 0)) {
+            return 0;
+        }
         puts("dual_conn BT_STATUS_INIT_OK");
         dual_conn_page_devices_init();
 #if (TCFG_BT_BACKGROUND_ENABLE)

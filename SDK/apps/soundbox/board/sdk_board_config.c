@@ -81,6 +81,9 @@ int gpio_config_init()
 int gpio_config_uninit()
 {
 #if TCFG_IO_CFG_AT_POWER_OFF
+    for (int i = 0; i < ARRAY_SIZE(g_io_cfg_at_poweroff); i++) {
+        soff_gpio_protect(g_io_cfg_at_poweroff[i].gpio);
+    }
     gpio_config_set(g_io_cfg_at_poweroff, ARRAY_SIZE(g_io_cfg_at_poweroff));
 #endif
 

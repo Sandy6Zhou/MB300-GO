@@ -191,6 +191,7 @@ int music_app_msg_handler(int *msg)
 #endif
          || msg_type == APP_MSG_MUSIC_MOUNT_PLAY_START || msg_type == APP_MSG_MUSIC_PLAY_START
          || msg_type == APP_MSG_MUSIC_PLAY_START_BY_SCLUST || msg_type == APP_MSG_MUSIC_PLAY_START_BY_DEV  //只屏蔽主动开启音乐播放的事件
+         || msg_type == APP_MSG_MUSIC_CHANGE_DEV
         )) {
 
         printf("BIS receiving state does not support the event %d", msg_type);
@@ -216,7 +217,7 @@ int music_app_msg_handler(int *msg)
 #if (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 music_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
-        if (get_broadcast_role() == 2) {
+        if (get_le_audio_curr_role() == 2) {
             //接收端已连上
             music_volume_mute_mark ^= 1;
             audio_app_mute_en(music_volume_mute_mark);

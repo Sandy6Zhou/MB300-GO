@@ -638,6 +638,7 @@ c_SRC_FILES := \
 	apps/soundbox/ui/led7/ui_common.c \
 	apps/soundbox/ui/led7/ui_fm.c \
 	apps/soundbox/ui/led7/ui_idle.c \
+	apps/soundbox/ui/led7/ui_iis.c \
 	apps/soundbox/ui/led7/ui_linein.c \
 	apps/soundbox/ui/led7/ui_music.c \
 	apps/soundbox/ui/led7/ui_pc.c \

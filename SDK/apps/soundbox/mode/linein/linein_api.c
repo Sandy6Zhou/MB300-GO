@@ -303,6 +303,7 @@ void linein_local_start(void *priv)
 REGISTER_LOCAL_TWS_OPS(linein) = {
     .name 	= APP_MODE_LINEIN,
     .local_audio_open = linein_local_start,
+    .get_play_status = linein_get_status,
 };
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \

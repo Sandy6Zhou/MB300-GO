@@ -11,6 +11,7 @@
 #include "tone_player.h"
 #include "app_task.h"
 #include "app_config.h"
+#include "rtc/rtc_dev.h"
 
 #if TCFG_APP_RTC_EN
 #ifdef  RTC_ALM_EN

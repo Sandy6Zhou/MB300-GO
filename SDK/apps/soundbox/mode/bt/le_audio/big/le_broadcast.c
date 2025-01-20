@@ -588,7 +588,7 @@ int broadcast_receiver_connect_deal(void *priv)
     u8 bis_num = get_bis_num(BROADCAST_ROLE_RECEIVER);
     struct broadcast_hdl *broadcast_hdl = 0;
     big_hdl_t *hdl = (big_hdl_t *)priv;
-    struct le_audio_stream_params params;
+    struct le_audio_stream_params params = {0};
 
     log_info("broadcast_receiver_connect_deal");
     log_info("hdl->big_hdl:%d, hdl->bis_hdl:%d", hdl->big_hdl, hdl->bis_hdl[0]);
@@ -1370,14 +1370,13 @@ u8 get_broadcast_role(void)
 /* ----------------------------------------------------------------------------*/
 u8 get_broadcast_connect_status(void)
 {
-
     struct broadcast_hdl *p;
-
-
     u8 conn_status = 0;
-
-
     u8 i = 0;
+
+    if (!broadcast_init_flag) {
+        return conn_status;
+    }
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     spin_lock(&broadcast_lock);

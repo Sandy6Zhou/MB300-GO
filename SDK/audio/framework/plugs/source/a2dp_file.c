@@ -99,6 +99,11 @@ void a2dp_file_low_latency_enable(u8 enable)
     a2dp_low_latency = enable;
 }
 
+u8 a2dp_file_get_low_latency_status(void)
+{
+    return a2dp_low_latency;
+}
+
 static void abandon_a2dp_data(void *p)
 {
     struct a2dp_file_hdl *hdl = (struct a2dp_file_hdl *)p;

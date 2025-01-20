@@ -13,6 +13,7 @@
 #include "user_cfg.h"
 #include "bt_common.h"
 #include "le_broadcast.h"
+#include "dual_conn.h"
 
 #if(TCFG_USER_TWS_ENABLE && TCFG_APP_BT_EN)
 
@@ -41,8 +42,6 @@ struct dual_conn_handle {
 
 static struct dual_conn_handle g_dual_conn;
 static u8 page_mode_active = 0;
-
-static void dual_conn_page_device();
 
 void clr_page_mode_active(void)
 {
@@ -536,41 +535,40 @@ static void dual_conn_page_device_timeout(void *p)
     }
 }
 
-static void dual_conn_page_device()
+void dual_conn_page_device()
 {
     struct page_device_info *info, *n;
     u8 edr_background_active = 1;
 
+    if (page_mode_active == 0) {
 #if TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
-    if (bt_background_active()) {
-        return;
-    }
-#endif
-
-    if (!g_dual_conn.page_head_inited) {
-        return;
-    }
-
-#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
-    if (bt_get_total_connect_dev()) {
-        return;
-    }
-#endif
-
-    list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
-        if (info->timer) {
+        if (bt_background_active()) {
             return;
         }
-        if (tws_api_get_role() == TWS_ROLE_SLAVE) {
-            break;
+#endif
+#if (TCFG_BT_DUAL_CONN_ENABLE == 0)
+        if (bt_get_total_connect_dev()) {
+            return;
         }
-        printf("start_page_device: %lu, %d\n", jiffies, info->timeout);
-        put_buf(info->mac_addr, 6);
-        info->timer = sys_timeout_add(info, dual_conn_page_device_timeout,
-                                      TCFG_BT_PAGE_TIMEOUT * 1000);
-        bt_cmd_prepare(USER_CTRL_START_CONNEC_VIA_ADDR, 6, info->mac_addr);
-        page_mode_active = 1;
-        return;
+#endif
+        if (!g_dual_conn.page_head_inited) {
+            return;
+        }
+        list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
+            if (info->timer) {
+                return;
+            }
+            if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+                break;
+            }
+            printf("start_page_device: %lu, %d\n", jiffies, info->timeout);
+            put_buf(info->mac_addr, 6);
+            info->timer = sys_timeout_add(info, dual_conn_page_device_timeout,
+                                          TCFG_BT_PAGE_TIMEOUT * 1000);
+            bt_cmd_prepare(USER_CTRL_START_CONNEC_VIA_ADDR, 6, info->mac_addr);
+            page_mode_active = 1;
+            return;
+        }
     }
 
     tws_dual_conn_state_handler();

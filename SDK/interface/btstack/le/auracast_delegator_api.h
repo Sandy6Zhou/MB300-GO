@@ -56,6 +56,9 @@ extern int auracast_delegator_event_notify(uint16_t event, uint8_t *packet, uint
 typedef struct {
     u32 server_map;     // BASS、PACS、JL_private ......
     u8  adv_edr;
+    char device_name[32];
+    u8 device_name_len;
+    u16 adv_interval;
 } auracast_delegator_user_config_t;
 
 extern void auracast_delegator_config(auracast_delegator_user_config_t *param);

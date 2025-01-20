@@ -983,6 +983,7 @@
 <Unit filename="apps/soundbox/ui/led7/ui_common.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/led7/ui_fm.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/led7/ui_idle.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/soundbox/ui/led7/ui_iis.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/led7/ui_linein.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/led7/ui_music.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/led7/ui_pc.c"><Option compilerVer="CC"/></Unit>
@@ -1440,7 +1441,7 @@
 <Unit filename="interface/driver/cpu/periph/two_io_led.h" />
 <Unit filename="interface/driver/cpu/periph/uart.h" />
 <Unit filename="interface/driver/device/inside_flash.h" />
-<Unit filename="interface/driver/device/rtc/rtc.h" />
+<Unit filename="interface/driver/device/rtc/rtc_dev.h" />
 <Unit filename="interface/driver/device/sdmmc/sdmmc.h" />
 <Unit filename="interface/driver/device/usb/ch9.h" />
 <Unit filename="interface/driver/device/usb/device/custom_hid.h" />

@@ -31,6 +31,8 @@
 #include "soundbox.h"
 /* #include "mic.h" */
 #include "iis.h"
+#include "pc_spk_player.h"
+#include "bt_slience_detect.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #include "ble_rcsp_server.h"
@@ -509,13 +511,21 @@ u8 get_broadcast_app_mode_exit_flag(void)
 /* ----------------------------------------------------------------------------*/
 static bool is_broadcast_as_transmitter()
 {
+    struct app_mode *cur_mode = app_get_current_mode();
+
+#if (TCFG_BT_BACKGROUND_ENABLE)
+    //如果能量检测中则等待能量检测完成再触发做发送的流程，避免重复打开数据流
+    u8 addr[6];
+    if (cur_mode->name == APP_MODE_BT && bt_slience_get_detect_addr(addr)) {
+        return false;
+    }
+#endif
+
 #if (LEA_BIG_FIX_ROLE == 1)
     return true;
 #elif (LEA_BIG_FIX_ROLE == 2)
     return false;
 #endif
-
-    struct app_mode *cur_mode = app_get_current_mode();
 
     //当前处于蓝牙模式并且已连接手机设备时，
     //(1)播歌作为广播发送设备；
@@ -600,7 +610,11 @@ static bool is_broadcast_as_transmitter()
     //当处于下面几种模式时，作为广播发送设备
     if (cur_mode->name == APP_MODE_PC) {
 #if defined(TCFG_USB_SLAVE_AUDIO_SPK_ENABLE) && TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        return true;
+        if (pc_get_status() || config_broadcast_as_master) {
+            return true;
+        } else {
+            return false;
+        }
 #else
         return false;
 #endif
@@ -988,11 +1002,10 @@ int app_broadcast_switch(void)
 
     if (!tone_player_runing()) {
         if (find) {
-            if (app_broadcast_close(APP_BROADCAST_STATUS_STOP) == 0) {
-                play_tone_file_alone_callback(get_tone_files()->le_broadcast_close,
-                                              (void *)TONE_INDEX_BROADCAST_CLOSE,
-                                              broadcast_tone_play_end_callback);
-            }
+            bt_work_mode_select(g_bt_hdl.last_work_mode);
+            play_tone_file_alone_callback(get_tone_files()->le_broadcast_close,
+                                          (void *)TONE_INDEX_BROADCAST_CLOSE,
+                                          broadcast_tone_play_end_callback);
         } else {
 
             if (g_bt_hdl.work_mode !=  BT_MODE_BROADCAST) {

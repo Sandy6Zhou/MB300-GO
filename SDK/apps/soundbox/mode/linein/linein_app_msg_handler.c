@@ -17,6 +17,7 @@
 #include "app_le_connected.h"
 #include "le_broadcast.h"
 #include "audio_config.h"
+#include "app_le_auracast.h"
 
 #include "rcsp_linein_func.h"
 

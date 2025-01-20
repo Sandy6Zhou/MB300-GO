@@ -308,6 +308,7 @@ REGISTER_APP_MODE(fm_mode) = {
 REGISTER_LOCAL_TWS_OPS(fm) = {
     .name 	= APP_MODE_FM,
     .local_audio_open = fm_local_start,
+    .get_play_status = fm_player_runing,
 };
 
 static u8 fm_idle_query(void)

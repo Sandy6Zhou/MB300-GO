@@ -92,7 +92,7 @@ RTC_DEV_PLATFORM_DATA_BEGIN(rtc_data)
 .default_sys_time = &def_sys_time,
  .default_alarm = &def_alarm,
 #if defined(CONFIG_CPU_BR28)
-  .clk_sel = RTC_CLK_RES_SEL,
+  .rtc_clk = RTC_CLK_RES_SEL,
 #endif
 #if defined(CONFIG_CPU_BR27)
    .rtc_clk = RTC_CLK_RES_SEL,

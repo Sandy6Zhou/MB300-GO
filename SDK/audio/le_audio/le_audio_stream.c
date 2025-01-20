@@ -50,6 +50,8 @@ struct le_audio_rx_stream {
 
 struct le_audio_stream_context {
     u16 conn;
+    u8 start;
+    u32 start_time;
     struct le_audio_stream_format fmt;
     struct le_audio_tx_stream *tx_stream;
     struct le_audio_rx_stream *rx_stream;
@@ -78,6 +80,7 @@ void *le_audio_stream_create(u16 conn, struct le_audio_stream_format *fmt)
            ctx->fmt.frame_dms, ctx->fmt.sdu_period, ctx->fmt.sample_rate);
     spin_lock_init(&ctx->lock);
     ctx->conn = conn;
+    ctx->start = 1;
 
     return ctx;
 }
@@ -109,11 +112,29 @@ static int __le_audio_stream_tx_data_handler(void *stream, void *data, int len, 
 {
     struct le_audio_tx_stream *tx_stream = (struct le_audio_tx_stream *)stream;
     struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)tx_stream->parent;
+    struct le_audio_rx_stream *rx_stream = ctx->rx_stream;
     u32 rlen = 0;
     u32 read_alloc_len = 0;
 
     /*putchar('A');*/
+    if (!ctx->start) {
+        u32 time_diff = (bb_le_clk_get_time_us() - ctx->start_time) & 0xfffffff;
+        if (time_diff > 5000000) {
+            return 0;
+        }
+        ctx->start = 1;
+    }
+
+    if (cbuf_get_data_len(&tx_stream->buf.cbuf) < len ||
+        (rx_stream && cbuf_get_data_len(&rx_stream->buf.cbuf) < rx_stream->sdu_period_len)) {
+        /*对于需要本地播放的必须满足播放与发送都有一个interval的数据*/
+        /*y_printf("no data : %u, %d\n", timestamp, latency);*/
+        return 0;
+    }
+
+    spin_lock(&ctx->lock);
     rlen = cbuf_read(&tx_stream->buf.cbuf, data, len);
+    spin_unlock(&ctx->lock);
     /*printf("-%d, %d-\n", len, rlen);*/
     if (!rlen) {
         return 0;
@@ -128,12 +149,13 @@ static int __le_audio_stream_tx_data_handler(void *stream, void *data, int len, 
     }
 
     /*putchar('B');*/
-    if (ctx->rx_stream) {
-        struct le_audio_rx_stream *rx_stream = ctx->rx_stream;
-        if (cbuf_get_data_len(&rx_stream->buf.cbuf) < rx_stream->sdu_period_len) {
-            printf("--tick tx2rx sync : no data--\n");
-        }
+    if (rx_stream) {
+        spin_lock(&ctx->lock);
         void *addr = cbuf_read_alloc(&rx_stream->buf.cbuf, &read_alloc_len);
+        if (read_alloc_len < rx_stream->sdu_period_len) {
+            printf("local not align to tx.\n");
+            return rlen;
+        }
         if ((tx_stream->coding_type == AUDIO_CODING_LC3 || tx_stream->coding_type == AUDIO_CODING_JLA) &&
             rx_stream->coding_type == AUDIO_CODING_PCM) {
             timestamp = (timestamp + (ctx->fmt.frame_dms == 75 ? 4000L : 2500L)) & 0xfffffff;
@@ -152,6 +174,7 @@ static int __le_audio_stream_tx_data_handler(void *stream, void *data, int len, 
         timestamp = (timestamp + latency) & 0xfffffff;
         le_audio_stream_rx_frame(rx_stream, addr, rx_stream->sdu_period_len, timestamp);
         cbuf_read_updata(&rx_stream->buf.cbuf, rx_stream->sdu_period_len);
+        spin_unlock(&ctx->lock);
         /*printf("-%d-\n", rx_stream->sdu_period_len);*/
     }
 
@@ -222,6 +245,7 @@ void *le_audio_stream_tx_open(void *le_audio, int coding_type, void *priv, int (
     int sdu_period_len = (ctx->fmt.sdu_period / 100 / ctx->fmt.frame_dms) * frame_size;
     tx_stream->buf.size = sdu_period_len * 8;
     tx_stream->buf.addr = malloc(tx_stream->buf.size);
+    ASSERT(tx_stream->buf.addr != NULL, "please check audio param");
     printf("tx stream buffer : 0x%x, %d\n", (u32)tx_stream->buf.addr, tx_stream->buf.size);
     cbuf_init(&tx_stream->buf.cbuf, tx_stream->buf.addr, tx_stream->buf.size);
     tx_stream->coding_type = coding_type;
@@ -275,6 +299,17 @@ int le_audio_stream_tx_buffered_time(void *stream)
     return cbuf_get_data_len(&tx_stream->buf.cbuf) / frame_size * ctx->fmt.frame_dms * 100;
 }
 
+int le_audio_stream_set_start_time(void *le_audio, u32 start_time)
+{
+    struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)le_audio;
+
+    if (ctx) {
+        ctx->start_time = start_time;
+        ctx->start = 0;
+    }
+
+    return 0;
+}
 
 int le_audio_stream_set_bit_width(void *le_audio, u8 bit_width)
 {
@@ -402,11 +437,10 @@ int le_audio_stream_tx_write(void *stream, void *data, int len)
 
     int wlen = cbuf_write(&tx_stream->buf.cbuf, (u8 *)data, len);
     if (wlen < len) {
-        putchar('t');
-        /* printf("le_audio_stream_debug : tx cbuffer full : %d, %d-\n", len, wlen); */
+        /* putchar('t'); */
     }
 
-    return wlen ;
+    return wlen;
 }
 
 int le_audio_stream_rx_write(void *stream, void *data, int len)
@@ -415,11 +449,34 @@ int le_audio_stream_rx_write(void *stream, void *data, int len)
 
     int wlen = cbuf_write(&rx_stream->buf.cbuf, data, len);
     if (wlen < len) {
-        putchar('r');
-        /* printf("le_audio_stream_debug : rx cbuffer full : %d, %d\n", cbuf_get_data_len(&rx_stream->buf.cbuf), len); */
+        /* putchar('r'); */
     }
 
     return wlen;
+}
+
+int le_audio_stream_tx_drain(void *stream)
+{
+    struct le_audio_tx_stream *tx_stream = (struct le_audio_tx_stream *)stream;
+    struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)tx_stream->parent;
+
+    /*r_printf("tx buffered : %d\n", cbuf_get_data_len(&tx_stream->buf.cbuf));*/
+    spin_lock(&ctx->lock);
+    cbuf_clear(&tx_stream->buf.cbuf);
+    spin_unlock(&ctx->lock);
+    return 0;
+}
+
+int le_audio_stream_rx_drain(void *stream)
+{
+    struct le_audio_rx_stream *rx_stream = (struct le_audio_rx_stream *)stream;
+    struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)rx_stream->parent;
+
+    /*r_printf("rx buffered : %d\n", cbuf_get_data_len(&rx_stream->buf.cbuf));*/
+    spin_lock(&ctx->lock);
+    cbuf_clear(&rx_stream->buf.cbuf);
+    spin_unlock(&ctx->lock);
+    return 0;
 }
 
 int le_audio_stream_rx_frame(void *stream, void *data, int len, u32 timestamp)

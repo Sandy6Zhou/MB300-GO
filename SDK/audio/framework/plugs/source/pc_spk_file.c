@@ -68,6 +68,17 @@ struct pc_spk_fmt_t {
     u8 bit;
     u32 sample_rate;
 };
+
+struct pc_spk_isr_state {
+    volatile u8 pc_spk_in_isr;
+    u8 pc_spk_isr_close;
+};
+
+struct pc_spk_isr_state pc_spk_isr = {
+    .pc_spk_in_isr = 0,
+    .pc_spk_isr_close = 0,
+};
+
 struct pc_spk_fmt_t pc_spk_fmt = {
     .init = 0,
     .channel = SPK_CHANNEL,
@@ -84,43 +95,20 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
     struct stream_frame *frame = NULL;
 
     int wlen = 0;
+    pc_spk_isr.pc_spk_in_isr = 1;
+
+    if (pc_spk_isr.pc_spk_isr_close) {
+        pc_spk_isr.pc_spk_in_isr = 0;
+        return;
+    }
 
     if (!hdl) {
-#if TCFG_KBOX_1T3_MODE_EN
-        if (pc_spk_player_runing() == 0) {
-            //打开播放器
-            pcspk_open_player_by_taskq();
-        }
-#else
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-        if (!get_broadcast_role()) {
-            if (pc_spk_player_runing() == 0) {
-                //打开播放器
-                pcspk_open_player_by_taskq();
-            }
-        } else {
-            pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
-        }
-#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-        if (!get_auracast_role()) {
-            if (pc_spk_player_runing() == 0) {
-                //打开播放器
-                pcspk_open_player_by_taskq();
-            }
-        } else {
-            pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_START);
-        }
-#else
-        if (pc_spk_player_runing() == 0) {
-            //打开播放器
-            pcspk_open_player_by_taskq();
-        }
-#endif
-#endif
+        pc_spk_isr.pc_spk_in_isr = 0;
         return;
     }
 
     if (!hdl->start || !len) { //增加0长帧的过滤，避免引起后续节点的写异常
+        pc_spk_isr.pc_spk_in_isr = 0;
         return;
     }
     struct stream_node  *source_node = hdl->source_node;
@@ -150,6 +138,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
     if (cache_len >= len * SPK_PUSH_FRAME_NUM) {
         frame = source_plug_get_output_frame(source_node, cache_len);
         if (!frame) {
+            pc_spk_isr.pc_spk_in_isr = 0;
             return;
         }
         frame->len    = cache_len;
@@ -164,6 +153,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
         source_plug_put_output_frame(source_node, frame);
         hdl->data_run = 1;
     }
+    pc_spk_isr.pc_spk_in_isr = 0;
 }
 
 /* 定时器检测 pcspk 在线 */
@@ -179,25 +169,6 @@ static void pcspk_det_timer_cb(void *priv)
                     //已经往后面推数据突然中断没有起的情况
                     hdl->data_run = 0;
                     log_debug(">>>>>>> PCSPK LOST CONNECT <<<<<<<");
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-                    if (get_broadcast_role() == 1) {
-                        //广播（发送端）
-                        log_debug(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
-                        pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_STOP);
-                    } else {
-                        pcspk_close_player_by_taskq();
-                    }
-#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-                    if (get_auracast_role() == 1) {
-                        //广播（发送端）
-                        log_debug(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
-                        pc_mode_broadcast_deal_by_taskq(LE_AUDIO_MUSIC_STOP);
-                    } else {
-                        pcspk_close_player_by_taskq();
-                    }
-#else
-                    pcspk_close_player_by_taskq();
-#endif
                 }
             }
         }
@@ -219,6 +190,7 @@ static void *pc_spk_file_init(void *source_node, struct stream_node *node)
         log_error("%s, %d, alloc memory failed!\n", __func__, __LINE__);
         return NULL;
     }
+    pc_spk_isr.pc_spk_isr_close = 0;
     node->type |= NODE_TYPE_IRQ;
     hdl->source_node = source_node;
     hdl->node = node;
@@ -324,6 +296,10 @@ static void pc_spk_release(void *_hdl)
         }
     }
 
+    pc_spk_isr.pc_spk_isr_close = 1;
+    while (pc_spk_isr.pc_spk_in_isr) {
+        os_time_dly(1);
+    }
     pcspk_close_det_timer();
     free(hdl->cache_buf);
     hdl->cache_buf = NULL;

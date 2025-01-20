@@ -593,7 +593,7 @@ int bt_tws_poweroff()
 
     if (tws_api_get_role() == TWS_ROLE_MASTER) {
         send_page_device_addr_2_sibling();
-        tws_api_detach((CONFIG_TWS_USE_COMMMON_ADDR) ? TWS_DETACH_BY_POWEROFF : TWS_DETACH_BY_LOCAL, 5000);   //这里不等完全断开的话，退出蓝牙模式把资源全部释放之后如果还没断完，底层的状态就乱了,这里是应用BY_LOCAL是为了不进行主从切换
+        tws_api_detach((CONFIG_TWS_USE_COMMMON_ADDR) ? TWS_DETACH_BY_POWEROFF : TWS_DETACH_BY_USER, 5000);   //这里不等完全断开的话，退出蓝牙模式把资源全部释放之后如果还没断完，底层的状态就乱了,这里是应用BY_LOCAL是为了不进行主从切换
     } else {
         tws_api_detach(TWS_DETACH_BY_POWEROFF, 5000);   //这里不等完全断开的话，退出蓝牙模式把资源全部释放之后如果还没断完，底层的状态就乱了
     }
@@ -915,9 +915,10 @@ int bt_tws_connction_status_event_handler(int *msg)
         if (app_var.goto_poweroff_flag) {
             break;
         }
+        reason |= (evt->args[3] << 8);
         g_bt_hdl.phone_ring_sync_tws = 0;
-        work_state = evt->args[3];
-        log_info("tws_event_connection_detach: state: %x,%x\n", gtws.state, work_state);
+        work_state = evt->args[4];
+        log_info("tws_event_connection_detach: state: %x,%x %x\n", gtws.state, work_state, reason);
 
         app_power_set_tws_sibling_bat_level(0xff, 0xff);
 

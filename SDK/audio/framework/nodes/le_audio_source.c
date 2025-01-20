@@ -35,9 +35,8 @@ struct le_audio_source_context {
     u32 coding_type;
     struct list_head syncts_list;
     spinlock_t lock;
-    u32 tick_usec;
-    u32 latch_time_state;
-    u32 usec_offset;
+    u32 local_time;
+    u32 le_audio_time;
 };
 
 struct le_audio_source_iport {
@@ -49,8 +48,6 @@ struct le_audio_source_iport {
     u16 frame_dms;
     u16 frame_len;
     u8 bit_width;
-
-    struct stream_frame *frame;
 };
 
 static int le_audio_source_bind(struct stream_node *node, u16 uuid)
@@ -66,6 +63,7 @@ static int le_audio_source_bind(struct stream_node *node, u16 uuid)
     return 0;
 }
 
+extern uint32_t bb_le_clk_get_time_us(void);
 static int le_audio_source_frame_timestamp_handler(struct le_audio_source_context *ctx, struct stream_frame *frame)
 {
     if (!(frame->flags & FRAME_FLAG_TIMESTAMP_ENABLE)) {
@@ -82,8 +80,11 @@ static int le_audio_source_frame_timestamp_handler(struct le_audio_source_contex
         time_diff = frame->timestamp - node->timestamp;
         if (time_diff >= 0) {
             sound_pcm_syncts_latch_trigger(node->syncts);
-            printf("--le audio tx syncts start : %u, %u--\n", frame->timestamp, node->timestamp);
             node->start = 1;
+            int frame_latency = frame->timestamp - (audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR);
+            u32 start_time = (bb_le_clk_get_time_us() + (frame_latency / TIMESTAMP_US_DENOMINATOR)) & 0xfffffff;
+            le_audio_stream_set_start_time(ctx->le_audio, start_time);
+            printf("--le audio tx syncts start : %u, %u, %d, %u--\n", frame->timestamp, node->timestamp, frame_latency / TIMESTAMP_US_DENOMINATOR, start_time);
         }
     }
     spin_unlock(&ctx->lock);
@@ -99,13 +100,9 @@ static void le_audio_source_handle_frame(struct stream_iport *iport, struct stre
     int wlen;
 
     while (1) {
-        frame = hdl->frame;
+        frame = jlstream_pull_frame(iport, note);
         if (!frame) {
-            frame = jlstream_pull_frame(iport, note);
-            if (!frame) {
-                break;
-            }
-            hdl->frame = frame;
+            break;
         }
 
         if (hdl->attribute == LE_AUDIO_TX_SOURCE) {
@@ -120,78 +117,43 @@ static void le_audio_source_handle_frame(struct stream_iport *iport, struct stre
 #endif
         }
         if (wlen < frame->len) {
+            jlstream_return_frame(iport, frame);
             note->state |= NODE_STA_OUTPUT_BLOCKED;
             break;
         }
 
         jlstream_free_frame(frame);
-        hdl->frame = NULL;
     }
 }
 
-extern uint32_t bb_le_clk_get_time_us(void);
-static u32 le_audio_usec_to_local_usec(struct le_audio_source_context *ctx, u32 usec)
+static void le_audio_usec_to_local_usec(struct le_audio_source_context *ctx)
 {
-    u32 time = bb_le_clk_get_time_us();//le_audio_stream_tx_time(hdl->stream);
-    u32 local_usec = audio_jiffies_usec();
-
-    if (ctx->latch_time_state == 0) {
-        ctx->latch_time_state = 1;
-        ctx->usec_offset = time - local_usec;
-    } else {
-        /*校准*/
-        u32 expect_time = (local_usec + ctx->usec_offset) & 0xfffffff;
-        if (time != expect_time) {
-            int diff = 0;
-            if (time > expect_time) {
-                if (time > 0x7ffffff && expect_time < 0x7ffffff) {
-                    diff = -(int)((u32)(expect_time - time) & 0x7ffffff);
-                } else {
-                    diff = time - expect_time;
-                }
-            } else {
-                if (time < 0x7ffffff && expect_time > 0x7ffffff) {
-                    diff = (int)((u32)(time - expect_time) & 0x7ffffff);
-                } else {
-                    diff = time - expect_time;
-                }
-            }
-            ctx->usec_offset += diff;
-        }
-
-        if (usec < ctx->tick_usec) {
-            ctx->usec_offset -= 0x10000000;
-        }
-    }
-
-    ctx->tick_usec = usec;
-
-    local_usec = usec - ctx->usec_offset;
-
-    /*printf("<%u, %u, %u, %lu>\n", usec, time, local_usec, audio_jiffies_usec());*/
-    return local_usec;
+    local_irq_disable();
+    ctx->local_time = audio_jiffies_usec();
+    ctx->le_audio_time = bb_le_clk_get_time_us();
+    local_irq_enable();
+    /*printf("local le audio switch init : %d, %d\n", ctx->local_time, ctx->le_audio_time);*/
 }
+
 static int le_audio_tx_tick_handler(void *priv, int period, u32 send_timestamp)
 {
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)priv;
 
     int pcm_frames = period * ctx->sample_rate / 1000000;
-    u32 buffered_time = 0;
-    u32 buffered_frames = 0;
-    u32 local_time_usec = 0;
+    u32 tx_timestamp = ctx->local_time + ((send_timestamp - ctx->le_audio_time) & 0xfffffff);
+    ctx->local_time = tx_timestamp;
+    ctx->le_audio_time = send_timestamp;
 
     struct le_audio_source_syncts *node;
     spin_lock(&ctx->lock);
-    local_time_usec = le_audio_usec_to_local_usec(ctx, send_timestamp);
     list_for_each_entry(node, &ctx->syncts_list, entry) {
         if (!node->start) {
             continue;
         }
-        sound_pcm_update_frame_num_and_time(node->syncts, pcm_frames, local_time_usec, pcm_frames);
+        sound_pcm_update_frame_num_and_time(node->syncts, pcm_frames, tx_timestamp, pcm_frames);
     }
     spin_unlock(&ctx->lock);
 
-    /*printf("out : %d, %u, %lu\n", pcm_frames, local_time_usec, audio_jiffies_usec()); */
     return 0;
 }
 
@@ -237,11 +199,13 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
             hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
         } else {
             if (ctx->tx_stream) {
+                le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler);
                 return 0;
             }
             ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
             le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler);
             hdl->attribute = LE_AUDIO_TX_SOURCE;
+            le_audio_usec_to_local_usec(ctx);
         }
         return 0;
     }
@@ -251,6 +215,7 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
         ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
         le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler);
         hdl->attribute = LE_AUDIO_TX_SOURCE;
+        le_audio_usec_to_local_usec(ctx);
         return 0;
     }
 
@@ -284,10 +249,26 @@ static void le_audio_source_ioc_stop(struct stream_iport *iport)
         }
     }
 
-    if (hdl->frame) {
-        jlstream_free_frame(hdl->frame);
-        hdl->frame = NULL;
+}
+
+static void le_audio_source_suspend(struct stream_iport *iport)
+{
+    struct le_audio_source_iport *hdl = (struct le_audio_source_iport *)iport->private_data;
+    struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
+
+    if (hdl->attribute == LE_AUDIO_LOCAL_SOURCE) {
+#if LEA_LOCAL_SYNC_PLAY_EN
+        if (ctx->rx_stream) {
+            le_audio_stream_rx_drain(ctx->rx_stream);
+        }
+#endif
+    } else {
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL);
+        if (ctx->tx_stream) {
+            le_audio_stream_tx_drain(ctx->tx_stream);
+        }
     }
+
 }
 
 static int le_audio_source_ioc_fmt_nego(struct stream_iport *iport)
@@ -323,6 +304,8 @@ static int le_audio_source_buffer_delay_time(struct stream_iport *iport)
     if (ctx->tx_stream) {
         return le_audio_stream_tx_buffered_time(ctx->tx_stream)/*us*/ / 100;
     }
+
+
 
     return 0;
 }
@@ -421,6 +404,9 @@ static int le_audio_source_ioctl(struct stream_iport *iport, int cmd, int arg)
         break;
     case NODE_IOC_START:
         le_audio_source_ioc_start(iport);
+        break;
+    case NODE_IOC_SUSPEND:
+        le_audio_source_suspend(iport);
         break;
     case NODE_IOC_STOP:
         le_audio_source_ioc_stop(iport);

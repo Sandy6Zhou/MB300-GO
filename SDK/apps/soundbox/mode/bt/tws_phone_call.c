@@ -633,7 +633,7 @@ static int bt_phone_status_event_handler(int *msg)
     case BT_STATUS_PHONE_OUT:
         log_info("BT_STATUS_PHONE_OUT\n");
         put_buf(bt->args, 6);
-        bt_phone_out(bt->args);
+        /* bt_phone_out(bt->args); */
         tws_phone_call_send_cmd(CMD_PHONE_OUT, bt->args, 0, 0);
 #if TCFG_BT_PHONE_NUMBER_ENABLE
         bt_cmd_prepare(USER_CTRL_HFP_CALL_CURRENT, 0, NULL); //发命令获取电话号码

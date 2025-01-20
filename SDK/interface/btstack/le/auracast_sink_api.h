@@ -45,6 +45,7 @@ enum {
     AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT,
     AURACAST_SINK_BIG_INFO_REPORT_EVENT,
     AURACAST_SINK_ISO_RX_CALLBACK_EVENT,
+    AURACAST_SINK_BIG_SYNC_FAIL_EVENT,
 };
 
 typedef void (*auracast_sink_event_callback_t)(uint16_t event, uint8_t *packet, uint16_t length);
@@ -52,7 +53,7 @@ typedef void (*auracast_sink_event_callback_t)(uint16_t event, uint8_t *packet, 
 extern int auracast_sink_init(void);
 extern int auracast_sink_uninit(void);
 extern void auracast_sink_scan_start(void);
-extern void auracast_sink_scan_stop(void);
+extern void auracast_sink_stop_scan(void);
 extern int auracast_sink_big_sync_create(auracast_sink_source_info_t *param);
 extern void auracast_sink_big_create(void);
 extern void auracast_sink_rescan(void);

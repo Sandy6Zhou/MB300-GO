@@ -914,9 +914,16 @@ void music_local_start(void *priv)
     }
 }
 
+static bool get_music_player_status(void)
+{
+    u8 paly_status = music_file_get_player_status(get_music_file_player());
+    return (paly_status == FILE_PLAYER_START) ? TRUE : FALSE;
+}
+
 REGISTER_LOCAL_TWS_OPS(music) = {
     .name 	= APP_MODE_MUSIC,
     .local_audio_open = music_local_start,
+    .get_play_status = get_music_player_status,
 };
 
 

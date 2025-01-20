@@ -25,5 +25,6 @@ void bt_music_player_time_timer_deal(u8 en);
 
 int bt_app_msg_handler(int *msg);
 void bt_close_discoverable_and_connectable(void);
+void ble_standard_dut_test_init(void);
 
 #endif

@@ -19,6 +19,7 @@
 #include "bt_slience_detect.h"
 #include "bt_ability.h"
 #include "le_broadcast.h"
+#include "wireless_trans.h"
 
 int bt_app_msg_handler(int *msg)
 {
@@ -139,6 +140,9 @@ int bt_app_msg_handler(int *msg)
             dev_vol = app_audio_bt_volume_update(bt_addr, APP_AUDIO_STATE_MUSIC);
         }
         set_music_device_volume(dev_vol);
+        if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
+            break;
+        }
         int err = a2dp_player_open(bt_addr);
         if (err == -EBUSY) {
             printf("bt_app_msg_handler open a2dp_player failed\n");

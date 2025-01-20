@@ -422,6 +422,7 @@ void app_common_device_event_handler(int *msg)
 #if TCFG_APP_RTC_EN
         if (msg[1] == DEVICE_EVENT_IN) {
             printf("ALM ONLINE");
+            alarm_flag = 1;
             alarm_update_info_after_isr();
             if (true != app_in_mode(APP_MODE_RTC)) {
                 app = APP_MODE_RTC;
@@ -429,6 +430,7 @@ void app_common_device_event_handler(int *msg)
                 alarm_ring_start();
             }
         } else if (msg[1] == DEVICE_EVENT_OUT) {
+            alarm_flag = 0;
             printf("ALM OFFLINE");
         }
 #endif

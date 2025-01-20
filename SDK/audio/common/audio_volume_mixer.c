@@ -660,7 +660,9 @@ static void app_audio_volume_save_do(void *priv)
         __this->save_vol_cnt = 0;
         local_irq_enable();
         log_info("VOL_SAVE %d\n", app_var.music_volume);
-        syscfg_write(CFG_MUSIC_VOL, &app_var.music_volume, 2);//中断里不能操作vm 关中断不能操作vm
+        if (app_in_mode(APP_MODE_PC) == 0) {                      //pc模式写vm导致丢中断,暂时PC模式不设置音量等到退出pc模式才记录
+            syscfg_write(CFG_MUSIC_VOL, &app_var.music_volume, 2);//中断里不能操作vm 关中断不能操作vm
+        }
         return;
     }
     local_irq_enable();
@@ -749,6 +751,12 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
 #if TCFG_APP_PC_EN
             case APP_MODE_PC:
                 sprintf(node_name, "%s%s", "Vol_Pcspk", dvol_type[i]);
+                printf("vol_name:%d,%s\n", __LINE__, node_name);
+                break;
+#endif
+#if TCFG_APP_IIS_EN
+            case APP_MODE_IIS:
+                sprintf(node_name, "%s%s", "Vol_IIS", dvol_type[i]);
                 printf("vol_name:%d,%s\n", __LINE__, node_name);
                 break;
 #endif

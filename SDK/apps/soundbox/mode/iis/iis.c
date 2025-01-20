@@ -13,6 +13,7 @@
 #include "iis.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
+#include "local_tws.h"
 
 #if TCFG_APP_IIS_EN
 
@@ -38,6 +39,9 @@ static int iis_tone_play_end_callback(void *priv, enum stream_event event)
 
 void app_iis_exit()
 {
+#if TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
     app_set_current_mode(app_get_mode_by_name(APP_MODE_NULL));        //这里把MODE设置成NULL，防止快速切模式的时候提示音还没播完已经退出当前模式，在提示音回调里还继续开广播
 
     iis_stop();
@@ -49,14 +53,21 @@ void app_iis_exit()
 
 static int app_iis_init(void)
 {
+    int ret = -1;
     iis_idle_flag = 0;
 
     tone_player_stop();
 
-    int ret = play_tone_file_callback(get_tone_files()->iis_mode, NULL, iis_tone_play_end_callback);
-    if (ret) {
-        //提示音播放失败
-        iis_tone_play_end_callback(NULL, STREAM_EVENT_NONE);
+#if TCFG_LOCAL_TWS_ENABLE
+    ret = local_tws_enter_mode(get_tone_files()->iis_mode, NULL);
+#endif //TCFG_LOCAL_TWS_ENABLE
+
+    if (ret != 0) {
+        ret = play_tone_file_callback(get_tone_files()->iis_mode, NULL, iis_tone_play_end_callback);
+        if (ret) {
+            //提示音播放失败
+            iis_tone_play_end_callback(NULL, STREAM_EVENT_NONE);
+        }
     }
 
 #ifdef TCFG_PITCH_SPEED_NODE_ENABLE
@@ -160,6 +171,16 @@ REGISTER_LP_TARGET(iis_lp_target) = {
     .is_idle = iis_idle_query,
 };
 
+static void iis_local_start(void *priv)
+{
+    iis_start();
+}
+
+REGISTER_LOCAL_TWS_OPS(iis) = {
+    .name 	= APP_MODE_IIS,
+    .local_audio_open = iis_local_start,
+    .get_play_status = iis_player_runing,
+};
 
 #endif
 

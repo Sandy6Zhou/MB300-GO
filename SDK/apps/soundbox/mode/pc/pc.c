@@ -25,6 +25,7 @@
 #include "app_le_connected.h"
 #include "app_le_auracast.h"
 #include "soundbox.h"
+#include "pc_spk_player.h"
 
 #define LOG_TAG_CONST       PC
 #define LOG_TAG             "[PC]"
@@ -312,5 +313,6 @@ REGISTER_LP_TARGET(pc_lp_target) = {
 REGISTER_LOCAL_TWS_OPS(pc) = {
     .name 	= APP_MODE_PC,
     .local_audio_open = pc_local_start,
+    .get_play_status =  pc_spk_player_runing,
 };
 #endif

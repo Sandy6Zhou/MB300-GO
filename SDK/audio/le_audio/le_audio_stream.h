@@ -102,6 +102,12 @@ void le_audio_stream_latch_time_enable(void *le_audio);
 u32 le_audio_stream_current_time(void *le_audio);
 
 int le_audio_stream_set_bit_width(void *le_audio, u8 bit_width);
+
+int le_audio_stream_tx_drain(void *stream);
+
+int le_audio_stream_rx_drain(void *stream);
+
+int le_audio_stream_set_start_time(void *stream, u32 start_time);
 /*****************************LE Audio stream 音频流管理简介**************************
  *
  *  1、LE Audio 的一条BIS/CIS可对应一路LE Audio stream

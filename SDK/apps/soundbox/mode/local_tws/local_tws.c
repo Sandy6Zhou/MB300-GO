@@ -12,7 +12,7 @@
 #if TCFG_LOCAL_TWS_ENABLE
 #define LOG_TAG             "[LOCAL_TWS]"
 #define LOG_ERROR_ENABLE
-#define LOG_DEBUG_ENABLE
+//#define LOG_DEBUG_ENABLE
 #define LOG_INFO_ENABLE
 /* #define LOG_DUMP_ENABLE */
 #define LOG_CLI_ENABLE
@@ -61,15 +61,15 @@ void local_tws_cmd_send(u8 *data, u8 len)
     __this->cmd_record  = data[0];
     *((u32 *)cmd_list) = __this->cmd_timestamp;
     memcpy(cmd_list + sizeof(int), data, len);
-    log_info("cmd:%d timestamp:%d %d\n", data[0], send_timestamp, __this->cmd_timestamp);
+    log_debug("cmd:%d timestamp:%d %d\n", data[0], send_timestamp, __this->cmd_timestamp);
     tws_api_send_data_to_sibling(cmd_list, len + sizeof(int), TWS_FUNC_ID_LOCAL_TWS);
     free(cmd_list);
 }
 
-void local_tws_vol_report(u8 vol)
+void local_tws_vol_report(u8 vol, u8 ui_reflash)
 {
-    u8 data[2] = {CMD_TWS_VOL_REPORT, vol};
-    log_info("%s %d\n", __func__, vol);
+    u8 data[] = {CMD_TWS_VOL_REPORT, vol, ui_reflash};
+    log_debug("%s %d\n", __func__, vol);
     local_tws_cmd_send(data, sizeof(data));
 }
 
@@ -104,9 +104,15 @@ void local_tws_music_operate(u8 operate, void *arg)
 /* 输出参数描述： void */
 void local_tws_connect_mode_report(void)
 {
-    u8 data[2];
+    u8 data[3] = {0};
+    struct local_tws_mode_ops *ops;
     data[0] = CMD_TWS_CONNECT_MODE_REPORT;
     data[1] = app_get_current_mode()->name;
+    list_for_each_local_tws_ops(ops) {
+        if (ops->name == app_get_current_mode()->name && ops->get_play_status) {
+            data[2] = ops->get_play_status();
+        }
+    }
     local_tws_cmd_send(data, sizeof(data));
     __this->sync_tone_name = NULL;
 }
@@ -172,7 +178,7 @@ u8 local_tws_get_remote_dec_status(void)
 static void sync_vol_timer_hdl(void *priv)
 {
     s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
-    local_tws_vol_report((u8)vol);
+    local_tws_vol_report((u8)vol, 1);
     __this->timer = 0;
 }
 
@@ -187,7 +193,9 @@ void local_tws_sync_vol(void)
     if (__this->timer != 0) {
         sys_timeout_del(__this->timer);
     }
-    __this->timer = sys_timeout_add(NULL, sync_vol_timer_hdl, 1000);
+    s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
+    local_tws_vol_report((u8)vol, 1);
+    /* __this->timer = sys_timeout_add(NULL, sync_vol_timer_hdl, 1000); */
 }
 
 /* 功能描述： localtws同步播放提示音的回调接口, ops是每个模式通过REGISTER_LOCAL_TWS_OPS注册（该接口不是提供给用户手动调用）*/
@@ -247,7 +255,10 @@ int local_tws_enter_mode(const char *file_name, void *priv)
         __this->sync_tone_name = file_name;
         __this->priv = priv;
         if (app_in_mode(APP_MODE_BT)) {
-            if (__this->sync_goto_bt_mode == 0) {    		//TWS有一边切到蓝牙模式同步通知另一边也切到蓝牙模式, 后切换的设备不需要发送命令
+            if (__this->sync_goto_bt_mode == 2) {
+                __this->sync_goto_bt_mode = 0;
+                return -1;
+            } else if (__this->sync_goto_bt_mode == 0) {    		//TWS有一边切到蓝牙模式同步通知另一边也切到蓝牙模式, 后切换的设备不需要发送命令
                 data = CMD_TWS_BACK_TO_BT_MODE_REQ;		    //通知对方进入蓝牙模式
             } else {
                 data = CMD_TWS_BACK_TO_BT_MODE_RSP;
@@ -257,7 +268,19 @@ int local_tws_enter_mode(const char *file_name, void *priv)
             __this->role = LOCAL_TWS_ROLE_NULL;         //进入蓝牙模式不区分source和sink
         } else {
             if (__this->sync_goto_bt_mode == 0) {       //由于推消息到app_core执行切换模式存在滞后，所以当sync_goto_bt_mode为1说明当前需要切到BT，但是被按键打断先切到别的模式，这里如果通知对方切到sink模式会导致当前小机最后处于蓝牙模式，对方处于sink模式
-                local_tws_become_to_source(app_get_current_mode()->name);
+                struct local_tws_mode_ops *ops;
+                bool match = FALSE;
+                list_for_each_local_tws_ops(ops) {
+                    if (ops->name == app_get_current_mode()->name) {
+                        local_tws_become_to_source(app_get_current_mode()->name);
+                        match = TRUE;
+                        break;
+                    }
+                }
+                if (!match) {
+                    data = CMD_TWS_ENTER_NO_SOURCE_MODE_REPORT;
+                    local_tws_cmd_send(&data, 1);
+                }
             }
         }
         return 0;
@@ -285,7 +308,7 @@ void local_tws_exit_mode(void)
                     sys_timeout_del(__this->timer);
                 }
                 s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
-                local_tws_vol_report((u8)vol);
+                local_tws_vol_report((u8)vol, 0);
             }
         }
     }
@@ -329,6 +352,8 @@ static int local_tws_msg_handler(int *msg)
     case CMD_TWS_ENTER_SINK_MODE_RSP:           //sink设备切到sink模式之后回复source，表示已经切换到sink模式了
         log_info("CMD_TWS_ENTER_SINK_MODE_RSP:%d %d\n", app_get_current_mode()->name, cmd[1]);
         __this->role = LOCAL_TWS_ROLE_SOURCE;
+        s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);      //source同步一次音量给sink避免两边音量不同步
+        local_tws_vol_report((u8)vol, 0);
         if (__this->role == LOCAL_TWS_ROLE_SOURCE &&  __this->sync_tone_name && app_in_mode(cmd[1])) {        //cmd[1] = mode, 如果不等于当前模式则说明已经切到下个模式
             tone_player_stop();
             tws_play_tone_file_alone_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
@@ -379,7 +404,26 @@ static int local_tws_msg_handler(int *msg)
             log_info("Both in bt_mode\n");
         } else {
             //两边都处于非蓝牙模式,有可能一边在音乐模式下播歌，另一边开机切到音乐模式才连上
-            local_tws_become_to_source(app_get_current_mode()->name);
+            bool local_play_status = FALSE;
+            struct local_tws_mode_ops *ops;
+            list_for_each_local_tws_ops(ops) {
+                if (ops->name == app_get_current_mode()->name && ops->get_play_status) {
+                    local_play_status = ops->get_play_status();
+                }
+            }
+            printf("local_play_status:%d remote_play_status:%d\n", local_play_status, cmd[2]);
+            if (local_play_status == FALSE && cmd[2] == TRUE) {
+                local_tws_connect_mode_report();
+            } else {
+                local_tws_become_to_source(app_get_current_mode()->name);
+            }
+        }
+        break;
+
+    case CMD_TWS_ENTER_NO_SOURCE_MODE_REPORT:
+        if (app_in_mode(APP_MODE_SINK)) {
+            app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
+            __this->sync_goto_bt_mode = 2;
         }
         break;
 
@@ -393,8 +437,9 @@ static int local_tws_msg_handler(int *msg)
         break;
 
     case CMD_TWS_VOL_REPORT:
-        if (!app_in_mode(APP_MODE_BT)) {
-            app_audio_set_volume(APP_AUDIO_STATE_MUSIC, cmd[1], 1);
+        app_audio_set_volume(APP_AUDIO_STATE_IDLE, cmd[1], 1);
+        if (cmd[2]) {   //sink shound be reflash ui
+            app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_IDLE));
         }
         break;
 
@@ -490,7 +535,9 @@ static int local_tws_app_msg_handler(int *msg)
 {
     switch (msg[0]) {
     case APP_MSG_VOL_CHANGED:
-        local_tws_sync_vol();
+        if (__this->role != LOCAL_TWS_ROLE_SINK) {
+            local_tws_sync_vol();
+        }
         break;
     default:
         break;

@@ -1,4 +1,3 @@
-
 #include "jlstream.h"
 #include "classic/tws_api.h"
 #include "media/audio_base.h"
@@ -9,6 +8,7 @@
 #include "app_main.h"
 #include "le_audio_player.h"
 #include "le_audio_stream.h"
+#include "uac_stream.h"
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
@@ -321,6 +321,11 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
             jlstream_set_scene(player->stream, STREAM_SCENE_LEA_CALL);
         } else {
             printf("LEA Service Type:Media\n");
+            if (app_in_mode(APP_MODE_PC)) {
+                u16 l_vol = 0, r_vol = 0;
+                uac_speaker_stream_get_volume(&l_vol, &r_vol);
+                app_audio_set_volume(APP_AUDIO_STATE_MUSIC, (r_vol + l_vol) / 2, 1);
+            }
             jlstream_set_scene(player->stream, STREAM_SCENE_LE_AUDIO);
         }
 

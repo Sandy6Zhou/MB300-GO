@@ -22,6 +22,7 @@ enum {
     CMD_TWS_BACK_TO_BT_MODE_RSP,
     CMD_TWS_CONNECT_MODE_REPORT,
     CMD_TWS_PLAYER_STATUS_REPORT,
+    CMD_TWS_ENTER_NO_SOURCE_MODE_REPORT,
     CMD_TWS_VOL_UP,
     CMD_TWS_VOL_DOWN,
     CMD_TWS_VOL_REPORT,
@@ -44,6 +45,7 @@ typedef struct _local_tws_info {
 struct local_tws_mode_ops {
     enum app_mode_t name;
     void (*local_audio_open)(void *priv);
+    bool (*get_play_status)(void);
 };
 
 #define REGISTER_LOCAL_TWS_OPS(local_tws_ops) \

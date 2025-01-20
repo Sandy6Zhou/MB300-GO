@@ -1,6 +1,6 @@
 #ifndef APP_RTC_H
 #define APP_RTC_H
-#include "rtc/rtc.h"
+#include "rtc/rtc_dev.h"
 
 void set_rtc_sw(void);
 void set_rtc_pos(void);

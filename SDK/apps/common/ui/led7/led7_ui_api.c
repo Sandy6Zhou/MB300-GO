@@ -90,6 +90,9 @@ static const struct ui_dis_api *const ui_dis_main[] = {
 #if TCFG_LOCAL_TWS_ENABLE
     &sink_main,
 #endif
+#if TCFG_APP_IIS_EN
+    &iis_main,
+#endif
     &idle_main,
 };
 
