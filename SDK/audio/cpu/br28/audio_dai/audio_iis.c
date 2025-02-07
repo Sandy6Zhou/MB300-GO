@@ -222,6 +222,51 @@ int audio_iis_check_hw_rx_and_tx_status(u8 module_idx)
     }
     return 0;
 }
+/*
+ *检查相应通道的输入输出方向,以及使能的状态
+ * */
+int audio_iis_check_hw_cfg_status(u8 module_idx, u8 ch_idx, u8 tar_dir)
+{
+    int find = false;
+    int en = 0;
+    u8 dir = 0;
+    struct iis_file_cfg cfg = {0};
+    int rlen = audio_iis_read_cfg(module_idx, &cfg);
+    if (rlen == sizeof(cfg)) {
+        for (int i = 0; i < 4; i++) {
+            if (i != ch_idx) {
+                continue;
+            }
+            if (cfg.hwcfg[i].en) {
+                if (!cfg.hwcfg[i].dir) {
+                    dir = ALINK_DIR_TX;
+                } else {
+                    dir = ALINK_DIR_RX;
+                }
+            }
+            en = cfg.hwcfg[i].en;
+            find = true;
+            break;
+        }
+    }
+
+    if (find) {
+        if (!en) {
+            log_error("iis ch[%d] cfg disable\n", ch_idx);//通道未使能
+            ASSERT(0);
+        }
+        if (en && (dir != tar_dir)) {
+            log_error("iis ch[%d] %s cfg dir error\n", ch_idx, tar_dir ? "rx" : "tx"); //通道方向配置或者使用错误
+            ASSERT(0);
+        }
+
+    } else {
+        log_error("iis module[%d] cfg error\n", module_idx);//可视化配置界面模块参数结构与代码参数结构不一致
+        ASSERT(0);
+    }
+
+    return find;
+}
 
 /*
  * audio_iis_init : 	申请iis需要的资源和初始化iis配置
@@ -235,7 +280,7 @@ void *audio_iis_init(struct alink_param params)
     struct _iis_hdl *hdl = zalloc(sizeof(struct _iis_hdl));
     u8 module_idx = params.module_idx;
     u8 bit_width  = params.bit_width;
-    int dma_size  = params.dma_size;
+    u32 dma_size  = params.dma_size;
     u32 sr        = params.sr;
     if (hdl) {
         hdl->fixed_pns = params.fixed_pns;
@@ -1721,9 +1766,9 @@ void audio_iis_syncts_trigger_with_timestamp(void *iis_ch, u32 timestamp)
  *rx irq点数:rx_irq_points
  *return :使用该长度
  * */
-int audio_iis_fix_dma_len(u32 module_idx, u32 tx_dma_buf_time_ms, u16 rx_irq_points, u8 bit_width, u8 ch_num)
+u32 audio_iis_fix_dma_len(u32 module_idx, u32 tx_dma_buf_time_ms, u16 rx_irq_points, u8 bit_width, u8 ch_num)
 {
-    int dma_len = IIS_RX_DMA_LEN;
+    u32 dma_len = IIS_RX_DMA_LEN;
     u32 point_size = bit_width ? 4 : 2;
     if (audio_iis_check_hw_rx_and_tx_status(module_idx)) { //tx与rx共同使能，或者只有tx，buf长度使用tx的长度
         dma_len = tx_dma_buf_time_ms * ((AUDIO_DAC_MAX_SAMPLE_RATE + 999) / 1000) * ch_num  * point_size;

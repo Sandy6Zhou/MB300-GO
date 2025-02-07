@@ -36,7 +36,7 @@
 
 #define SCAN_WINDOW_SLOT                10
 #define SCAN_INTERVAL_SLOT              (28*2)
-#define PRIMARY_ADV_INTERVAL_SLOT       (192/2)
+#define PRIMARY_ADV_INTERVAL_SLOT       (192)
 
 /**************************************************************************************************
   Data Types
@@ -59,7 +59,7 @@ static big_parameter_t big_tx_param = {
         .eadv_int_slot  = PRIMARY_ADV_INTERVAL_SLOT,
         .padv_int_slot  = PRIMARY_ADV_INTERVAL_SLOT,
         .vdr = {
-            .tx_delay   = 3500,
+            .tx_delay   = 1000,
         },
     },
 };

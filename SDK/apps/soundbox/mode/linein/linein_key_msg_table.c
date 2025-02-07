@@ -44,7 +44,7 @@ const int key_linein_ad_num9_msg_table[KEY_ACTION_MAX] = {
 };
 #else  /*LCD按键*/
 const int key_linein_ad_num0_msg_table[KEY_ACTION_MAX] = {
-    APP_MSG_CHANGE_MODE,        APP_MSG_KEY_POWER_OFF,      APP_MSG_KEY_POWER_OFF_HOLD,  APP_MSG_NULL,           	 APP_MSG_NULL,          APP_MSG_NULL,
+    APP_MSG_CHANGE_MODE,        APP_MSG_KEY_POWER_OFF,      APP_MSG_KEY_POWER_OFF_HOLD,      APP_MSG_KEY_POWER_OFF_RELEASE,           	 APP_MSG_NULL,          APP_MSG_NULL,
 };
 const int key_linein_ad_num1_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_LCD_OK,             APP_MSG_LCD_MENU,           APP_MSG_NULL,               APP_MSG_NULL,                APP_MSG_NULL,          APP_MSG_NULL,
@@ -147,7 +147,7 @@ const int key_linein_ir_num20_msg_table[KEY_ACTION_MAX] = {
 #if TCFG_IOKEY_ENABLE
 //短按                  //长按                  //hold                       //长按抬起                  //双击                       //三击
 const int key_linein_io_num0_msg_table[KEY_ACTION_MAX] = {
-    APP_MSG_CHANGE_MODE,    APP_MSG_KEY_POWER_OFF,    	APP_MSG_KEY_POWER_OFF_HOLD, APP_MSG_NULL,            APP_MSG_NULL,     		APP_MSG_NULL,
+    APP_MSG_CHANGE_MODE,    APP_MSG_KEY_POWER_OFF,    	APP_MSG_KEY_POWER_OFF_HOLD,       APP_MSG_KEY_POWER_OFF_RELEASE,            APP_MSG_NULL,     		APP_MSG_NULL,
 };
 const int key_linein_io_num1_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_MUSIC_PP,       APP_MSG_NULL,    		APP_MSG_NULL,           APP_MSG_NULL,            APP_MSG_NULL,     		APP_MSG_NULL,

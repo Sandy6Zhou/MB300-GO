@@ -8,6 +8,10 @@
 #include "key_driver.h"
 #include "system/timer.h"
 
+/*最大多击次数限制, 目前SDK默认支持按键三击，如果需要更大的按键连击次数，改动此处需要同步修改*/
+/*对应模式的key_msg_table.c的按键消息表,增加对应事件的消息映射*/
+#define MULTI_CLICK_MAX_CNT     3
+
 struct key_hold {
     u8 send_3s_msg;
     u8 send_5s_msg;
@@ -75,6 +79,9 @@ static int multi_clicks_translate(struct key_event *key)
     }
     if (key->event == KEY_ACTION_NO_KEY) {
         if (click_cnt >= 2) {
+            if (click_cnt > MULTI_CLICK_MAX_CNT) {
+                click_cnt = MULTI_CLICK_MAX_CNT;        //限制多击按键最大连击次数，避险出现连击次数超过按键表定义的事件导致发到其他按键消息或者引发内存越界访问
+            }
             key->event = KEY_ACTION_DOUBLE_CLICK + (click_cnt - 2);
         } else {
             key->event = KEY_ACTION_CLICK;

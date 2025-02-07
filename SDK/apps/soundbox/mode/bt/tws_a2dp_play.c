@@ -121,6 +121,7 @@ static void tws_a2dp_play_in_task(u8 *data)
         break;
     case CMD_A2DP_CLOSE:
         if (le_audio_scene_deal(LE_AUDIO_A2DP_STOP) > 0) {
+            memset(g_play_addr, 0xff, 6);
             a2dp_media_close(bt_addr);
             break;
         }

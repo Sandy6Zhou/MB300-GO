@@ -223,4 +223,5 @@ u8 btstack_tws_debug_enable = 0xf;*/
 const u8 btstack_emitter_support  = 1;  /*定义用于优化代码编译*/
 const u8 adt_profile_support = 0;
 const u8 pbg_support_enable = 0;
+const int config_stack_modules = 0;
 #endif

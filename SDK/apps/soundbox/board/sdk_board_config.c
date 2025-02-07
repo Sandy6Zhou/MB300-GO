@@ -94,6 +94,10 @@ void board_init()
 {
     board_power_init();
 
+#if ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))
+    clk_set_api("pll1", 240000000);
+#endif
+
 #if TCFG_UPDATE_UART_IO_EN
     {
 #include "uart_update.h"

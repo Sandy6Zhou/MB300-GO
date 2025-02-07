@@ -117,6 +117,11 @@
 #define AUDIO_LINEIN_IRQ_POINTS 128
 #endif
 
+#if (TCFG_LOCAL_TWS_ENABLE)
+#undef AUDIO_LINEIN_IRQ_POINTS
+#define AUDIO_LINEIN_IRQ_POINTS 256
+#endif
+
 #define AUDIO_DAC_MAX_SAMPLE_RATE           48000
 //**************************************
 // 			IIS模块配置

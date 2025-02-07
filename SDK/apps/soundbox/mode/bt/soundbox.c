@@ -68,13 +68,6 @@
 #include "app_le_auracast.h"
 #include "btstack_rcsp_user.h"
 
-#if TCFG_APP_BT_EN
-
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-
-#include "multi_protocol_main.h"
-#endif
-
 #define LOG_TAG             "[SOUNDBOX]"
 #define LOG_ERROR_ENABLE
 #define LOG_DEBUG_ENABLE
@@ -82,13 +75,21 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
+
+#if TCFG_APP_BT_EN
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+
+#include "multi_protocol_main.h"
+#endif
+
 #define AVC_VOLUME_UP			0x41
 #define AVC_VOLUME_DOWN			0x42
 #define AVC_PLAY			    0x44
 #define AVC_PAUSE			    0x46
 
 BT_USER_COMM_VAR bt_user_comm_var;
-struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
 static u16 power_mode_timer = 0;
 static u8 sniff_out = 0;
 

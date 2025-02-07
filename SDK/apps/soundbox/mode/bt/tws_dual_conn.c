@@ -411,8 +411,8 @@ void tws_dual_conn_state_handler()
             g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_new_tws,
                                                 TCFG_TWS_CONN_TIMEOUT * 1000);
 #endif
+            return;
         }
-        return;
 #endif
         if (have_page_device) {
             g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout,
@@ -455,7 +455,7 @@ void tws_dual_conn_state_handler()
                                                 TCFG_TWS_PAIR_TIMEOUT * 1000);
         }
 #else
-        if (bt_name && edr_background_active) {
+        if ((bt_name || connect_device == 0) && edr_background_active) {
             write_scan_conn_enable(1, 1);
         }
 #endif
