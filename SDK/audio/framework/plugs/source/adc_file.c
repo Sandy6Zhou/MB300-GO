@@ -461,7 +461,42 @@ static void *adc_init(void *source_node, struct stream_node *node)
 
 static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 {
-    fmt->coding_type = AUDIO_CODING_PCM;
+    /*
+     *获取配置文件内的参数,及名字
+     * */
+    if (hdl->scene == STREAM_SCENE_ESCO) {
+        hdl->adc_f = &esco_adc_f;
+    } else if (!hdl->adc_f) {
+        hdl->adc_f = zalloc(sizeof(struct adc_file_common));
+    }
+    hdl->adc_f->hdl = hdl;
+    if (!jlstream_read_node_data_new(NODE_UUID_ADC, hdl->node->subid, (void *) & (hdl->adc_f->cfg), hdl->name)) {
+        printf("%s, read node data err\n", __FUNCTION__);
+        ASSERT(0);
+    }
+
+#if TCFG_AUDIO_DUT_ENABLE
+    //产测bypass 模式，MIC的使能位从产测命令读取
+    if (cvp_dut_mode_get() == CVP_DUT_MODE_BYPASS) {
+        hdl->adc_f->cfg.mic_en_map = cvp_dut_mic_ch_get();
+    }
+#endif
+    if (hdl->scene != STREAM_SCENE_ESCO) {
+        audio_adc_cfg_init(hdl->adc_f);
+    } else { //初始化通话通道数
+        hdl->ch_num = 0;
+        for (int i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
+            if (hdl->adc_f->cfg.mic_en_map & BIT(i)) {
+                hdl->ch_num++;
+            }
+        }
+    }
+
+    if (config_audio_cfg_online_enable) {
+        if (jlstream_read_effects_online_param(NODE_UUID_ADC, hdl->name, &hdl->adc_f->cfg, sizeof(hdl->adc_f->cfg))) {
+            adc_file_log("get adc online param\n");
+        }
+    }
 
     switch (hdl->scene) {
     case STREAM_SCENE_ESCO:
@@ -471,7 +506,6 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #else
         fmt->sample_rate    = 16000;
 #endif
-        fmt->channel_mode   = AUDIO_CH_MIX;
         break;
     case STREAM_SCENE_HEARING_AID:
 #ifdef TCFG_AUDIO_HEARING_AID_SAMPLE_RATE
@@ -479,7 +513,6 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #else
         fmt->sample_rate = 44100;
 #endif
-        fmt->channel_mode   = (hdl->ch_num == 2) ? AUDIO_CH_LR : AUDIO_CH_MIX ;
         break;
     default:
 #if SUPPORT_CHAGE_AUDIO_CLK
@@ -487,17 +520,28 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #else
         fmt->sample_rate    = 44100;
 #endif
-        fmt->channel_mode   = (hdl->ch_num == 2) ? AUDIO_CH_LR : AUDIO_CH_MIX ;
         break;
     }
-    hdl->channel_mode = fmt->channel_mode;
-    hdl->sample_rate = fmt->sample_rate;
-
+    if (hdl->ch_num == 4) {
+        fmt->channel_mode   = AUDIO_CH_QUAD;
+    } else if (hdl->ch_num == 3) {
+        fmt->channel_mode   = AUDIO_CH_TRIPLE;
+    } else if (hdl->ch_num == 2) {
+        fmt->channel_mode   = AUDIO_CH_LR;
+    } else {
+        fmt->channel_mode   = AUDIO_CH_MIX;
+    }
+    printf("adc num: %d , channel_mode: %x", hdl->ch_num, fmt->channel_mode);
     if (adc_hdl.bit_width == ADC_BIT_WIDTH_24) {
         fmt->bit_wide = DATA_BIT_WIDE_24BIT;
     } else {
         fmt->bit_wide = DATA_BIT_WIDE_16BIT;
     }
+    fmt->coding_type = AUDIO_CODING_PCM;
+
+    hdl->channel_mode = fmt->channel_mode;
+    hdl->sample_rate = fmt->sample_rate;
+
 }
 
 static int adc_ioc_set_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
@@ -584,42 +628,6 @@ static void adc_open_task(void *_hdl)
 static int adc_file_ioc_start(struct adc_file_hdl *hdl)
 {
     int ret = 0;
-    /*
-     *获取配置文件内的参数,及名字
-     * */
-    if (hdl->scene == STREAM_SCENE_ESCO) {
-        hdl->adc_f = &esco_adc_f;
-    } else if (!hdl->adc_f) {
-        hdl->adc_f = zalloc(sizeof(struct adc_file_common));
-    }
-    hdl->adc_f->hdl = hdl;
-    if (!jlstream_read_node_data_new(NODE_UUID_ADC, hdl->node->subid, (void *) & (hdl->adc_f->cfg), hdl->name)) {
-        printf("%s, read node data err\n", __FUNCTION__);
-        return -1;
-    }
-
-#if TCFG_AUDIO_DUT_ENABLE
-    //产测bypass 模式，MIC的使能位从产测命令读取
-    if (cvp_dut_mode_get() == CVP_DUT_MODE_BYPASS) {
-        hdl->adc_f->cfg.mic_en_map = cvp_dut_mic_ch_get();
-    }
-#endif
-    if (hdl->scene != STREAM_SCENE_ESCO) {
-        audio_adc_cfg_init(hdl->adc_f);
-    } else { //初始化通话通道数
-        hdl->ch_num = 0;
-        for (int i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
-            if (hdl->adc_f->cfg.mic_en_map & BIT(i)) {
-                hdl->ch_num++;
-            }
-        }
-    }
-
-    if (config_audio_cfg_online_enable) {
-        if (jlstream_read_effects_online_param(NODE_UUID_ADC, hdl->name, &hdl->adc_f->cfg, sizeof(hdl->adc_f->cfg))) {
-            adc_file_log("get adc online param\n");
-        }
-    }
     if (hdl->start == 0) {
         hdl->start = 1;
         hdl->dump_cnt = 0;

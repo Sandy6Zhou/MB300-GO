@@ -482,18 +482,14 @@ static int iis_ioc_negotiate(struct stream_iport *iport, int nego_state)
             ret = NEGO_STA_CONTINUE;
         }
     } else {
-        if (hdl->scene != STREAM_SCENE_ESCO) {
-            if (hdl->sample_rate) {
-                sample_rate = hdl->sample_rate;
-            } else {
-                if (params->sample_rate) {
-                    sample_rate = params->sample_rate;
-                } else {
-                    sample_rate = in_fmt->sample_rate;
-                }
-            }
+        if (hdl->sample_rate) {
+            sample_rate = hdl->sample_rate;
         } else {
-            sample_rate = in_fmt->sample_rate;
+            if (params->sample_rate) {
+                sample_rate = params->sample_rate;
+            } else {
+                sample_rate = in_fmt->sample_rate;
+            }
         }
         if (in_fmt->sample_rate != sample_rate) {
             if (!(nego_state & NEGO_STA_SAMPLE_RATE_LOCK)) {

@@ -220,6 +220,8 @@ u8 ble_debug_enable    = 0xff;
 u8 btstack_tws_debug_enable = 0xf;*/
 
 #else
+const u8 hci_inquiry_support = 0;
+const u8 more_avctp_cmd_support = 0;
 const u8 btstack_emitter_support  = 1;  /*定义用于优化代码编译*/
 const u8 adt_profile_support = 0;
 const u8 pbg_support_enable = 0;

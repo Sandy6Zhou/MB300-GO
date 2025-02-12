@@ -252,17 +252,14 @@ int audio_iis_check_hw_cfg_status(u8 module_idx, u8 ch_idx, u8 tar_dir)
 
     if (find) {
         if (!en) {
-            log_error("iis ch[%d] cfg disable\n", ch_idx);//通道未使能
-            ASSERT(0);
+            ASSERT(0, "iis ch[%d] cfg disable\n", ch_idx);  //通道未使能
         }
         if (en && (dir != tar_dir)) {
-            log_error("iis ch[%d] %s cfg dir error\n", ch_idx, tar_dir ? "rx" : "tx"); //通道方向配置或者使用错误
-            ASSERT(0);
+            ASSERT(0, "iis ch[%d] %s cfg dir error\n", ch_idx, tar_dir ? "rx" : "tx");  //通道方向配置或者使用错误
         }
 
     } else {
-        log_error("iis module[%d] cfg error\n", module_idx);//可视化配置界面模块参数结构与代码参数结构不一致
-        ASSERT(0);
+        ASSERT(0, "iis module[%d] cfg error\n", module_idx);    //可视化配置界面模块参数结构与代码参数结构不一致
     }
 
     return find;
@@ -627,7 +624,7 @@ int audio_iis_stop(void *_hdl, u8 ch_idx)
             }
         }
     }
-    if (hw_ch_num != 1) {
+    if (hw_ch_num != 1 ||  hdl->cfg.role == ALINK_ROLE_MASTER) { //iis 做主机时不关硬件,避免iix tx主机播完提示音关掉iis,导致从机无时钟,下次再播提示音时,从机声音变调
         return 0;//iis模块内通道使能 大于等于2个，默认不关闭硬件
     }
 

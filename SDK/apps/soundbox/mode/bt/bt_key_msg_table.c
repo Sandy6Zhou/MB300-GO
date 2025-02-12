@@ -26,7 +26,7 @@ const int key_bt_ad_num2_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_NULL,                APP_MSG_OPEN_SIRI,          APP_MSG_CALL_SWITCH,
 };
 const int key_bt_ad_num3_msg_table[KEY_ACTION_MAX] = {
-    APP_MSG_LE_BROADCAST_SW,     APP_MSG_VOL_DOWN,       APP_MSG_VOL_DOWN,
+    APP_MSG_MUSIC_PREV,     APP_MSG_VOL_DOWN,       APP_MSG_VOL_DOWN,
     APP_MSG_NULL,           APP_MSG_CALL_THREE_WAY_ANSWER1,           APP_MSG_NULL,
 };
 const int key_bt_ad_num4_msg_table[KEY_ACTION_MAX] = {

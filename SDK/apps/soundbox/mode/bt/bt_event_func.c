@@ -360,7 +360,7 @@ void bt_dut_api(u8 param)
         g_bt_hdl.auto_connection_timer = 0;
     }
 
-#if TCFG_BT_BLE_ADV_ENABLE
+#if ((TCFG_USER_BLE_ENABLE && TCFG_THIRD_PARTY_PROTOCOLS_ENABLE) || TCFG_BT_BLE_ADV_ENABLE)
 #if (CONFIG_BT_MODE == BT_NORMAL)
     bt_ble_adv_enable(0);
 #endif

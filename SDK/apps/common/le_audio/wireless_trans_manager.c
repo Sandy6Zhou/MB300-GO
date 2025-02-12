@@ -163,7 +163,7 @@ int wireless_trans_uninit(const char *name, void *priv)
     WIRELESS_DEV_ENTER_CRITICAL();
     list_for_each_wireless_trans(wireless_trans) {
         if (!strcmp(name, wireless_trans->name)) {
-            if (wireless_trans->init) {
+            if (wireless_trans->uninit) {
                 wireless_trans->uninit(priv);
             }
             WIRELESS_DEV_EXIT_CRITICAL();

@@ -748,7 +748,7 @@ int app_broadcast_open()
     ble_module_enable(0);
     if (bt_rcsp_ble_conn_num() > 0) {
         rcsp_connect_dev_detect_timer = sys_timeout_add((void *)0, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
-        return;
+        return -EPERM;
     } else {
         rcsp_connect_dev_detect_timer = 0;
     }
@@ -845,7 +845,7 @@ int app_broadcast_open_with_role(u8 role)
     if (bt_rcsp_ble_conn_num() > 0) {
         u32 temp_role = role + 1;
         rcsp_connect_dev_detect_timer = sys_timeout_add((void *)temp_role, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
-        return;
+        return -EPERM;
     } else {
         rcsp_connect_dev_detect_timer = 0;
     }

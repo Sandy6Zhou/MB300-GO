@@ -27,6 +27,7 @@
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
 #include "bt_key_func.h"
+#include "bt_tws.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 

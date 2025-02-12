@@ -354,7 +354,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
 
         bt_status_init_ok();
 
-#if (TCFG_USER_BLE_ENABLE && TCFG_BT_BLE_ADV_ENABLE)
+#if TCFG_USER_BLE_ENABLE
 #if RCSP_MODE
         rcsp_init();
 #endif

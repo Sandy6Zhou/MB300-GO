@@ -295,7 +295,8 @@ static void dual_conn_page_device_timeout(void *p)
                 }
                 g_dual_conn.timer = sys_timeout_add(NULL, page_next_device, 2000);
                 //增加2s可发现可连接
-                bt_discovery_and_connectable_using_loca_mac_addr(1, 1);
+                write_scan_conn_enable(1, 1);
+                page_mode_active = 0;
                 return;
             }
             page_mode_active = 0;

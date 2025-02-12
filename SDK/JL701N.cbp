@@ -56,6 +56,7 @@
 <Add option="-D__GCC_PI32V2__" />
 <Add option="-DCONFIG_NEW_ECC_ENABLE" />
 <Add option="-DCONFIG_CODE_MOVABLE_ENABLE" />
+<Add option="-DCONFIG_FLOAT_DEBUG_ENABLE" />
 <Add option="-DCONFIG_EFFECT_CORE_V2_ENABLE" />
 <Add option="-DCONFIG_OS_AFFINITY_ENABLE=0" />
 <Add option="-DEVENT_HANDLER_NUM_CONFIG=2" />
@@ -231,6 +232,7 @@
 <Add option="--plugin-opt=-movable-region-section-map-file-list=apps/soundbox/movable/section.txt" />
 <Add option="--plugin-opt=-movable-region-exclude-func-file-list=apps/soundbox/movable/exclude.txt" />
 <Add option="--plugin-opt=-pi32v2-large-program=true" />
+<Add option="--plugin-opt=-floating-point-may-trap=true" />
 <Add option="--gc-sections" />
 <Add option="--plugin-opt=-pi32v2-csync-before-rti=true" />
 <Add option="--start-group" />
