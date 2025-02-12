@@ -613,7 +613,11 @@
 #endif
 
 /*使能iis输出外部参考数据*/
+#if (TCFG_IIS_NODE_ENABLE == 1) && (TCFG_DAC_NODE_ENABLE == 0)
+#define TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE    1
+#else
 #define TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE    0
+#endif
 
 /*Audio数据导出配置:通过蓝牙spp导出/sd写卡导出/uart写卡导出*/
 #define AUDIO_DATA_EXPORT_VIA_UART	1
