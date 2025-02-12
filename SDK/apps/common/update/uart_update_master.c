@@ -18,7 +18,7 @@
 
 #include "timer.h"
 #include "utils/fs/fs.h"
-#include "asm/crc16.h"
+#include "crc.h"
 
 #define UART_DMA_LEN        534 //528 + 6
 

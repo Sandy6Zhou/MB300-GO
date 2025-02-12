@@ -235,7 +235,7 @@ static void tws_poweroff_tone_callback(int priv, enum stream_event event)
     if (event == STREAM_EVENT_STOP) {
         //bt_tws_detach(NULL);
         app_send_message2(APP_MSG_GOTO_MODE, APP_MODE_IDLE, IDLE_MODE_WAIT_POWEROFF);
-        sys_timeout_add(NULL, app_power_off, 100);
+        sys_timeout_add(NULL, app_power_off, 1000);
     }
 }
 REGISTER_TWS_TONE_CALLBACK(tws_poweroff_stub) = {

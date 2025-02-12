@@ -85,11 +85,9 @@ CFLAGS := \
 	-Wincompatible-pointer-types \
 	-Wreturn-type \
 	-Wimplicit-function-declaration \
-	-Werror \
 	-mllvm -pi32v2-large-program=true \
 	-fms-extensions \
 	-fdiscrete-bitfield-abi \
-	-w \
 
 
 # C++额外的编译参数
@@ -170,7 +168,7 @@ INCLUDES := \
 	-Iinterface/system \
 	-Iinterface/system/generic \
 	-Iinterface/system/device \
-	-Iinterface/utils/ui \
+	-Iinterface/utils/jl_ui \
 	-Iinterface/btctrler \
 	-Iinterface/btctrler/port/br28 \
 	-Iinterface/update \
@@ -190,7 +188,7 @@ INCLUDES := \
 	-Iapps/soundbox \
 	-Iapps/soundbox/include \
 	-Iapps/soundbox/include/wireless_mic \
-	-Iapps/soundbox/include/ui \
+	-Iapps/soundbox/include/jl_ui \
 	-Iapps/soundbox/board/br28 \
 	-Iapps/soundbox/ui \
 	-Iapps/common \
@@ -203,6 +201,7 @@ INCLUDES := \
 	-Iapps/common/ui \
 	-Iapps/common/config/include \
 	-Iapps/common/dev_manager \
+	-Iapps/common/temp_trim \
 	-Iapps/common/third_party_profile \
 	-Iapps/common/third_party_profile/common \
 	-Iapps/common/third_party_profile/interface \
@@ -236,11 +235,13 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/dma_protocol \
 	-Iapps/common/third_party_profile/gfps_protocol \
+	-Iapps/common/third_party_profile/custom_protocol_demo \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
 	-Iinterface/media/cpu/br28 \
-	-Iinterface/utils/ui/ui/cpu/br28 \
 	-Iinterface/utils/flash_translation_layer \
+	-Iinterface/ui/jl_ui \
+	-Iinterface/ui/jl_ui/ui/cpu/br28 \
 	-Iapps/common/le_audio \
 	-Iapps/soundbox/include/le_audio \
 	-Iapps/soundbox/include/le_audio/big \
@@ -355,6 +356,7 @@ c_SRC_FILES := \
 	apps/common/le_audio/cig.c \
 	apps/common/le_audio/wireless_trans_manager.c \
 	apps/common/music/breakpoint.c \
+	apps/common/music/general_player.c \
 	apps/common/music/music_decrypt.c \
 	apps/common/music/music_id3.c \
 	apps/common/music/music_player.c \
@@ -362,9 +364,11 @@ c_SRC_FILES := \
 	apps/common/test/fs_test.c \
 	apps/common/third_party_profile/common/3th_profile_api.c \
 	apps/common/third_party_profile/common/custom_cfg.c \
+	apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c \
 	apps/common/third_party_profile/dma_protocol/dma_config.c \
 	apps/common/third_party_profile/dma_protocol/dma_platform_api.c \
 	apps/common/third_party_profile/dma_protocol/dma_protocol.c \
+	apps/common/third_party_profile/gfps_protocol/gfps_protocol.c \
 	apps/common/third_party_profile/interface/app_protocol_api.c \
 	apps/common/third_party_profile/interface/app_protocol_common.c \
 	apps/common/third_party_profile/interface/app_protocol_dma.c \
@@ -393,7 +397,9 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_fm_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_linein_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_music_func.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_pc_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_rtc_func.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_spdif_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_cmd.c \
@@ -477,16 +483,7 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/multi_protocol_event.c \
 	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/common/third_party_profile/swift_pair/swift_pair_protocol.c \
-	apps/common/ui/interface/ui_platform.c \
-	apps/common/ui/interface/ui_pushScreen_manager.c \
-	apps/common/ui/interface/ui_resources_manager.c \
-	apps/common/ui/interface/ui_synthesis_manager.c \
-	apps/common/ui/interface/ui_synthesis_oled.c \
-	apps/common/ui/interface/watch_bgp.c \
 	apps/common/ui/lcd/lcd_ui_api.c \
-	apps/common/ui/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
-	apps/common/ui/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
-	apps/common/ui/lcd_drive/lcd_spi/oled_spi_ssd1306_128x64.c \
 	apps/common/ui/led7/led7_ui_api.c \
 	apps/common/ui/pwm_led/led_ui_api.c \
 	apps/common/ui/pwm_led/led_ui_tws_sync.c \
@@ -515,6 +512,7 @@ c_SRC_FILES := \
 	apps/soundbox/board/rdeckey_config.c \
 	apps/soundbox/board/sdk_board_config.c \
 	apps/soundbox/board/tocuhkey_config.c \
+	apps/soundbox/demo/att_over_edr_demo.c \
 	apps/soundbox/demo/pbg_demo.c \
 	apps/soundbox/demo/trans_data_demo.c \
 	apps/soundbox/device_config.c \
@@ -574,6 +572,10 @@ c_SRC_FILES := \
 	apps/soundbox/mode/idle/idle.c \
 	apps/soundbox/mode/idle/idle_app_msg_handler.c \
 	apps/soundbox/mode/idle/idle_key_msg_table.c \
+	apps/soundbox/mode/iis/iis.c \
+	apps/soundbox/mode/iis/iis_api.c \
+	apps/soundbox/mode/iis/iis_app_msg_handler.c \
+	apps/soundbox/mode/iis/iis_key_msg_table.c \
 	apps/soundbox/mode/key_tone.c \
 	apps/soundbox/mode/linein/linein.c \
 	apps/soundbox/mode/linein/linein_api.c \
@@ -636,6 +638,7 @@ c_SRC_FILES := \
 	apps/soundbox/ui/led7/ui_common.c \
 	apps/soundbox/ui/led7/ui_fm.c \
 	apps/soundbox/ui/led7/ui_idle.c \
+	apps/soundbox/ui/led7/ui_iis.c \
 	apps/soundbox/ui/led7/ui_linein.c \
 	apps/soundbox/ui/led7/ui_music.c \
 	apps/soundbox/ui/led7/ui_pc.c \
@@ -672,6 +675,7 @@ c_SRC_FILES := \
 	audio/common/audio_volume_mixer.c \
 	audio/common/bt_audio_energy_detection.c \
 	audio/common/debug/audio_debug.c \
+	audio/common/demo/audio_eq_demo.c \
 	audio/common/demo/codec_demo/audio_enc_file_demo.c \
 	audio/common/demo/codec_demo/audio_file_dec_demo.c \
 	audio/common/demo/codec_demo/audio_frame_codec_demo.c \
@@ -727,9 +731,11 @@ c_SRC_FILES := \
 	audio/effect/demo/voice_changer_demo.c \
 	audio/effect/effects_adj.c \
 	audio/effect/effects_default_param.c \
+	audio/effect/effects_dev.c \
 	audio/effect/eq_config.c \
 	audio/effect/esco_ul_voice_changer.c \
 	audio/effect/node_param_update.c \
+	audio/effect/scene_update.c \
 	audio/effect/spatial_effect/spatial_effect.c \
 	audio/effect/spatial_effect/spatial_effect_imu.c \
 	audio/effect/spatial_effect/spatial_effect_tws.c \
@@ -791,6 +797,7 @@ c_SRC_FILES := \
 	audio/interface/player/esco_player.c \
 	audio/interface/player/file_player.c \
 	audio/interface/player/fm_player.c \
+	audio/interface/player/iis_player.c \
 	audio/interface/player/key_tone_player.c \
 	audio/interface/player/le_audio_player.c \
 	audio/interface/player/linein_player.c \
@@ -845,6 +852,11 @@ c_SRC_FILES := \
 	cpu/br28/power/power_port.c \
 	cpu/br28/private_iis.c \
 	cpu/br28/setup.c \
+	cpu/br28/ui_driver/interface/ui_platform.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_drive.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_gc9b71_320x386.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
+	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
 	cpu/br28/ui_driver/led7/led7_driver.c \
 	cpu/br28/ui_driver/ui_common.c \
 	cpu/components/gpadc_utils.c \
@@ -927,6 +939,8 @@ LFLAGS := \
 	cpu/br28/liba/btstack.a \
 	cpu/br28/liba/rcsp_stack.a \
 	cpu/br28/liba/tme_stack.a \
+	cpu/br28/liba/google_fps.a \
+	cpu/br28/liba/swift_pair.a \
 	cpu/br28/liba/btctrler.a \
 	cpu/br28/liba/aec.a \
 	cpu/br28/liba/media.a \
@@ -945,6 +959,7 @@ LFLAGS := \
 	cpu/br28/liba/noisegate.a \
 	cpu/br28/liba/sbc_eng_lib.a \
 	cpu/br28/liba/lib_mp3_dec.a \
+	cpu/br28/liba/lib_speex_codec.a \
 	cpu/br28/liba/lib_m4a_dec.a \
 	cpu/br28/liba/mp3_decstream_lib.a \
 	cpu/br28/liba/lib_mty_dec.a \
@@ -967,6 +982,7 @@ LFLAGS := \
 	cpu/br28/liba/DynamicEQPro.a \
 	cpu/br28/liba/lib_ape_dec.a \
 	cpu/br28/liba/VirtualBass.a \
+	cpu/br28/liba/lib_virtual_bass_classic.a \
 	cpu/br28/liba/lib_plateReverb_adv.a \
 	cpu/br28/liba/lib_reverb_cal.a \
 	cpu/br28/liba/lib_Reverb.a \
@@ -1005,7 +1021,18 @@ LFLAGS := \
 	cpu/br28/liba/le_audio_profile.a \
 	cpu/br28/liba/lib_limiter.a \
 	cpu/br28/liba/libSAS_pi32v2_OnChip.a \
-	cpu/br28/liba/jla_codec_lib.a \
+	cpu/br28/liba/lib_jl_codec_common.a \
+	cpu/br28/liba/lib_lc3_codec.a \
+	cpu/br28/liba/lib_jla_codec.a \
+	cpu/br28/liba/lib_jla_ll_codec.a \
+	cpu/br28/liba/lib_jlalw_codec.a \
+	cpu/br28/liba/lib_jla_v2_codec.a \
+	cpu/br28/liba/lib_phaser.a \
+	cpu/br28/liba/lib_flanger.a \
+	cpu/br28/liba/lib_chorus_adv.a \
+	cpu/br28/liba/lib_pingpong_echo.a \
+	cpu/br28/liba/libStereoSpatialWider_pi32v2_OnChip.a \
+	cpu/br28/liba/libdistortion.a \
 	cpu/br28/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br28/liba/lib_wtg_dec.a \
 	cpu/br28/liba/bfilterfun_lib.a \
@@ -1014,11 +1041,10 @@ LFLAGS := \
 	cpu/br28/liba/crypto_toolbox_Osize.a \
 	cpu/br28/liba/lib_dns.a \
 	cpu/br28/liba/update.a \
-	cpu/br28/liba/res.a \
-	cpu/br28/liba/ui_draw.a \
-	cpu/br28/liba/font.a \
-	cpu/br28/liba/ui_cpu.a \
-	cpu/br28/liba/ui_dot.a \
+	cpu/br28/liba/res_new.a \
+	cpu/br28/liba/ui_draw_new.a \
+	cpu/br28/liba/font_new.a \
+	cpu/br28/liba/ui_new.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \

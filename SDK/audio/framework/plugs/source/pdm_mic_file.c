@@ -72,6 +72,8 @@ static void pdm_mic_output_handler(void *priv, void *data, u32 len)
     if (frame) {
         memcpy(frame->data, (u8 *)data, len);
         frame->len = len;
+        frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+        frame->timestamp    = audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR;
         source_plug_put_output_frame(hdl->source_node, frame);
     }
 }

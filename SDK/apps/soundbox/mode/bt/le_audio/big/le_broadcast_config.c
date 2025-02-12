@@ -34,9 +34,9 @@
 #define RX_USED_BIS_NUM                 1
 #endif
 
-#define SCAN_WINDOW_SLOT                16
-#define SCAN_INTERVAL_SLOT              28
-#define PRIMARY_ADV_INTERVAL_SLOT       192
+#define SCAN_WINDOW_SLOT                10
+#define SCAN_INTERVAL_SLOT              (28*2)
+#define PRIMARY_ADV_INTERVAL_SLOT       (192)
 
 /**************************************************************************************************
   Data Types
@@ -59,7 +59,7 @@ static big_parameter_t big_tx_param = {
         .eadv_int_slot  = PRIMARY_ADV_INTERVAL_SLOT,
         .padv_int_slot  = PRIMARY_ADV_INTERVAL_SLOT,
         .vdr = {
-            .tx_delay   = 3500,
+            .tx_delay   = 1000,
         },
     },
 };
@@ -123,7 +123,7 @@ const static u8 platform_data_mapping[] = {
 static u32 calcul_big_enc_output_frame_len(u16 frame_len, u32 bit_rate)
 {
     int len = 0;
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA)
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA || LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
     len = (frame_len * bit_rate / 1000 / 8 / 10 + 2);
 #if JL_CC_CODED_EN
     len += (len & 1); //开fec 编码时会微调码率，使编出来一帧的数据长度是偶数,故如果计算出来是奇数需要+1;

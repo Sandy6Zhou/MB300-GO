@@ -81,6 +81,9 @@ int gpio_config_init()
 int gpio_config_uninit()
 {
 #if TCFG_IO_CFG_AT_POWER_OFF
+    for (int i = 0; i < ARRAY_SIZE(g_io_cfg_at_poweroff); i++) {
+        soff_gpio_protect(g_io_cfg_at_poweroff[i].gpio);
+    }
     gpio_config_set(g_io_cfg_at_poweroff, ARRAY_SIZE(g_io_cfg_at_poweroff));
 #endif
 
@@ -90,6 +93,10 @@ int gpio_config_uninit()
 void board_init()
 {
     board_power_init();
+
+#if ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))
+    clk_set_api("pll1", 240000000);
+#endif
 
 #if TCFG_UPDATE_UART_IO_EN
     {

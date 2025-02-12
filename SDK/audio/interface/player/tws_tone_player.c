@@ -230,6 +230,7 @@ __exit0:
     g_tws_tone_adding = 0;
     tws_tone_reference_clock_close(msg->reference_clk);
 __exit1:
+    tws_files_callback((void *)(msg->func_uuid), STREAM_EVENT_STOP);
     free(msg);
 }
 

@@ -23,6 +23,7 @@
 struct le_audio_a2dp_recorder {
     void *stream;
     u8 btaddr[6];
+    u16 retry_timer;
 };
 
 static struct le_audio_a2dp_recorder *g_a2dp_recorder = NULL;
@@ -63,7 +64,7 @@ static struct le_audio_fm_recorder *g_fm_recorder = NULL;
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_AUDIO_IIS_ENABLE
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_APP_IIS_EN
 struct le_audio_iis_recorder {
     void *stream;
 };
@@ -95,6 +96,17 @@ static struct le_audio_mic_recorder *g_mic_recorder = NULL;
 static void a2dp_recorder_callback(void *private_data, int event)
 {
     printf("le audio a2dp recorder callback : %d\n", event);
+}
+
+static void retry_start_a2dp_player(void *p)
+{
+    if (g_a2dp_recorder && g_a2dp_recorder->stream) {
+        int err = jlstream_start(g_a2dp_recorder->stream);
+        if (err == 0) {
+            sys_timer_del(g_a2dp_recorder->retry_timer);
+            g_a2dp_recorder->retry_timer = 0;
+        }
+    }
 }
 
 int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
@@ -130,9 +142,15 @@ int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
 
     /*memcpy(&fmt, arg, sizeof(struct stream_enc_fmt));*/
 
+    memcpy(g_a2dp_recorder->btaddr, btaddr, 6);
+
     err = jlstream_ioctl(g_a2dp_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
     if (err == 0) {
         err = jlstream_start(g_a2dp_recorder->stream);
+        if (err) {
+            g_a2dp_recorder->retry_timer = sys_timer_add(NULL, retry_start_a2dp_player, 200);
+            return 0;
+        }
     }
 
     if (err) {
@@ -141,7 +159,6 @@ int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio)
         g_a2dp_recorder = NULL;
         return err;
     }
-    memcpy(g_a2dp_recorder->btaddr, btaddr, 6);
     return 0;
 }
 
@@ -160,6 +177,11 @@ void le_audio_a2dp_recorder_close(u8 *btaddr)
     if (a2dp_recorder->stream) {
         jlstream_stop(a2dp_recorder->stream, 0);
         jlstream_release(a2dp_recorder->stream);
+    }
+
+    if (g_a2dp_recorder->retry_timer) {
+        sys_timer_del(g_a2dp_recorder->retry_timer);
+        g_a2dp_recorder->retry_timer = 0;
     }
 
     free(a2dp_recorder);
@@ -261,7 +283,7 @@ void le_audio_linein_recorder_close(void)
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_AUDIO_IIS_ENABLE
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_APP_IIS_EN
 static void iis_recorder_callback(void *private_data, int event)
 {
     printf("le audio iis recorder callback : %d\n", event);
@@ -545,7 +567,9 @@ void le_audio_fm_recorder_close(void)
 }
 #endif
 
-#if (((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))||((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_AURACAST_SOURCE_EN)))||((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))) && TCFG_AUDIO_MIC_ENABLE
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))) && TCFG_AUDIO_MIC_ENABLE
 static void mic_recorder_callback(void *private_data, int event)
 {
     printf("le audio mic recorder callback : %d\n", event);

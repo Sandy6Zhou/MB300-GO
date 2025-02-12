@@ -137,6 +137,9 @@ void bt_background_suspend()
     if (a2dp_player_get_btaddr(addr)) {
         a2dp_player_close(addr);
         bt_start_a2dp_slience_detect(addr, 50);     //这里处理能跳回蓝牙模式外也处理后台丢包功能，如果手机一直没有发stop过来，这里会一直丢静音数据
+    } else {
+        u8 *get_g_play_addr(void);
+        bt_start_a2dp_slience_detect(get_g_play_addr(), 50);        //广播打开的情况，这里已经把player关闭了
     }
 }
 
@@ -255,6 +258,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
             break;
         }
 
+        app_set_a2dp_play_status(0);
         if (g_bt_hdl.background.close_bt_hw_in_background) {
             //需要后台关闭蓝牙硬件的就不返回蓝牙了
             printf("close_bt_hw_in_background not go back\n");
@@ -319,10 +323,12 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
     /* 	break; */
     case BT_STATUS_A2DP_MEDIA_START:
         log_info("BT_STATUS_A2DP_MEDIA_START start slience detect\n");
+        app_set_a2dp_play_status(1);
         bt_start_a2dp_slience_detect(event->args, 50);      //丢掉50包(约1s)之后才开始能量检测,过滤掉提示音，避免提示音引起抢占
         ret = BACKGROUND_A2DP_SLIENCE_DETECT;
         break;
     case BT_STATUS_A2DP_MEDIA_STOP:
+        app_set_a2dp_play_status(0);
         bt_stop_a2dp_slience_detect(event->args);
 #if TCFG_USER_TWS_ENABLE
         void tws_a2dp_player_close(u8 * bt_addr);

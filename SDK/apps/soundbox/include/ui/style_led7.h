@@ -18,6 +18,7 @@ enum ui_menu_main {
     UI_PC_MENU_MAIN,
     UI_SPDIF_MENU_MAIN,
     UI_SINK_MENU_MAIN,
+    UI_IIS_MENU_MAIN,
     UI_IDLE_MENU_MAIN,
 };
 
@@ -37,6 +38,7 @@ enum {
     MENU_ALM_UP,
     MENU_SPDIF,
     MENU_SINK,
+    MENU_IIS,
 
     MENU_SHOW_STRING,
     MENU_MAIN_VOL,
@@ -131,6 +133,7 @@ extern const struct ui_dis_api linein_main;
 extern const struct ui_dis_api idle_main;
 extern const struct ui_dis_api spdif_main;
 extern const struct ui_dis_api sink_main;
+extern const struct ui_dis_api iis_main;
 
 
 

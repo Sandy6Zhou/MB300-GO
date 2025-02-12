@@ -104,6 +104,7 @@ int audio_reference_clock_select(void *addr, u8 network)
         } else {
             reference_clock->network = network;
             if (LE_AUDIO_TIME_ENABLE && network == 2) {
+                reset_clock = (clk->network == 2 ? 0 : 1);//多路le_audio 参考时钟只需要设置一次;
                 reference_clock->le_addr = addr;
             } else {
                 if (addr == NULL) {
@@ -283,8 +284,12 @@ delete:
     list_del(&clk->entry);
     free(clk);
     if (!list_empty(&reference_head)) {
-        /*clk = list_first_entry(&reference_head, struct reference_clock, entry);*/
-        /*bt_audio_reference_clock_select(clk->net_addr, clk->network);*/
+        clk = list_first_entry(&reference_head, struct reference_clock, entry);
+        if (LE_AUDIO_TIME_ENABLE && clk->network == 2) {
+            le_audio_stream_clock_select(clk->le_addr);
+        } else {
+            bt_audio_reference_clock_select(clk->net_addr, clk->network);
+        }
     }
     local_irq_enable();
 }

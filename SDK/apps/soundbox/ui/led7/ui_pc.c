@@ -6,6 +6,7 @@
 #endif
 #include "ui/ui_api.h"
 #include "system/includes.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_PC_EN
 #if (TCFG_UI_ENABLE&&(CONFIG_UI_STYLE == STYLE_JL_LED7))
@@ -28,12 +29,19 @@ static void led7_show_pc(void *hd)
     dis->lock(0);
 }
 
-
-
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
+    dis->lock(0);
+}
 
 static void *ui_open_pc(void *hd)
 {
-    /* ui_set_auto_reflash(500);//设置主页500ms自动刷新 */
+    ui_set_auto_reflash(500);//设置主页500ms自动刷新
     return NULL;
 }
 
@@ -54,7 +62,17 @@ static void ui_pc_main(void *hd, void *private) //主界面显示
     if (!hd) {
         return;
     }
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+    if (get_le_audio_curr_role() == 2) {
+        led7_show_le(hd);
+    } else {
+        led7_show_pc(hd);
+    }
+#else
     led7_show_pc(hd);
+#endif
 }
 
 

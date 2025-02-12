@@ -13,6 +13,8 @@
 
 int rtc_app_msg_handler(int *msg)
 {
+    int msg_argc[4];
+
     if (false == app_in_mode(APP_MODE_RTC)) {
         return 0;
     }
@@ -21,22 +23,27 @@ int rtc_app_msg_handler(int *msg)
     case APP_MSG_CHANGE_MODE:
         printf("APP_MSG_CHANGE_MODE\n");
         app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
+        app_send_message_from(MSG_FROM_RTC, sizeof(msg_argc), msg_argc);
         break;
     case APP_MSG_RTC_UP:
         printf("APP_MSG_RTC_UP \n");
         set_rtc_up();
+        app_send_message_from(MSG_FROM_RTC, sizeof(msg_argc), msg_argc);
         break;
     case APP_MSG_RTC_DOWN:
         printf("APP_MSG_RTC_DOWN \n");
         set_rtc_down();
+        app_send_message_from(MSG_FROM_RTC, sizeof(msg_argc), msg_argc);
         break;
     case APP_MSG_RTC_SW:
         printf("APP_MSG_RTC_SW \n");
         set_rtc_sw();
+        app_send_message_from(MSG_FROM_RTC, sizeof(msg_argc), msg_argc);
         break;
     case APP_MSG_RTC_SW_POS:
         printf("APP_MSG_RTC_SW_POS \n");
         set_rtc_pos();
+        app_send_message_from(MSG_FROM_RTC, sizeof(msg_argc), msg_argc);
         break;
     default:
         break;

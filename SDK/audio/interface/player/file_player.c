@@ -613,6 +613,26 @@ int file_dec_set_start_play(u32 start_time, u32 coding_type)
 }
 #endif
 
+
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+static int file_name_match_mp3(char *file_name)
+{
+    const char *ext_name;
+    for (int i = 0; file_name[i] != '\0'; i++) {
+        if (file_name[i] == '.') {
+            ext_name = file_name + i + 1;
+            goto __match;
+        }
+    }
+    return 0;
+__match:
+    if (!strncasecmp(ext_name, "mp3", 3)) {
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 /*----------------------------------------------------------------------------*/
 /**@brief    获取id3信息
    @return   true：成功
@@ -678,9 +698,10 @@ static int music_file_player_start(struct file_player *player)
 
     jlstream_set_dec_file(player->stream, player, &music_file_ops);
 
-    err = jlstream_start(player->stream);
-
-    if (player->stream->coding_type == AUDIO_CODING_MP3) {
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+    u8 name[12 + 1] = {0}; //8.3+\0
+    fget_name(player->file, name, sizeof(name));
+    if (file_name_match_mp3((char *)name)) {
 #if TCFG_DEC_ID3_V1_ENABLE
         if (player->p_mp3_id3_v1) {
             id3_obj_post(&player->p_mp3_id3_v1);
@@ -698,6 +719,8 @@ static int music_file_player_start(struct file_player *player)
         file_dec_id3_post(player);
 #endif
     }
+#endif
+    err = jlstream_start(player->stream);
 
     if (err) {
         goto __exit1;

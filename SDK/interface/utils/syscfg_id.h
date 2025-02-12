@@ -244,6 +244,28 @@ int syscfg_tools_init(void);
 #define		DUAL_BANK_BP_STEP			139
 #define		DUAL_BANK_BP_FW_CODE		140
 
+#define		VM_ALARM_0				    141
+#define		VM_ALARM_1					142
+#define		VM_ALARM_2					143
+#define		VM_ALARM_3					144
+#define		VM_ALARM_4					145
+#define		VM_ALARM_MASK				146
+#define		VM_ALARM_NAME_0				147
+#define		VM_ALARM_NAME_1				148
+#define		VM_ALARM_NAME_2				149
+#define		VM_ALARM_NAME_3				150
+#define		VM_ALARM_NAME_4				151
+#define		VM_ALARM_RING_NAME_0		152
+#define		VM_ALARM_RING_NAME_1		153
+#define		VM_ALARM_RING_NAME_2		154
+#define		VM_ALARM_RING_NAME_3		155
+#define		VM_ALARM_RING_NAME_4		156
+#define		VM_ALARM_EX0				157
+#define		VM_ALARM_EX1				158
+#define		VM_ALARM_EX2				159
+#define		VM_ALARM_EX3				160
+#define		VM_ALARM_EX4				161
+
 #define     CFG_ONLINE_EQ_DRC_DATA_ID   254//在线调试保存参数的id
 #define     CFG_ONLINE_SAVE_ID          255//在线保存文件大小的id
 

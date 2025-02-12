@@ -32,6 +32,10 @@ struct __music {
     u8 music_busy;
     u8 scandisk_mark;//扫描设备标志
     u16 timer;
+    //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
+    u8 close_broadcast_need_resume_local_music_flag;
+    //下面这个变量为了解决问题：固定为接收端，暂停中打开广播再关闭，本地音乐需是暂停状态
+    u8 music_local_audio_resume_onoff;
 };
 enum {
     MUSIC_TASK_START_BY_NORMAL = 0x0,
@@ -60,6 +64,15 @@ int music_device_msg_handler(int *msg);
 const char *get_music_tone_name_by_logo(const char *logo);
 
 extern int music_device_tone_play(char *logo);
+
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==2))
+//当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
+extern void music_set_broadcast_local_open_flag(u8 en);
+#endif
 
 #endif
 

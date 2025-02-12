@@ -30,7 +30,10 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
-
+#include "app_le_auracast.h"
+#include "rcsp_device_status.h"
+#include "rcsp_music_func.h"
+#include "rcsp_config.h"
 
 #if TCFG_APP_MUSIC_EN
 
@@ -251,7 +254,7 @@ static int music_tone_play_end_callback(void *priv, enum stream_event event)
         return 0;
     }
     switch (event) {
-    case STREAM_EVENT_NONE:
+    /* case STREAM_EVENT_NONE: */
     case STREAM_EVENT_STOP:
         switch (index) {
 #if (TCFG_MUSIC_DEVICE_TONE_EN)
@@ -368,6 +371,14 @@ static void music_player_play_success(void *priv, int parm)
     }
     music_save_breakpoint(0);
     app_send_message2(APP_MSG_MUSIC_FILE_NUM_CHANGED, __this->player_hd->fsn->file_counter, __this->player_hd->fsn->file_number);
+    app_send_message(APP_MSG_MUSIC_PLAY_SUCCESS, 0);
+
+
+
+#if (TCFG_APP_MUSIC_EN && !RCSP_APP_MUSIC_EN)
+    rcsp_device_status_update(MUSIC_FUNCTION_MASK,
+                              BIT(MUSIC_INFO_ATTR_STATUS) | BIT(MUSIC_INFO_ATTR_FILE_NAME) | BIT(MUSIC_INFO_ATTR_FILE_PLAY_MODE));
+#endif
 
 }
 
@@ -559,6 +570,10 @@ static int app_music_init()
         app_broadcast_close_in_other_mode();
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        y_printf("---> Auracast Close in Other Mode()\n");
+        app_auracast_close_in_other_mode();
+#endif
     }
 #else
     tone_player_stop();
@@ -626,9 +641,15 @@ static int app_music_init()
     }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     btstack_init_in_other_mode();
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==2)
     //当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
     music_set_broadcast_local_open_flag(1);
 #endif
@@ -767,6 +788,10 @@ int music_device_msg_handler(int *msg)
                     /* app_task_put_key_msg(KEY_MUSIC_PLAYER_START, 0);//卸载了设备再执行 */
                     app_send_message(APP_MSG_MUSIC_PLAY_START, 0);
                     log_i("KEY_MUSIC_PLAYER_START AFTER UMOUNT\n");
+                } else {
+                    if (dev_manager_get_total(1) == 0) {        //当前没有设备在线
+                        app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
+                    }
                 }
             } else {
                 if (!dev_manager_check_by_logo(evt_logo)) { //未成功的插入，打断原来播放需恢复
@@ -855,8 +880,7 @@ static int music_mode_try_exit()
 #endif
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();
@@ -890,9 +914,16 @@ void music_local_start(void *priv)
     }
 }
 
+static bool get_music_player_status(void)
+{
+    u8 paly_status = music_file_get_player_status(get_music_file_player());
+    return (paly_status == FILE_PLAYER_START) ? TRUE : FALSE;
+}
+
 REGISTER_LOCAL_TWS_OPS(music) = {
     .name 	= APP_MODE_MUSIC,
     .local_audio_open = music_local_start,
+    .get_play_status = get_music_player_status,
 };
 
 

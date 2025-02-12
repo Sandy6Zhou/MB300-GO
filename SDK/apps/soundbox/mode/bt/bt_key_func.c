@@ -14,8 +14,10 @@
 #include "ui/ui_api.h"
 #include "ui_manage.h"
 
+#include "a2dp_player.h"
 #include "bt_event_func.h"
 #include "app_tone.h"
+#include "a2dp_player.h"
 
 
 /*************************************************************************************************/
@@ -34,6 +36,8 @@ static void volume_up(void)
     u8 test_box_vol_up = 0x41;
     s8 cur_vol = 0;
     u8 call_status = bt_get_call_status();
+    u8 data[6];
+    a2dp_player_get_btaddr(data);
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -61,14 +65,18 @@ static void volume_up(void)
         if (bt_get_call_status() != BT_CALL_HANGUP) {
             /*本地音量最大，如果手机音量还没最大，继续加，以防显示不同步*/
             if (g_bt_hdl.phone_vol < 15) {
-                bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_UP, 0, NULL);
+                if (bt_get_curr_channel_state() & HID_CH) {
+                    bt_cmd_prepare(USER_CTRL_HID_VOL_UP, 0, NULL);
+                } else {
+                    bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_UP, 0, NULL);
+                }
             }
             return;
         }
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
             opid_play_vol_sync_fun(&app_var.music_volume, 1);
-            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
         }
 #endif/* TCFG_BT_VOL_SYNC_ENABLE */
         return;
@@ -90,7 +98,7 @@ static void volume_up(void)
         bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_UP, 0, NULL);
     } else {
 #if TCFG_BT_VOL_SYNC_ENABLE
-        bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+        bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL); //使用HID调音量
 #endif
     }
 }
@@ -109,6 +117,9 @@ static void volume_up(void)
 static void volume_down(void)
 {
     u8 test_box_vol_down = 0x42;
+    u8 data[6];
+    a2dp_player_get_btaddr(data);
+
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
             volume_up_down_direct(-1);
@@ -127,14 +138,19 @@ static void volume_down(void)
              *注意：有些手机通话最小音量是1(GREE G0245D)
              */
             if (g_bt_hdl.phone_vol > 1) {
-                bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_DOWN, 0, NULL);
+                if (bt_get_curr_channel_state() & HID_CH) {
+                    bt_cmd_prepare(USER_CTRL_HID_VOL_DOWN, 0, NULL);
+                } else {
+                    bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_DOWN, 0, NULL);
+
+                }
             }
             return;
         }
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
             opid_play_vol_sync_fun(&app_var.music_volume, 0);
-            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
         }
 #endif
         return;
@@ -160,7 +176,7 @@ static void volume_down(void)
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == 0) {
             app_audio_volume_down(0);
         }
-        bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+        bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
 #endif
     }
 }
@@ -252,6 +268,19 @@ void bt_key_vol_up(void)
     }
     printf("music_vol:vol=%d, state:%d", vol, app_audio_get_state());
     app_send_message(APP_MSG_VOL_CHANGED, vol);
+
+}
+
+void bt_key_rcsp_vol_up(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    u8 vol;
+    u8 call_status;
+    if (bt_get_call_status() == BT_CALL_ACTIVE && bt_sco_state() == 0) {
+        return;
+    }
+    volume_up();
+#endif
 }
 
 /*************************************************************************************************/
@@ -281,6 +310,18 @@ void bt_key_vol_down(void)
     }
     printf("music_vol:vol=%d, state:%d", vol, app_audio_get_state());
     app_send_message(APP_MSG_VOL_CHANGED, vol);
+}
+
+void bt_key_rcsp_vol_down(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+    u8 vol;
+    u8 call_status;
+    if (bt_get_call_status() == BT_CALL_ACTIVE && bt_sco_state() == 0) {
+        return;
+    }
+    volume_down();
+#endif
 }
 
 /*************************************************************************************************/

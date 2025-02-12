@@ -28,17 +28,30 @@ typedef struct {
     uint8_t broadcast_code[16];
     char    broadcast_name[33];         // 长度要求 4 byte 到 32 byte
     uint32_t broadcast_id;              // 24 bits
+    uint8_t PBP_adv_en;                 // 拓展广播 UUID 0x1856 字段使能
 } auracast_user_config_t;
 
+typedef struct {
+    uint32_t iso_interval;  // ISO interval(uints:us).
+    uint8_t  rtn;
+} auracast_advanced_config_t;
+
+typedef struct {
+    uint8_t  *buffer;
+    uint8_t  bis_index;
+    uint8_t  bis_sub_event_counter;
+} auracast_event_send_t;
+
 // event
-// event 0-15 -> BIS index  send callback
-#define AURACAST_SOURCE_BIG_CREATED         (0x0010)
-#define AURACAST_SOURCE_BIG_TERMINATED      (0x0011)
+#define AURACAST_SOURCE_BIG_CREATED         (0x0010)        // packet: NULL
+#define AURACAST_SOURCE_BIG_TERMINATED      (0x0011)        // packet: NULL
+#define AURACAST_SOURCE_SEND_CALLBACK       (0x0012)        // packet: auracast_event_send_t
 
 typedef void (*auracast_source_event_callback_t)(uint16_t event, uint8_t *packet, uint16_t length);
 
 extern int auracast_source_init();
-extern void auracast_source_config(auracast_user_config_t *param);
+extern void auracast_source_config(auracast_user_config_t *param);      // 用户配置一定要设置才能正常工作
+extern void auracast_source_advanced_config(auracast_advanced_config_t *param);   // 高级配置只有特殊需求才需要配置，默认不需要配置
 extern void auracast_source_event_callback_register(auracast_source_event_callback_t callback);
 extern void auracast_source_start(void);
 extern void auracast_source_stop(void);

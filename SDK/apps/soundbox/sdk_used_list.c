@@ -23,6 +23,10 @@ adc_file_plug
 tone_file_plug
 ring_file_plug
 key_tone_file_plug
+#if TCFG_FILEPLAY_NODE_ENABLE
+file_play_plug
+#endif
+
 sbc_hwaccel
 sbc_decoder_plug
 msbc_decoder_plug
@@ -38,7 +42,10 @@ aac_dec_plug
 sine_dec_plug
 cvsd_decoder_plug
 pcm_dec_plug
+
+#if TCFG_ZERO_ACTIVE_NODE_ENABLE
 zero_file_plug
+#endif
 
 #if TCFG_BT_SUPPORT_LHDC
 lhdc_dec_plug
@@ -71,6 +78,7 @@ mp3_encoder_plug
 
 #if TCFG_ENC_ADPCM_ENABLE
 wav_encoder_plug
+wav_package
 #endif
 
 #if TCFG_ENC_PCM_ENABLE
@@ -263,6 +271,14 @@ opus_dec_plug
 ogg_dec_plug
 #endif
 
+#if TCFG_DEC_SPEEX_ENABLE
+speex_dec_plug
+#endif
+
+#if TCFG_ENC_SPEEX_ENABLE
+speex_encoder_plug
+#endif
+
 #if TCFG_DEC_AMR_ENABLE
 amr_dec_plug
 #endif
@@ -325,8 +341,10 @@ fat_vfs_ops
 big_tx_op
 big_rx_op
 #endif
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if LEA_CIG_CENTRAL_EN
 cig_central_op
+#endif
+#if LEA_CIG_PERIPHERAL_EN
 cig_perip_op
 #endif
 wireless_custom_data_trans
@@ -343,6 +361,11 @@ jla_lw_dec_plug
 jla_ll_encoder_plug
 #endif
 jla_ll_dec_plug
+#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
+#if (TCFG_KBOX_1T3_MODE_EN == 0)
+jla_v2_enc_plug
+#endif
+jla_v2_dec_plug
 #endif
 le_audio_file_plug
 #endif
@@ -468,8 +491,6 @@ packager_adapter
 #if TCFG_WRITE_FILE_NODE_ENABLE
 write_file_adapter
 #endif
-
-wav_package
 
 #if TCFG_DATA_SATURATION_NODE_ENABLE
 data_saturation_node_adapter
@@ -597,6 +618,10 @@ signal_generator_file_plug
 replace_node_adapter
 #endif
 
+#if TCFG_UI_ENABLE
+sdfile_resfile_ops
+sdfile_vfs_ops
+#endif
 
 #if TCFG_REVERB_NODE_ENABLE
 reverb_node_adapter
@@ -618,4 +643,37 @@ multi_ch_tdm_node_adapter
 #if TCFG_MULTI_CH_TDM_RX_NODE_ENABLE
 multi_ch_tdm_file_plug
 #endif
+
+#if TCFG_SPLIT_GAIN_NODE_ENABLE
+split_gain_node_adapter
+#endif
+
+#if TCFG_VIRTUAL_BASS_CLASSIC_NODE_ENABLE
+virtual_bass_classic_node_adapter
+#endif
+
+#if TCFG_PHASER_NODE_ENABLE
+phaser_node_adapter
+#endif
+
+#if TCFG_FLANGER_NODE_ENABLE
+flanger_node_adapter
+#endif
+
+#if TCFG_CHORUS_ADVANCE_NODE_ENABLE
+chorus_advance_node_adapter
+#endif
+
+#if TCFG_PINGPONG_ECHO_NODE_ENABLE
+pingpong_echo_node_adapter
+#endif
+
+#if TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE
+stereo_spatial_wider_node_adapter
+#endif
+
+#if TCFG_DISTORTION_CLIPPING_NODE_ENABLE
+distortion_clipping_node_adapter
+#endif
+
 

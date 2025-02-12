@@ -557,6 +557,7 @@ typedef struct {
         uint32_t aux_offset;    // Aux offset  (uints:us).
         uint8_t  adv_cnt;       // ADV counter
         uint8_t  max_pdu;       // Max PDU size(uints:octets)
+        uint32_t iso_interval;  // ISO interval(uints:us).
     };
 
     // for CIG
@@ -776,4 +777,5 @@ s8 le_hb_rssi();
 
 void ll_hci_remove_iso_data_path(uint8_t *data, size_t size);
 
+void ll_set_ext_scan_priority(uint8_t priority);
 #endif

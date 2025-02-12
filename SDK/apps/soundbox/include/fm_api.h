@@ -21,5 +21,7 @@ u8 fm_get_cur_channel(void);
 u16 fm_get_cur_fre(void);
 void fm_clear_all_station(); //清全部电台
 u8 get_fm_scan_status(void); //获取fm 搜台状态
+u8 fm_get_fm_dev_mute(void);
+u8 fm_get_scan_flag(void);
 #endif
 

@@ -17,6 +17,8 @@
 #include "ui/ui_api.h"
 #include "ui/ui_style.h"
 #include "ui_manage.h"
+#include "rcsp_rtc_func.h"
+#include "local_tws.h"
 
 #if TCFG_APP_RTC_EN
 
@@ -532,26 +534,39 @@ static int rtc_tone_play_end_callback(void *priv, enum stream_event event)
 
 static int app_rtc_init()
 {
+    int ret = -1;
     log_info("rtc start");
+
+#if TCFG_LOCAL_TWS_ENABLE
+    ret = local_tws_enter_mode(NULL, NULL);
+#endif //TCFG_LOCAL_TWS_ENABLE
+
+    if (ret == -1) {
 #if (RCSP_MODE)
-    extern u8 rcsp_rtc_ring_tone(void);
-    if (rcsp_rtc_ring_tone()) {
-        play_tone_file_callback(get_tone_files()->rtc_mode, NULL, rtc_tone_play_end_callback);
-    }
+        extern u8 rcsp_rtc_ring_tone(void);
+        if (rcsp_rtc_ring_tone()) {
+            play_tone_file_callback(get_tone_files()->rtc_mode, NULL, rtc_tone_play_end_callback);
+        } else {
+            rtc_task_start();
+        }
 #else
-    tone_player_stop();
-    int ret = play_tone_file_callback(get_tone_files()->rtc_mode, NULL, rtc_tone_play_end_callback);
-    if (ret) {
-        log_error("rtc tone play err!!!");
-        rtc_task_start();
-    }
+        tone_player_stop();
+        int ret = play_tone_file_callback(get_tone_files()->rtc_mode, NULL, rtc_tone_play_end_callback);
+        if (ret) {
+            log_error("rtc tone play err!!!");
+            rtc_task_start();
+        }
 #endif
+    }
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_RTC);
     return 0;
 }
 
 static void app_rtc_exit()
 {
+#if TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
     rtc_task_close();
     app_send_message(APP_MSG_EXIT_MODE, APP_MODE_RTC);
 }

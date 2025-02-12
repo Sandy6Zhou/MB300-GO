@@ -644,9 +644,9 @@ void audio_fade_in_fade_out(u8 left_vol, u8 right_vol)
 
 /*
  *************************************************************
- *
- *	audio volume save
- *
+ *					Audio Volume Save
+ *Notes:如果不想保存音量（比如保存音量到vm，可能会阻塞），可以
+ *		定义AUDIO_VOLUME_SAVE_DISABLE来关闭音量保存
  *************************************************************
  */
 
@@ -660,7 +660,9 @@ static void app_audio_volume_save_do(void *priv)
         __this->save_vol_cnt = 0;
         local_irq_enable();
         log_info("VOL_SAVE %d\n", app_var.music_volume);
-        syscfg_write(CFG_MUSIC_VOL, &app_var.music_volume, 2);//中断里不能操作vm 关中断不能操作vm
+        if (app_in_mode(APP_MODE_PC) == 0) {                      //pc模式写vm导致丢中断,暂时PC模式不设置音量等到退出pc模式才记录
+            syscfg_write(CFG_MUSIC_VOL, &app_var.music_volume, 2);//中断里不能操作vm 关中断不能操作vm
+        }
         return;
     }
     local_irq_enable();
@@ -668,12 +670,14 @@ static void app_audio_volume_save_do(void *priv)
 
 static void app_audio_volume_change(void)
 {
+#ifndef AUDIO_VOLUME_SAVE_DISABLE
     local_irq_disable();
     __this->save_vol_cnt = 0;
     if (__this->save_vol_timer == 0) {
         __this->save_vol_timer = sys_timer_add(NULL, app_audio_volume_save_do, 1000);//中断里不能操作vm 关中断不能操作vm
     }
     local_irq_enable();
+#endif
 }
 
 int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
@@ -681,7 +685,9 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
     struct app_mode *mode;
     mode = app_get_current_mode();
     int i = 0;
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
     if (le_audio_player_is_playing()) {
         sprintf(node_name, "%s%s", "Vol_LE_", "Audio");
         return 0;
@@ -745,6 +751,12 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
 #if TCFG_APP_PC_EN
             case APP_MODE_PC:
                 sprintf(node_name, "%s%s", "Vol_Pcspk", dvol_type[i]);
+                printf("vol_name:%d,%s\n", __LINE__, node_name);
+                break;
+#endif
+#if TCFG_APP_IIS_EN
+            case APP_MODE_IIS:
+                sprintf(node_name, "%s%s", "Vol_IIS", dvol_type[i]);
                 printf("vol_name:%d,%s\n", __LINE__, node_name);
                 break;
 #endif
@@ -834,6 +846,17 @@ static void app_audio_set_mute_timer_func(void *arg)
 void audio_app_volume_set(u8 state, s16 volume, u8 fade)
 {
     u8 dvol_idx = 0; //记录音量通道供数字音量控制使用
+
+
+
+#if (RCSP_MODE && RCSP_ADV_EQ_SET_ENABLE)
+    extern bool rcsp_set_volume(s8 volume);
+    if (rcsp_set_volume(volume)) {
+        return;
+    }
+#endif
+
+
     switch (state) {
     case APP_AUDIO_STATE_IDLE:
     case APP_AUDIO_STATE_MUSIC:
@@ -1176,12 +1199,6 @@ static const u16 phone_call_dig_vol_tab[] = {
 */
 void app_audio_init_dig_vol(u8 state, s16 volume, u8 fade, dvol_handle *dvol_hdl)
 {
-#if (RCSP_MODE && RCSP_ADV_EQ_SET_ENABLE)
-    extern bool rcsp_set_volume(s8 volume);
-    if (rcsp_set_volume(volume)) {
-        return;
-    }
-#endif
     switch (state) {
     case APP_AUDIO_STATE_IDLE:
     case APP_AUDIO_STATE_MUSIC:
@@ -1479,7 +1496,9 @@ void app_audio_set_volume(u8 state, s16 volume, u8 fade)
 {
     audio_app_volume_set(state, volume, fade);
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    update_broadcast_sync_data(BROADCAST_SYNC_VOL, volume);
+    if (state == APP_AUDIO_STATE_MUSIC) {
+        update_broadcast_sync_data(BROADCAST_SYNC_VOL, volume);
+    }
 #endif
 
 #if AUDIO_VBASS_LINK_VOLUME

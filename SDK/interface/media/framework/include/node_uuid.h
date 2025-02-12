@@ -9,6 +9,7 @@
 
 #define NODE_UUID_TONE              0x768A
 #define NODE_UUID_RING              0xCADC
+#define NODE_UUID_FILEPLAY          0XF03B
 #define NODE_UUID_KEY_TONE          0x8346
 #define NODE_UUID_EQ                0x737B
 #define NODE_UUID_SRC               0x1ECD
@@ -183,5 +184,12 @@
 #define NODE_UUID_REPLACE                  0xb5e1
 #define NODE_UUID_SIGNAL_GENERATOR         0x225d
 #define NODE_UUID_REVERB                   0x24AB//混响V2
-
+#define NODE_UUID_SPLIT_GAIN               0x2A10
+#define NODE_UUID_VIRTUAL_BASS_CLASSIC     0x55C9//virtual bass classic
+#define NODE_UUID_FLANGER                  0xBC44
+#define NODE_UUID_PHASER                   0xD2E8
+#define NODE_UUID_CHORUS_ADVANCE           0x7C2B
+#define NODE_UUID_PINGPONG_ECHO            0xAB66
+#define NODE_UUID_STEREO_SPATIAL_WIDER     0x6700
+#define NODE_UUID_DISTORTION_CLIPPING      0x97AA
 #endif

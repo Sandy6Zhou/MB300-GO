@@ -21,6 +21,7 @@
 #include "wireless_trans.h"
 #include "clock_manager/clock_manager.h"
 #include "le_audio_stream.h"
+#include "le_audio_player.h"
 #include "bt_event_func.h"
 #include "audio_config.h"
 #include "le_audio_player.h"
@@ -522,6 +523,11 @@ int broadcast_transmitter(big_parameter_t *params)
 {
     int ret;
 
+#if !LEA_BIG_CTRLER_TX_EN
+    log_error("broadcast transmitter open fail");
+    return -EPERM;
+#endif
+
     if (broadcast_role == BROADCAST_ROLE_RECEIVER) {
         log_error("broadcast_role err");
         return -EPERM;
@@ -582,7 +588,7 @@ int broadcast_receiver_connect_deal(void *priv)
     u8 bis_num = get_bis_num(BROADCAST_ROLE_RECEIVER);
     struct broadcast_hdl *broadcast_hdl = 0;
     big_hdl_t *hdl = (big_hdl_t *)priv;
-    struct le_audio_stream_params params;
+    struct le_audio_stream_params params = {0};
 
     log_info("broadcast_receiver_connect_deal");
     log_info("hdl->big_hdl:%d, hdl->bis_hdl:%d", hdl->big_hdl, hdl->bis_hdl[0]);
@@ -1036,6 +1042,10 @@ static void broadcast_rx_iso_callback(const void *const buf, size_t length, void
 
 static int broadcast_rx_padv_data_callback(const void *const buf, size_t length, u8 big_hdl)
 {
+#if ((!LEA_BIG_CUSTOM_DATA_EN) || TCFG_KBOX_1T3_MODE_EN)
+    return -EPERM;
+#endif
+
     int ret = 0;
 
     if (!length) {
@@ -1081,6 +1091,11 @@ static int broadcast_rx_padv_data_callback(const void *const buf, size_t length,
 int broadcast_receiver(big_parameter_t *params)
 {
     int ret;
+
+#if !LEA_BIG_CTRLER_RX_EN
+    log_error("broadcast receiver open fail");
+    return -EPERM;
+#endif
 
     if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
         log_error("broadcast_role err");
@@ -1348,6 +1363,55 @@ u8 get_broadcast_role(void)
 
 /* --------------------------------------------------------------------------*/
 /**
+ * @brief get current broadcast connect status
+ *
+ * @return connect status (1:connected, 0:disconnected)
+ */
+/* ----------------------------------------------------------------------------*/
+u8 get_broadcast_connect_status(void)
+{
+    struct broadcast_hdl *p;
+    u8 conn_status = 0;
+    u8 i = 0;
+
+    if (!broadcast_init_flag) {
+        return conn_status;
+    }
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    spin_lock(&broadcast_lock);
+    list_for_each_entry(p, &broadcast_list_head, entry) {
+        if (p->big_hdl == g_big_hdl) {
+            //关闭原来的recorder
+            if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+                for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                    if (p->bis_hdl_info[i].init_ok) {
+                        conn_status = 1;
+                        spin_unlock(&broadcast_lock);
+                        return  conn_status;
+                    }
+
+                }
+            } else if (broadcast_role == BROADCAST_ROLE_RECEIVER) {
+                for (i = 0; i < get_bis_num(BROADCAST_ROLE_RECEIVER); i++) {
+                    if (p->bis_hdl_info[i].init_ok) {
+                        conn_status = 1;
+                        spin_unlock(&broadcast_lock);
+                        return  conn_status;
+                    }
+                }
+            }
+        }
+    }
+    spin_unlock(&broadcast_lock);
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+
+
+    return  conn_status;
+
+}
+/* --------------------------------------------------------------------------*/
+/**
  * @brief 初始化同步的状态数据的内容
  *
  * @param data:用来同步的数据
@@ -1403,6 +1467,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
             params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
             params.latency = get_big_tx_latency();
@@ -1574,6 +1639,8 @@ int broadcast_audio_all_open(u16 big_hdl)
     u8 i = 0;
     void *recorder = 0;
 
+    broadcast_audio_all_close(big_hdl);
+
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     list_for_each_entry(broadcast_hdl, &broadcast_list_head, entry) {
         if (broadcast_hdl->big_hdl == big_hdl) {
@@ -1595,9 +1662,10 @@ int broadcast_audio_all_open(u16 big_hdl)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
-    params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
-    params.conn = broadcast_hdl->latch_bis_hdl;
+    params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+    params.latency = get_big_tx_latency();
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     if (find) {

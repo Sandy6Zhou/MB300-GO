@@ -1,4 +1,3 @@
-
 #include "jlstream.h"
 #include "classic/tws_api.h"
 #include "media/audio_base.h"
@@ -8,6 +7,8 @@
 #include "volume_node.h"
 #include "app_main.h"
 #include "le_audio_player.h"
+#include "le_audio_stream.h"
+#include "uac_stream.h"
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
@@ -18,8 +19,11 @@
 struct le_audio_player {
     struct jlstream *stream;
     void *le_audio;
+    u16 timer;
+    u8 player_id;
 #if TCFG_KBOX_1T3_MODE_EN
     u8 *stream_addr;
+    char name[16];
     u8 le_audio_num;
     u8 inused;
     s16 dvol;
@@ -29,6 +33,7 @@ struct le_audio_player {
 #endif
 };
 
+static u8 g_player_id = 0;
 
 static struct le_audio_player *g_le_audio_player = NULL;
 
@@ -69,6 +74,7 @@ void *le_audio_player_handle_open(u8 *addr)
             g_le_audio_player_file[i].inused = 1;
             g_le_audio_player_file[i].le_audio_num = i;
             g_le_audio_player_file[i].stream_addr = addr;
+            g_le_audio_player_file[i].player_id = g_player_id;
             local_irq_enable();
             return &g_le_audio_player_file[i];
         }
@@ -84,6 +90,7 @@ void le_audio_player_handle_close(u8 *addr)
                 g_le_audio_player_file[i].inused = 0;
                 g_le_audio_player_file[i].le_audio_num = 0;
                 g_le_audio_player_file[i].stream_addr = 0;
+                g_le_audio_player_file[i].player_id = 0;
             }
         }
     }
@@ -117,7 +124,6 @@ int le_audio_player_create(u8 *conn)
 {
     int err;
     int uuid;
-    char lea_player_name[16];
 
     uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
     struct le_audio_player *player = get_le_audio_player_handle(conn);
@@ -134,13 +140,13 @@ int le_audio_player_create(u8 *conn)
     }
     if (player->le_audio_num) {
         y_printf("======   LE_Audio_Sink1  ======\n");
-        strcpy(lea_player_name, "LE_Audio_Sink1");
+        strcpy(player->name, "LE_Audio_Sink1");
     } else {
         y_printf("======   LE_Audio_Sink0  ======\n");
-        strcpy(lea_player_name, "LE_Audio_Sink0");
+        strcpy(player->name, "LE_Audio_Sink0");
     }
     player->le_audio = conn;
-    player->stream = jlstream_pipeline_parse_by_node_name(uuid, lea_player_name);
+    player->stream = jlstream_pipeline_parse_by_node_name(uuid, player->name);
     if (!player->stream) {
         printf("create le audio  stream faild\n");
         return -EFAULT;
@@ -228,6 +234,28 @@ static void le_audio_player_callback(void *private_data, int event)
 #if TCFG_KBOX_1T3_MODE_EN
     player = (struct le_audio_player *)private_data;
 #endif
+
+
+    if (!player) {
+        return;
+    }
+
+    u8 find = 0;
+#if TCFG_KBOX_1T3_MODE_EN
+    for (u8 i = 0; i < (sizeof(g_le_audio_player_file) / sizeof(struct le_audio_player) - 1); i++) {
+        if (player->player_id == g_le_audio_player_file[i].player_id) {
+            find = 1;
+            break;
+        }
+    }
+#else
+    find = (player->player_id == g_le_audio_player->player_id);
+#endif
+
+    if (!find) {
+        return;
+
+    }
     printf("le audio player callback : %d\n", event);
     switch (event) {
     case STREAM_EVENT_START:
@@ -247,6 +275,10 @@ static void le_audio_player_callback(void *private_data, int event)
         printf("le_audio_player_callback, le_audio_num:%d, dvol:%d\n", player->le_audio_num, player->dvol);
 #endif
         break;
+    case STREAM_EVENT_PREEMPTED:
+
+
+        break;
     }
 }
 
@@ -254,8 +286,9 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
 {
     int err;
     int uuid;
-    char lea_player_name[16];
-    enum stream_scene lea_player_scene;
+
+
+    g_player_id ++;
 
 #if TCFG_KBOX_1T3_MODE_EN
     err = le_audio_player_create(conn);
@@ -277,32 +310,31 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
     }
     g_le_audio_player = player;
     player->le_audio = conn;
-
-    if (lea_param->service_type == LEA_SERVICE_CALL) {
-        printf("LEA Service Type:Call\n");
-        strcpy(lea_player_name, "LE_Audio_Call");
-        lea_player_scene = STREAM_SCENE_LEA_CALL;
-    } else {
-        printf("LEA Service Type:Media\n");
-        strcpy(lea_player_name, "LE_Audio_Media");
-        lea_player_scene = STREAM_SCENE_LE_AUDIO;
-    }
-    player->stream = jlstream_pipeline_parse_by_node_name(uuid, lea_player_name);
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_LE_AUDIO_SINK);
     if (!player->stream) {
-        //容错处理，找不到名字的时候通过节点UUID打开.
-        player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_LE_AUDIO_SINK);
-        if (!player->stream) {
-            printf("create le_audio stream faild\n");
-            return -EFAULT;
+        printf("create le_audio stream faild\n");
+        return -EFAULT;
+    }
+    if (lea_param) {
+        if (lea_param->service_type == LEA_SERVICE_CALL) {
+            printf("LEA Service Type:Call\n");
+            jlstream_set_scene(player->stream, STREAM_SCENE_LEA_CALL);
+        } else {
+            printf("LEA Service Type:Media\n");
+            if (app_in_mode(APP_MODE_PC)) {
+                u16 l_vol = 0, r_vol = 0;
+                uac_speaker_stream_get_volume(&l_vol, &r_vol);
+                app_audio_set_volume(APP_AUDIO_STATE_MUSIC, (r_vol + l_vol) / 2, 1);
+            }
+            jlstream_set_scene(player->stream, STREAM_SCENE_LE_AUDIO);
         }
+
+    } else {
+        jlstream_set_scene(player->stream, STREAM_SCENE_LE_AUDIO);
     }
-    jlstream_set_scene(player->stream, lea_player_scene);
-    if (lea_player_scene == STREAM_SCENE_LEA_CALL) {
-#if TCFG_LEA_CALL_DL_GLOBAL_SR
-        jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, TCFG_LEA_CALL_DL_GLOBAL_SR);
 #endif
-    }
-#endif /*TCFG_KBOX_1T3_MODE_EN*/
+
+    player->player_id = g_player_id;
 
     jlstream_set_callback(player->stream, player, le_audio_player_callback);
 
@@ -316,11 +348,11 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
     if (err == 0) {
 #if TCFG_KBOX_1T3_MODE_EN
         if (player->le_audio_num) {
-            jlstream_add_thread(player->stream, "mic_effect3");
-            //jlstream_add_thread(player->stream, "mic_effect4");
+            jlstream_add_thread(player->stream, "wl_mic_effect2");
+            //jlstream_add_thread(player->stream, "wl_mic_effect4");
         } else {
-            jlstream_add_thread(player->stream, "mic_effect1");
-            //jlstream_add_thread(player->stream, "mic_effect2");
+            jlstream_add_thread(player->stream, "wl_mic_effect1");
+            //jlstream_add_thread(player->stream, "wl_mic_effect3");
         }
 #endif
         err = jlstream_start(player->stream);
@@ -344,9 +376,10 @@ void le_audio_player_close(u8 *conn)
     if (!player) {
         return;
     }
-    if (memcmp(player->stream_addr, conn, 6)) {
-        return;
-    }
+    /* if (memcmp(player->stream_addr, conn, 6)) { */
+    /*     return; */
+    /* } */ //不用指针来判断，因为释放后去申请可能会申请到同一个指针，采用自增的id来判断是否为同一条
+
 #else
     struct le_audio_player *player = g_le_audio_player;
 
@@ -354,6 +387,25 @@ void le_audio_player_close(u8 *conn)
         return;
     }
 #endif
+
+
+    u8 find = 0;
+#if TCFG_KBOX_1T3_MODE_EN
+    for (u8 i = 0; i < (sizeof(g_le_audio_player_file) / sizeof(struct le_audio_player) - 1); i++) {
+        if (player->player_id == g_le_audio_player_file[i].player_id) {
+            find = 1;
+            break;
+        }
+    }
+#else
+    find = (player->player_id == g_le_audio_player->player_id);
+#endif
+
+    if (!find) {
+        return;
+
+    }
+
     if (player->le_audio != conn) {
         return;
     }

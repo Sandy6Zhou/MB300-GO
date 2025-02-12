@@ -766,7 +766,7 @@ AT_VOLATILE_RAM_CODE
 int flash_virfat_read(struct device *device, void *buf, u32 len, u32 addr)
 {
     /* y_printf(">>>[test]:r；addr = %d ,len = %d\n", addr, len); */
-    u32 *_buf = buf;
+    u8 *_buf = buf;
     u32 _len = len;
     u32 _lba = addr;
     while (_len) {
@@ -787,7 +787,7 @@ static int flash_virfat_write(struct device *device, void *buf, u32 len, u32 add
 
     /* r_printf(">>>[test]:w；addr = %d ,len = %d\n", addr, len); */
     /* return virfat_flash_write(buf, addr, len); */
-    u32 *_buf = buf;
+    u8 *_buf = buf;
     u32 _len = len;
     u32 _lba = addr;
     while (_len) {

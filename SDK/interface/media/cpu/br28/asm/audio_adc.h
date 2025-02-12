@@ -181,6 +181,7 @@ struct audio_adc_hdl {
     u8 buf_fixed;  //是否固定adc硬件使用的buffer地址
     u8 bit_width;
     OS_MUTEX mutex;
+    u32 timestamp;
 };
 
 struct adc_mic_ch {

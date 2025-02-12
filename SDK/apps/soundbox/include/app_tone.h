@@ -42,6 +42,7 @@ struct tone_files {
     const char *pc_mode;
     const char *rtc_mode;
     const char *spdif_mode;
+    const char *iis_mode;
     const char *le_broadcast_open;
     const char *le_broadcast_close;
     const char *le_connected_open;

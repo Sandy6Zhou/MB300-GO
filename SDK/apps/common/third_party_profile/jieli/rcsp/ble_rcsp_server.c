@@ -829,6 +829,7 @@ static int set_adv_enable(void *priv, u32 en)
     } else {
         app_ble_adv_enable(rcsp_server_ble_hdl, en);
         app_ble_adv_enable(rcsp_server_ble_hdl1, en);
+        bt_ble_rcsp_adv_disable_timer();
     }
     return APP_BLE_NO_ERROR;
 }
@@ -915,7 +916,7 @@ void rcsp_bt_ble_adv_enable(u8 enable)
     printf("%s, rets=0x%x\n", __FUNCTION__, rets_addr);
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
     if (enable) {
-        if ((0 == is_cig_phone_conn()) && (0 == bt_get_total_connect_dev())) {
+        if ((0 == is_cig_phone_conn()) && (0 == bt_get_total_connect_dev()) && (get_le_audio_switch_onoff() == 0)) {
             printf("cig[%d] or edr[%d] is not connected\n", is_cig_phone_conn(), bt_get_total_connect_dev());
             return;
         }
@@ -1001,11 +1002,7 @@ void rcsp_bt_ble_exit(void)
         return;
     }
 
-    /* ble_module_enable(0); */
-    bt_ble_rcsp_adv_disable_timer();
-    if (bt_rcsp_ble_conn_num() > 0) {
-        ble_disconnect(NULL);
-    }
+    ble_module_enable(0);
 #if RCSP_MODE
     rcsp_exit();
 #endif

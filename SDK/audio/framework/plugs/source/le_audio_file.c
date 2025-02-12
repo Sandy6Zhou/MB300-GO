@@ -11,6 +11,7 @@
 #include "source_node.h"
 #include "le_audio_stream.h"
 #include "reference_time.h"
+#include "system/timer.h"
 
 struct le_audio_file_handle {
     u8 start;
@@ -20,7 +21,37 @@ struct le_audio_file_handle {
     void *file;
     struct stream_node *node;
     int play_latency;
+    u16 timer;
 };
+
+static void abandon_le_audio_data(void *p)
+{
+    struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)p;
+    while (le_audio_stream_get_frame_num(hdl->file) > 0) {
+        struct le_audio_frame *le_audio_frame = le_audio_stream_get_frame(hdl->file);
+        if (le_audio_frame) {
+            le_audio_stream_free_frame(hdl->file, le_audio_frame);
+        }
+    }
+}
+
+static void le_audio_file_start_abandon_data(struct le_audio_file_handle *hdl)
+{
+    if (hdl->timer == 0) {
+        hdl->timer = sys_timer_add(hdl, abandon_le_audio_data, 50);
+        puts("start_abandon_le_audio_data\n");
+    }
+}
+
+static void le_audio_file_stop_abandon_data(struct le_audio_file_handle *hdl)
+{
+    if (hdl->timer) {
+        abandon_le_audio_data(hdl);
+        puts("stop_abandon_le_audio_data\n");
+        sys_timer_del(hdl->timer);
+        hdl->timer = 0;
+    }
+}
 
 static enum stream_node_state le_audio_get_frame(void *file, struct stream_frame **pframe)
 {
@@ -128,6 +159,7 @@ static int le_audio_file_stop(struct le_audio_file_handle *hdl)
         if (hdl->reference) {
             audio_reference_clock_exit(hdl->reference);
         }
+        le_audio_file_stop_abandon_data(hdl);
         hdl->start = 0;
     }
 
@@ -148,8 +180,12 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
         break;
     case NODE_IOC_START:
         le_audio_file_start(hdl);
+        le_audio_file_stop_abandon_data(hdl);
         break;
     case NODE_IOC_SUSPEND:
+        le_audio_file_stop(hdl);
+        le_audio_file_start_abandon_data(hdl);
+        break;
     case NODE_IOC_STOP:
         le_audio_file_stop(hdl);
         break;
@@ -161,6 +197,8 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
 static void le_audio_file_release(void *file)
 {
     struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)file;
+
+    le_audio_file_stop_abandon_data(hdl);
 
     free(hdl);
 }

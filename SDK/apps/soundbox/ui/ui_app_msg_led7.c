@@ -38,14 +38,14 @@ static void led7_enter_mode(u8 mode)
         break;
     case APP_MODE_LINEIN:
         UI_SHOW_WINDOW(ID_WINDOW_LINEIN);
-        UI_SHOW_MENU(MENU_AUX, 0, 0, NULL);
+        /* UI_SHOW_MENU(MENU_AUX, 0, 0, NULL); */
         break;
     case APP_MODE_RTC:
         UI_SHOW_WINDOW(ID_WINDOW_CLOCK);
         break;
     case APP_MODE_PC:
         UI_SHOW_WINDOW(ID_WINDOW_PC);
-        UI_SHOW_MENU(MENU_PC, 1000, 0, NULL);
+        /* UI_SHOW_MENU(MENU_PC, 1000, 0, NULL); */
         break;
     case APP_MODE_SPDIF:
         UI_SHOW_WINDOW(ID_WINDOW_SPDIF);
@@ -54,6 +54,10 @@ static void led7_enter_mode(u8 mode)
     case APP_MODE_SINK:
         UI_SHOW_WINDOW(ID_WINDOW_SINK);
         UI_SHOW_MENU(MENU_SINK, 0, 0, NULL);
+        break;
+    case APP_MODE_IIS:
+        UI_SHOW_WINDOW(ID_WINDOW_IIS);
+        /* UI_SHOW_MENU(MENU_IIS, 0, 0, NULL); */
         break;
     }
 }

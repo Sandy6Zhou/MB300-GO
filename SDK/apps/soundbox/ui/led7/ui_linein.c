@@ -7,6 +7,8 @@
 #include "system/includes.h"
 #include "ui/ui_api.h"
 #include "linein.h"
+#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_FM_EMITTER_EN
 #include "fm_emitter/fm_emitter_manage.h"
@@ -31,6 +33,16 @@ static void led7_show_aux(void *hd)
     dis->clear();
     dis->setXY(0, 0);
     dis->show_string((u8 *)" AUX");
+    dis->lock(0);
+}
+
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
     dis->lock(0);
 }
 
@@ -67,7 +79,7 @@ static void led7_show_pause(void *hd)
 
 static void *ui_open_linein(void *hd)
 {
-    /* ui_set_auto_reflash(500);//设置主页500ms自动刷新 */
+    ui_set_auto_reflash(500);//设置主页500ms自动刷新
     return NULL;
 }
 
@@ -101,7 +113,17 @@ static void ui_linein_main(void *hd, void *private) //主界面显示
     }
 #else
 
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+    if (get_le_audio_curr_role() == 2) {
+        led7_show_le(hd);
+    } else {
+        led7_show_aux(hd);
+    }
+#else
     led7_show_aux(hd);
+#endif
 
 #endif
 }

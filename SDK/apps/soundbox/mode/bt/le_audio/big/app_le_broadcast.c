@@ -28,8 +28,16 @@
 #include "linein.h"
 #include "spdif_file.h"
 #include "spdif.h"
+#include "soundbox.h"
 /* #include "mic.h" */
-/* #include "iis.h" */
+#include "iis.h"
+#include "pc_spk_player.h"
+#include "bt_slience_detect.h"
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#include "ble_rcsp_server.h"
+#include "btstack_rcsp_user.h"
+#endif
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
 
@@ -107,6 +115,11 @@ static const pair_callback_t pair_rx_cb = {
 static u8 save_sync_status_table[5][2] = {0};
 #endif
 
+static u8 bis_switch_onoff = 0;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+static int rcsp_connect_dev_detect_timer = 0;
+#endif
 /**************************************************************************************************
   Function Declarations
 **************************************************************************************************/
@@ -353,6 +366,21 @@ static int app_broadcast_conn_status_event_handler(int *msg)
 #if TCFG_KBOX_1T3_MODE_EN
         bis_connected_nums++;
         ASSERT(bis_connected_nums <= BIG_MAX_BIS_NUMS && bis_connected_nums >= 0, "bis_connected_nums:%d", bis_connected_nums);
+#if (TCFG_KBOX_1T3_BIND_EN == 2) //0-不配对，1-TX生成配对码，2-RX生成配对码
+        ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &pair_code, sizeof(u32));
+        if ((ret <= 0) || (pair_code == 0xFFFFFFFF)) {
+            wireless_trans_get_pair_code("big_rx", (u8 *)&pair_code, 1);
+            ret = syscfg_write(VM_WIRELESS_PAIR_CODE0, &pair_code, sizeof(u32));
+            if (ret <= 0) {
+                r_printf(">>>>>>wireless pair code save err, %d", __LINE__);
+            }
+        }
+        wireless_custom_data_send_to_sibling('P', &pair_code, sizeof(u32), remote_dev_identification);
+        wireless_trans_set_pair_code("big_rx", (u8 *)&pair_code);
+#elif (TCFG_KBOX_1T3_BIND_EN == 1)  //由于TX事件比较快，导致TX发送配对码时，RX仍未准备好，此处改为引导TX发配对码
+        pair_code = 0x55aa55aa;
+        wireless_custom_data_send_to_sibling('P', &pair_code, sizeof(u32), remote_dev_identification);
+#endif
 #endif
 
         ret = broadcast_receiver_connect_deal((void *)hdl);
@@ -483,20 +511,28 @@ u8 get_broadcast_app_mode_exit_flag(void)
 /* ----------------------------------------------------------------------------*/
 static bool is_broadcast_as_transmitter()
 {
+    struct app_mode *cur_mode = app_get_current_mode();
+
+#if (TCFG_BT_BACKGROUND_ENABLE)
+    //如果能量检测中则等待能量检测完成再触发做发送的流程，避免重复打开数据流
+    u8 addr[6];
+    if (cur_mode->name == APP_MODE_BT && bt_slience_get_detect_addr(addr)) {
+        return false;
+    }
+#endif
+
 #if (LEA_BIG_FIX_ROLE == 1)
     return true;
 #elif (LEA_BIG_FIX_ROLE == 2)
     return false;
 #endif
 
-    struct app_mode *cur_mode = app_get_current_mode();
-
     //当前处于蓝牙模式并且已连接手机设备时，
     //(1)播歌作为广播发送设备；
     //(2)暂停作为广播接收设备。
     if ((cur_mode->name == APP_MODE_BT) &&
         (bt_get_connect_status() != BT_STATUS_WAITINT_CONN)) {
-        if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING) ||
+        if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING &&  bt_get_connect_status() == BT_STATUS_PLAYING_MUSIC) ||
             get_a2dp_decoder_status() ||
             a2dp_player_runing()) {
             return true;
@@ -574,7 +610,11 @@ static bool is_broadcast_as_transmitter()
     //当处于下面几种模式时，作为广播发送设备
     if (cur_mode->name == APP_MODE_PC) {
 #if defined(TCFG_USB_SLAVE_AUDIO_SPK_ENABLE) && TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        return true;
+        if (pc_get_status() || config_broadcast_as_master) {
+            return true;
+        } else {
+            return false;
+        }
 #else
         return false;
 #endif
@@ -649,6 +689,20 @@ static void app_broadcast_suspend()
     }
 }
 
+
+
+static void app_broadcast_retry_open(void *priv)
+{
+    u32 role = (u32)priv;
+
+    if (role) {
+        app_broadcast_open_with_role(role - 1);
+    } else {
+        app_broadcast_open();
+    }
+
+
+}
 /* --------------------------------------------------------------------------*/
 /**
  * @brief 开启广播
@@ -688,19 +742,24 @@ int app_broadcast_open()
         return -EPERM;
     }
 
+
+    bis_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+    if (bt_rcsp_ble_conn_num() > 0) {
+        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)0, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+        return;
+    } else {
+        rcsp_connect_dev_detect_timer = 0;
+    }
+#endif
     log_info("broadcast_open");
 
+    app_broadcast_mutex_pend(&mutex, __LINE__);
 #if TCFG_KBOX_1T3_MODE_EN
     le_audio_ops_register(APP_MODE_NULL);
 #endif
 
-#if defined(RCSP_MODE) && RCSP_MODE
-#if RCSP_BLE_MASTER
-    setRcspConnectBleAddr(NULL);
-#endif
-    setLeAudioModeMode(JL_LeAudioModeBig);
-    ble_module_enable(0);
-#endif
     if (is_broadcast_as_transmitter()) {
         //初始化广播发送端参数
         params = set_big_params(mode->name, BROADCAST_ROLE_TRANSMITTER, 0);
@@ -737,8 +796,109 @@ int app_broadcast_open()
         }
     }
 
+    app_broadcast_mutex_post(&mutex, __LINE__);
     return temp_broadcast_hdl;
 }
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 固定角色（0：接收端，1：发射端）开启广播
+ *
+ * @return >=0:success
+ */
+/* ----------------------------------------------------------------------------*/
+int app_broadcast_open_with_role(u8 role)
+{
+    u8 i;
+    u8 big_available_num = 0;
+    int temp_broadcast_hdl = 0;
+    big_parameter_t *params;
+    struct app_mode *mode;
+
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if (!app_broadcast_init_flag) {
+        return -EPERM;
+    }
+
+    for (i = 0; i < BIG_MAX_NUMS; i++) {
+        if (!app_big_hdl_info[i].used) {
+            big_available_num++;
+        }
+    }
+
+    if (!big_available_num) {
+        return -EPERM;
+    }
+
+    mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    bis_switch_onoff = 1;
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    ble_module_enable(0);
+    if (bt_rcsp_ble_conn_num() > 0) {
+        u32 temp_role = role + 1;
+        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)temp_role, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+        return;
+    } else {
+        rcsp_connect_dev_detect_timer = 0;
+    }
+#endif
+
+    log_info("broadcast_open_with_role %d", role);
+
+    app_broadcast_mutex_pend(&mutex, __LINE__);
+#if TCFG_KBOX_1T3_MODE_EN
+    le_audio_ops_register(APP_MODE_NULL);
+#endif
+
+    if (role) {
+        //初始化广播发送端参数
+        params = set_big_params(mode->name, BROADCAST_ROLE_TRANSMITTER, 0);
+
+        //打开big，打开成功后会在函数app_broadcast_conn_status_event_handler做后续处理
+        temp_broadcast_hdl = broadcast_transmitter(params);
+#if TRANSMITTER_AUTO_TEST_EN
+        //不定时切换模式
+        wireless_trans_auto_test3_init();
+        //不定时暂停播放
+        wireless_trans_auto_test4_init();
+#endif
+    } else {
+        //初始化广播接收端参数
+        params = set_big_params(mode->name, BROADCAST_ROLE_RECEIVER, 0);
+
+        //打开big，打开成功后会在函数app_broadcast_conn_status_event_handler做后续处理
+        temp_broadcast_hdl = broadcast_receiver(params);
+#if RECEIVER_AUTO_TEST_EN
+        //不定时切换模式
+        wireless_trans_auto_test3_init();
+        //不定时暂停播放
+        wireless_trans_auto_test4_init();
+#endif
+    }
+    if (temp_broadcast_hdl >= 0) {
+        for (i = 0; i < BIG_MAX_NUMS; i++) {
+            if (!app_big_hdl_info[i].used) {
+                app_big_hdl_info[i].big_hdl = temp_broadcast_hdl;
+                app_big_hdl_info[i].big_status = APP_BROADCAST_STATUS_START;
+                app_big_hdl_info[i].used = 1;
+                break;
+            }
+        }
+    }
+
+    app_broadcast_mutex_post(&mutex, __LINE__);
+
+    return temp_broadcast_hdl;
+}
+
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -761,6 +921,11 @@ int app_broadcast_close(u8 status)
 
     log_info("broadcast_close");
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    if (rcsp_connect_dev_detect_timer) {
+        sys_timeout_del(rcsp_connect_dev_detect_timer);
+    }
+#endif
     //由于是异步操作需要加互斥量保护，避免和开启开广播的流程同时运行,添加的流程请放在互斥量保护区里面
     app_broadcast_mutex_pend(&mutex, __LINE__);
 
@@ -790,9 +955,11 @@ int app_broadcast_close(u8 status)
     //释放互斥量
     app_broadcast_mutex_post(&mutex, __LINE__);
 
-#if defined(RCSP_MODE) && RCSP_MODE
+    bis_switch_onoff = 0;
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     if (status != APP_BROADCAST_STATUS_SUSPEND) {
-        setLeAudioModeMode(JL_LeAudioModeNone);
+        ll_set_private_access_addr_pair_channel(0);
         ble_module_enable(1);
     }
 #endif
@@ -835,13 +1002,19 @@ int app_broadcast_switch(void)
 
     if (!tone_player_runing()) {
         if (find) {
-            if (app_broadcast_close(APP_BROADCAST_STATUS_STOP) == 0) {
-                play_tone_file_alone_callback(get_tone_files()->le_broadcast_close,
-                                              (void *)TONE_INDEX_BROADCAST_CLOSE,
-                                              broadcast_tone_play_end_callback);
-            }
+            bt_work_mode_select(g_bt_hdl.last_work_mode);
+            play_tone_file_alone_callback(get_tone_files()->le_broadcast_close,
+                                          (void *)TONE_INDEX_BROADCAST_CLOSE,
+                                          broadcast_tone_play_end_callback);
         } else {
-            if (app_broadcast_open() >= 0) {
+
+            if (g_bt_hdl.work_mode !=  BT_MODE_BROADCAST) {
+                bt_work_mode_select(BT_MODE_BROADCAST);
+                play_tone_file_alone_callback(get_tone_files()->le_broadcast_open,
+                                              (void *)TONE_INDEX_BROADCAST_OPEN,
+                                              broadcast_tone_play_end_callback);
+
+            } else if (app_broadcast_open() >= 0) {
                 play_tone_file_alone_callback(get_tone_files()->le_broadcast_open,
                                               (void *)TONE_INDEX_BROADCAST_OPEN,
                                               broadcast_tone_play_end_callback);
@@ -916,6 +1089,7 @@ int app_broadcast_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
         broadcast_app_mode_exit = 0;
+    case LE_AUDIO_APP_OPEN:
         config_broadcast_as_master = 1;
         mode = app_get_current_mode();
         if (mode) {
@@ -932,6 +1106,8 @@ int app_broadcast_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_EXIT");
         //退出当前模式
         broadcast_app_mode_exit = 1;
+    case LE_AUDIO_APP_CLOSE:
+        phone_start_cnt = 0;
         app_broadcast_suspend();
         le_audio_ops_unregister();
         break;
@@ -961,24 +1137,23 @@ int app_broadcast_deal(int scene)
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色重启广播数据流
-                broadcast_audio_recorder_reset(app_big_hdl_info[i].big_hdl);
+                broadcast_audio_all_open(app_big_hdl_info[i].big_hdl);
             }
             ret = 1;
             break;
         }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
 #if TCFG_BT_VOL_SYNC_ENABLE
         mode = app_get_current_mode();
         if (mode && (mode->name == APP_MODE_BT)) {
             set_music_device_volume(get_music_sync_volume());
         }
 #endif
-#endif
 
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(1);
             ret = 1;
         }
         break;
@@ -998,14 +1173,15 @@ int app_broadcast_deal(int scene)
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色暂停播放时关闭广播数据流
-                broadcast_audio_recorder_close(app_big_hdl_info[i].big_hdl);
+                broadcast_audio_all_close(app_big_hdl_info[i].big_hdl);
             }
             ret = 1;
             break;
         }
 #endif
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
             ret = 1;
         }
         break;
@@ -1035,7 +1211,9 @@ int app_broadcast_deal(int scene)
         }
         //当前处于蓝牙模式并且挂起前广播，恢复广播并作为接收设备
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
+            ret = 1;
         }
         break;
 
@@ -1050,7 +1228,9 @@ int app_broadcast_deal(int scene)
             app_broadcast_suspend();
         }
         if (is_need_resume_broadcast()) {
-            app_broadcast_resume();
+            /* app_broadcast_resume(); */
+            app_broadcast_open_with_role(0);
+            ret = 1;
         }
         break;
 
@@ -1227,12 +1407,10 @@ static void broadcast_pair_tx_event_callback(const PAIR_EVENT event, void *priv)
     case PAIR_EVENT_TX_PRI_CHANNEL_CREATE_SUCCESS:
         u32 *private_connect_access_addr = (u32 *)priv;
         g_printf("PAIR_EVENT_TX_PRI_CHANNEL_CREATE_SUCCESS:0x%x", *private_connect_access_addr);
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
         int ret = syscfg_write(VM_WIRELESS_PAIR_CODE0, private_connect_access_addr, sizeof(u32));
         if (ret <= 0) {
             r_printf(">>>>>>wireless pair code save err");
         }
-#endif
         break;
 
     case PAIR_EVENT_TX_OPEN_PAIR_MODE_SUCCESS:
@@ -1263,9 +1441,7 @@ void app_broadcast_enter_pair(u8 role, u8 mode)
 
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &private_connect_access_addr, sizeof(u32));
-#endif
     if (role == BROADCAST_ROLE_UNKNOW) {
         if (is_broadcast_as_transmitter()) {
             broadcast_enter_pair(BROADCAST_ROLE_TRANSMITTER, mode, (void *)&pair_tx_cb, private_connect_access_addr);
@@ -1596,6 +1772,12 @@ WIRELESS_CUSTOM_DATA_STUB_REGISTER(cmd_status_sync) = {
 u8 get_bis_connected_num(void)
 {
     return bis_connected_nums;
+}
+
+
+u8 get_bis_switch_onoff(void)
+{
+    return bis_switch_onoff;
 }
 
 #endif

@@ -180,6 +180,12 @@ int app_protocol_sys_event_handler(struct sys_event *event);
 #define EARPHONE_STATE_ROLE_SWITCH(a)
 #endif
 
+enum {
+    DUAL_CONN_CLOSE = 0,
+    DUAL_CONN_SET_ONE,
+    DUAL_CONN_SET_TWO,
+
+};
 
 extern struct bt_mode_var g_bt_hdl;
 
@@ -193,7 +199,10 @@ void tone_ring_player_stop();
 bool bt_check_already_initializes(void);
 void btstack_init_in_other_mode(void);
 void btstack_exit_in_other_mode(void);
+void btstack_init_for_app(void);
+void btstack_exit_for_app(void);
 
 void bt_work_mode_switch_to_next(void);
 
+int bt_work_mode_select(u8 mode);
 #endif

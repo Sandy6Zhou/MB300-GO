@@ -37,7 +37,6 @@
 #include "btcrypt.h"
 #include "custom_cfg.h"
 #include "rcsp_music_info_setting.h"
-#include "classic/tws_api.h"
 #include "ble_rcsp_server.h"
 #include "rcsp_manage.h"
 #include "rcsp_bt_manage.h"
@@ -49,9 +48,15 @@
 #include "rcsp_config.h"
 #include "btstack_rcsp_user.h"
 
-#if RCSP_MODE == RCSP_MODE_EARPHONE
+#if	TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
+#include "classic/tws_api.h"
+#endif
+
+#if RCSP_MODE == RCSP_MODE_EARPHONE
 #include "earphone.h"
+#elif RCSP_MODE == RCSP_MODE_SOUNDBOX
+#include "soundbox.h"
 #endif
 
 #include "asm/charge.h"

@@ -99,7 +99,37 @@ const int device_bulk_read_async_enable = 0;
 //================================================//
 //                  UI 							  //
 //================================================//
-//const int ENABLE_LUA_VIRTUAL_MACHINE = 0;
+const int SCALE_EFFECT_WITHOUT_PSRAM_ENABLE     = 0;
+const int ENABLE_LUA_VIRTUAL_MACHINE = 0;
+const int UI_DATA_STORE_IN_NORFLASH = 0;
+
+const int ARABIC_MODE_SWITCH      = 0;
+const int HEBREW_MODE_SWITCH      = 0;
+const int THAI_MODE_SWITCH        = 0;
+const int MIXRIGHT_MODE_SWITCH    = 0;
+const int MIXLEFT_MODE_SWITCH     = 0;
+const int MYANMAR_MODE_SWITCH     = 0;
+const int BENGALI_MODE_SWITCH     = 0;
+const int KHMER_MODE_SWITCH       = 0;
+const int INDIC_MODE_SWITCH       = 0;
+const int TIBETAN_MODE_SWITCH     = 0;
+const int FONT_UNIC_SWITCH        = 1;
+const int JPEG_DECODE_TIMEOUT	  = 20;	//20-50ms
+
+#if (TCFG_UI_ENABLE)
+const int ENABLE_JL_UI_FRAME = 1;
+#else
+const int ENABLE_JL_UI_FRAME = 0;
+#endif
+
+//================================================//
+//              是否使用PSRAM UI  				  //
+//================================================//
+#if (TCFG_PSRAM_DEV_ENABLE)
+const int ENABLE_PSRAM_UI_FRAME = 1;
+#else
+const int ENABLE_PSRAM_UI_FRAME = 0;
+#endif
 
 //================================================//
 //          不可屏蔽中断使能配置(UNMASK_IRQ)      //

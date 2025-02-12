@@ -81,18 +81,18 @@ u8 power_soff_callback()
 
     __mask_io_cfg();
 
+    gpio_config_uninit();
+
     void gpio_config_soft_poweroff(void);
     gpio_config_soft_poweroff();
-
-    gpio_config_uninit();
 
     return 0;
 }
 
 void power_early_flowing()
 {
-    // 默认关闭长按复位0，由key_driver配置
-    gpio_longpress_pin0_reset_config(IO_PORTB_01, 0, 0, 1, 1);
+    /* // 默认关闭长按复位0，由key_driver配置 */
+    /* gpio_longpress_pin0_reset_config(IO_PORTB_01, 0, 0, 1, 1); */
     // 不开充电功能，将长按复位关闭
 #if (!TCFG_CHARGE_ENABLE)
     gpio_longpress_pin1_reset_config(IO_LDOIN_DET, 0, 0, 0);

@@ -15,6 +15,8 @@ int  linein_volume_pp(void);
 
 struct app_mode *app_enter_linein_mode(int arg);
 int linein_app_msg_handler(int *msg);
+u8 get_need_resume_aux_flag();
+void set_close_broadcast_resume_aux_val(u8 val);
 
 
 

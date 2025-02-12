@@ -27,12 +27,18 @@
 #include "app_le_connected.h"
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
+#include "local_tws.h"
+#include "rcsp_spdif_func.h"
+#include "bt_key_func.h"
+#include "btstack_rcsp_user.h"
 
 struct spdif_ctl {
     struct spdif_file_cfg *p_spdif_cfg;	//spdif的配置参数信息
     void *spdif_hdl;
     u8 mute_mark;
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
 #if (LEA_BIG_FIX_ROLE==0)
     //下面两个变量配合着使用, 解决问题：当关闭广播，打开本地音频时，是否需要mute（固定广播发送端, mute的状态下打开广播，关闭广播时恢复mute状态）
     u8 close_broadcast_open_lacal_audio_need_mute;
@@ -64,7 +70,7 @@ static int spdif_tone_play_end_callback(void *priv, enum stream_event event)
         return 0;
     }
     switch (event) {
-    case STREAM_EVENT_NONE:
+    /* case STREAM_EVENT_NONE: */
     case STREAM_EVENT_STOP:
         app_send_message(APP_MSG_SPDIF_START, 0);
         break;
@@ -86,11 +92,25 @@ int spdif_app_msg_handler(int *msg)
         puts("APP_MSG_MUSIC_PP\n");
         app_spdif_hd.mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         app_spdif_hd.mute_mark ^= 1;
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0)
         if (!get_broadcast_role()) {
             audio_app_mute_en(app_spdif_hd.mute_mark);
         } else {
             if (get_broadcast_role() == 2) {
+                //如果此时是接收端, 则需要转为发送端
+                app_spdif_hd.mute_mark = 0;
+                app_spdif_hd.spdif_broadcast_pp_sw_flag = 1;
+            } else {
+                //如果此时是发送端, 则需要转为接收端
+                app_spdif_hd.mute_mark = 1;
+                app_spdif_hd.spdif_broadcast_pp_sw_flag = 1;
+            }
+        }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==0)
+        if (!get_auracast_role()) {
+            audio_app_mute_en(app_spdif_hd.mute_mark);
+        } else {
+            if (get_auracast_role() == 2) {
                 //如果此时是接收端, 则需要转为发送端
                 app_spdif_hd.mute_mark = 0;
                 app_spdif_hd.spdif_broadcast_pp_sw_flag = 1;
@@ -106,6 +126,11 @@ int spdif_app_msg_handler(int *msg)
 
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
         if (get_broadcast_role()) {
+            le_audio_spdif_volume_pp();
+        }
+#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (get_auracast_role()) {
             le_audio_spdif_volume_pp();
         }
 #endif
@@ -129,6 +154,11 @@ int spdif_app_msg_handler(int *msg)
         spdif_io_loop_switch();
         printf("spdif switch source");
         break;
+    case APP_MSG_SPDIF_SET_SOURCE:
+        spdif_set_port_by_index(msg[1]);
+        app_send_message(APP_MSG_SPDIF_SOURCE_UPDATE, 0);
+        //printf("spdif set source %d\n",msg[1]);
+        break;
     case APP_MSG_CEC_VOL_UP:
         if (uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[0]) != get_spdif_source_io() &&
             uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[1]) != get_spdif_source_io()) {
@@ -137,7 +167,15 @@ int spdif_app_msg_handler(int *msg)
         }
     /* fall-through */
     case APP_MSG_VOL_UP:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_up();
+        } else {
+            app_audio_volume_up(1);
+        }
+#else
         app_audio_volume_up(1);
+#endif
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == app_audio_get_max_volume()) {
             if (tone_player_runing() == 0) {
 #if TCFG_MAX_VOL_PROMPT
@@ -162,7 +200,15 @@ int spdif_app_msg_handler(int *msg)
         }
     /* fall-through */
     case APP_MSG_VOL_DOWN:
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN))
+        if (bt_rcsp_device_conn_num() && JL_rcsp_get_auth_flag() && (app_get_current_mode()->name != APP_MODE_BT)) {
+            bt_key_rcsp_vol_down();
+        } else {
+            app_audio_volume_down(1);
+        }
+#else
         app_audio_volume_down(1);
+#endif
         if (uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff) {
             if (uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[0]) == get_spdif_source_io() ||
                 uuid2gpio(app_spdif_hd.p_spdif_cfg->hdmi_port[1]) == get_spdif_source_io()) {
@@ -229,6 +275,10 @@ int spdif_app_msg_handler(int *msg)
         break;
     }
 
+#if RCSP_MODE
+    rcsp_spdif_msg_deal(msg[0]);
+#endif
+
     return 0;
 }
 static int app_spdif_init()
@@ -249,12 +299,18 @@ static int app_spdif_init()
     app_var.pitch_mode = PITCH_0;
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     btstack_init_in_other_mode();
 #endif
 
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_SPDIF);
     app_spdif_hd.p_spdif_cfg = audio_spdif_file_get_cfg();
+    app_send_message(APP_MSG_SPDIF_SOURCE_UPDATE, 0);
+    app_send_message(APP_MSG_SPDIF_STATUS_UPDATE, 0);
     return 0;
 }
 
@@ -342,8 +398,7 @@ static int spdif_mode_try_exit()
 #endif
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();
@@ -387,24 +442,10 @@ REGISTER_LP_TARGET(spdif_lp_target) = {
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 static int get_spdif_play_status(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_app_mode_exit_flag()) {
+    if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
     return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-#endif
-
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
-    if (get_connected_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-
-    if (spdif_get_online_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-    } else {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-#endif
 }
 
 static int spdif_local_audio_open(void)
@@ -420,7 +461,7 @@ static int spdif_local_audio_open(void)
             log_e("spdif_start fail!!!");
         }
     }
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0)
     if (get_broadcast_role() == 0) {
         if (app_spdif_hd.spdif_broadcast_pp_sw_flag) {
             app_spdif_hd.spdif_broadcast_pp_sw_flag = 0;
@@ -438,7 +479,26 @@ static int spdif_local_audio_open(void)
     }
 #endif
 
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==0)
+    if (get_auracast_role() == 0) {
+        if (app_spdif_hd.spdif_broadcast_pp_sw_flag) {
+            app_spdif_hd.spdif_broadcast_pp_sw_flag = 0;
+        } else {
+            if (app_spdif_hd.close_broadcast_open_lacal_audio_need_mute == 1) {
+                //需要恢复mute状态
+                app_spdif_hd.close_broadcast_open_lacal_audio_need_mute = 0;
+                app_spdif_hd.mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
+                if (app_spdif_hd.mute_mark == 0) {
+                    app_spdif_hd.mute_mark ^= 1;
+                    audio_app_mute_en(app_spdif_hd.mute_mark);
+                }
+            }
+        }
+    }
+#endif
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
     if (app_spdif_hd.close_broadcast_open_lacal_audio_need_mute == 1) {
         //需要恢复mute状态
         app_spdif_hd.close_broadcast_open_lacal_audio_need_mute = 0;
@@ -458,7 +518,9 @@ static int spdif_local_audio_open(void)
         }
     }
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==2)
     if (app_spdif_hd.close_broadcast_open_lacal_audio_need_mute == 1) {
         //需要恢复mute状态
         app_spdif_hd.close_broadcast_open_lacal_audio_need_mute = 0;
@@ -485,7 +547,7 @@ static int spdif_local_audio_open(void)
 static int spdif_local_audio_close(void)
 {
     if (get_spdif_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0)
         //没有固定发送端或者是固定接收端
         if (get_broadcast_role()) {
             app_spdif_hd.mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
@@ -497,7 +559,21 @@ static int spdif_local_audio_close(void)
             }
         }
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0)
+        //没有固定发送端或者是固定接收端
+        if (get_auracast_role()) {
+            app_spdif_hd.mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
+            if (app_spdif_hd.mute_mark) {
+                //此时是mute状态，需要解mute
+                app_spdif_hd.mute_mark ^= 1;
+                app_audio_set_mute_state(APP_AUDIO_STATE_MUSIC, app_spdif_hd.mute_mark);
+                app_spdif_hd.close_broadcast_open_lacal_audio_need_mute = 1;	//关闭广播时需要恢复mute状态
+            }
+        }
+#endif
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
         //如果固定为发送端，则可能会存在两种情况：
         //1、mute住的情况下打开广播,此时发送端mute住，但接收端有声音, 发送端需要解mute. 关闭广播时需要重新给mute住
         //2、unmute的情况下打开广播，在关闭广播时需要解mute
@@ -515,7 +591,9 @@ static int spdif_local_audio_close(void)
             app_spdif_hd.close_broadcast_open_lacal_audio_need_unmute = 1;	//关闭广播时需要恢复mute状态
         }
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==2)
         //如果固定为接收端，则可能会存在两种情况：
         //1、mute住的情况下打开广播，此时进入接收端也是mute的状态，需要解mute；当关闭广播接收的时候，需要mute回去
         //2、unmute的情况下打开广播，在关闭广播时需要解mute
@@ -567,6 +645,10 @@ static void *spdif_tx_le_audio_open(void *args)
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    //修复spdif模式下反复开关广播后，在广播下按下pp键，本地mute住但接收端依旧出声的问题
+    update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
+#endif
     return le_audio;
 }
 
@@ -584,6 +666,9 @@ static int spdif_tx_le_audio_close(void *le_audio)
     app_spdif_hd.le_audio = NULL;
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
+#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    update_app_auracast_deal_scene(LE_AUDIO_MUSIC_STOP);
 #endif
     /* app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1); */
     return 0;
@@ -626,7 +711,9 @@ static int le_audio_spdif_volume_pp(void)
     int ret = 0;
     if (!app_spdif_hd.mute_mark) {
         ret = le_audio_scene_deal(LE_AUDIO_MUSIC_START);
-#if (LEA_BIG_FIX_ROLE==1)
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
         if (app_spdif_hd.close_broadcast_open_lacal_audio_need_unmute == 0) {
             app_spdif_hd.close_broadcast_open_lacal_audio_need_unmute = 1;
         }
@@ -636,7 +723,9 @@ static int le_audio_spdif_volume_pp(void)
 #endif
     } else {
         ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
-#if (LEA_BIG_FIX_ROLE==1)
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
         if (app_spdif_hd.close_broadcast_open_lacal_audio_need_unmute) {
             app_spdif_hd.close_broadcast_open_lacal_audio_need_unmute = 0;
         }

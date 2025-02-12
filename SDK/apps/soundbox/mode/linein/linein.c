@@ -19,7 +19,7 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
-
+#include "app_le_auracast.h"
 
 #if TCFG_APP_LINEIN_EN
 
@@ -37,7 +37,7 @@ static int linein_tone_play_end_callback(void *priv, enum stream_event event)
         return 0;
     }
     switch (event) {
-    case STREAM_EVENT_NONE:
+    /* case STREAM_EVENT_NONE: */
     case STREAM_EVENT_STOP:
         app_send_message(APP_MSG_LINEIN_START, 0);
         break;
@@ -158,8 +158,7 @@ static int linein_mode_try_exit()
 #endif
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();

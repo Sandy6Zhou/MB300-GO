@@ -40,6 +40,7 @@
 #include "key/adkey.h"
 #include "key/iokey.h"
 #include "trim.h"
+#include "iis.h"
 #include "dev_manager.h"
 #include "app_mode_update.h"
 #include "sdfile.h"
@@ -48,6 +49,7 @@
 #include "app_mode_sink.h"
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
+#include "rcsp_device_status.h"
 
 #if TCFG_LP_TOUCH_KEY_ENABLE
 #include "asm/lp_touch_key_api.h"
@@ -124,7 +126,7 @@ const struct task_info task_info_table[] = {
     {"aec",					2,	   1,   768,   128 },
 
     {"aec_dbg",				3,	   0,   512,   128 },
-    {"update",				1,	   0,   256,   0   },
+    {"update",				1,	   0,   512,   0   },
     {"tws_ota",				2,	   0,   256,   0   },
     {"tws_ota_msg",			2,	   0,   256,   128 },
     {"dw_update",		 	2,	   0,   256,   128 },
@@ -349,6 +351,8 @@ static struct app_mode *app_task_init()
     cfg_file_parse(0);
     key_driver_init();
 
+    key_wakeup_init();
+
     do_initcall();
     do_module_initcall();
     do_late_initcall();
@@ -529,8 +533,14 @@ struct app_mode *app_mode_switch_handler(int *msg)
 int app_get_message(int *msg, int max_num, const struct key_remap_table *key_table)
 {
     const struct app_msg_handler *handler;
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
 
     app_core_get_message(msg, max_num);
+
+    if (msg[1] == APP_MSG_MUSIC_PLAY_SUCCESS) {
+        printf("app_get_message  APP_MSG_MUSIC_PLAY_SUCCESS:0x%x\n", rets_addr);
+    }
 
     if (msg[0] == MSG_FROM_KEY && key_table) {
         /*
@@ -564,8 +574,13 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
                 msg[1] = key_msg;
 #endif
             } else {
-                msg[0] = MSG_FROM_APP;
-                msg[1] = key_msg;
+                if (msg[0] == MSG_FROM_RTC) {
+                    msg[0] = MSG_FROM_RTC;
+                    msg[1] = key_msg;
+                } else {
+                    msg[0] = MSG_FROM_APP;
+                    msg[1] = key_msg;
+                }
             }
         }
     }
@@ -606,6 +621,12 @@ static void app_task_loop(void *p)
         }
 #endif //#if 0
 //
+
+
+#if (RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE)
+        function_change_inform(mode->name, 0);
+#endif
+
 
         switch (mode->name) {
         case APP_MODE_IDLE:
@@ -663,6 +684,11 @@ static void app_task_loop(void *p)
         case APP_MODE_UPDATE:
             mode = app_enter_update_mode(g_mode_switch_arg);
             break;
+#if TCFG_APP_IIS_EN
+        case APP_MODE_IIS:
+            mode = app_enter_iis_mode(g_mode_switch_arg);
+            break;
+#endif
         case APP_MODE_SINK:
 #if TCFG_LOCAL_TWS_ENABLE
             mode = app_enter_sink_mode(g_mode_switch_arg);

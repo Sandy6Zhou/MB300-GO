@@ -25,6 +25,7 @@
 #include "mix_record_api.h"
 #include "local_tws.h"
 #include "bt_tws.h"
+#include "audio_dut_control.h"
 
 #define PIPELINE_UUID_TONE_NORMAL   0x7674
 #define PIPELINE_UUID_A2DP          0xD96F
@@ -116,7 +117,10 @@ static int get_pipeline_uuid(const char *name)
     }
 
     if (!strcmp(name, "mic_effect")) {
+#if TCFG_KBOX_1T3_MODE_EN
+#else
         clock_alloc("mic_effect", 24 * 1000000UL);
+#endif
         return PIPELINE_UUID_MIC_EFFECT;
     }
 
@@ -287,7 +291,7 @@ void aec_code_movable_unload(void)
 #endif
 }
 
-#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if defined(TCFG_HI_RES_AUDIO_ENEBALE) || TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
 //调整解码器输出帧长
 static const int frame_unit_size[] = { 64, 128, 256, 384, 512, 1024, 2048, 4096, 8192};
 int decoder_check_frame_unit_size(int dest_len)
@@ -314,12 +318,24 @@ static int load_decoder_handler(struct stream_decoder_info *info)
     if (info->scene == STREAM_SCENE_A2DP) {
         g_a2dp_slience = 0;
         g_a2dp_slience_begin = 0;
+#if (CPU_CORE_NUM > 1)
         info->task_name = "a2dp_dec";
+#else
+        if (info->coding_type != AUDIO_CODING_SBC) {
+            info->task_name = "a2dp_dec";
+        }
+#endif
 
 #if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
         info->frame_time = 16;
 #endif
     }
+
+#if TCFG_KBOX_1T3_MODE_EN
+    if (info->scene == STREAM_SCENE_WIRELESS_MIC) {
+        info->frame_time = 15;
+    }
+#endif
 
     if (info->coding_type == AUDIO_CODING_LHDC || info->coding_type == AUDIO_CODING_LDAC) {
         info->task_name = "a2dp_dec";
@@ -411,7 +427,7 @@ static int tws_switch_get_status()
 
 static int tws_get_output_channel()
 {
-    int channel = AUDIO_CH_MIX;
+    int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
     if (tws_api_is_connect()) {
         channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
     }

@@ -18,6 +18,8 @@
 #include "classic/tws_api.h"
 #include "bt_slience_detect.h"
 #include "bt_ability.h"
+#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 int bt_app_msg_handler(int *msg)
 {
@@ -28,6 +30,23 @@ int bt_app_msg_handler(int *msg)
     u8 msg_type = msg[0];
 
     printf("bt_app_msg type:0x%x", msg[0]);
+
+#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
+    if (get_broadcast_connect_status() &&  \
+        (msg_type == APP_MSG_MUSIC_PP  \
+         || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
+#if LEA_BIG_VOL_SYNC_EN
+         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
+#endif
+        )) {
+
+        printf("BIS receiving state does not support the event %d", msg_type);
+
+        return 0;
+
+    }
+#endif
+
     switch (msg_type) {
     case APP_MSG_CHANGE_MODE:
         puts("app msg key change mode\n");
@@ -121,6 +140,9 @@ int bt_app_msg_handler(int *msg)
             dev_vol = app_audio_bt_volume_update(bt_addr, APP_AUDIO_STATE_MUSIC);
         }
         set_music_device_volume(dev_vol);
+        if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
+            break;
+        }
         int err = a2dp_player_open(bt_addr);
         if (err == -EBUSY) {
             printf("bt_app_msg_handler open a2dp_player failed\n");

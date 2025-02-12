@@ -328,6 +328,13 @@ static void clk_ref_cal(void)
 
     int curr_clk = clk_get("sys");
     int dest_clk = curr_clk;
+
+#if (defined TCFG_FIX_CLOCK_FREQ  && TCFG_FIX_CLOCK_FREQ)
+    //固定时钟只进行效率统计
+    r_printf("cpu: %d %d  clk:%d\n", usage[0], usage[1], curr_clk);
+    return;
+#endif
+
 __again:
     switch (clk_adjust_step) {
     case 0:
@@ -418,6 +425,7 @@ void clock_refurbish(void)
     clk_set_api("sys", TCFG_FIX_CLOCK_FREQ);
 #else
     clk_set_api("sys", CLOCK_MAXIMUM_FREQ);
+#endif
     ref_cnt = 0;
     clk_adjust_step = 0;
 
@@ -431,7 +439,6 @@ void clock_refurbish(void)
 
     task_info_reset();
 
-#endif
     CLOCK_MANAGER_EXIT_CRITICAL();
 }
 

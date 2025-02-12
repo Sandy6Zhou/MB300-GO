@@ -23,7 +23,9 @@
 #include "local_tws.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
+#include "app_le_auracast.h"
 #include "soundbox.h"
+#include "pc_spk_player.h"
 
 #define LOG_TAG_CONST       PC
 #define LOG_TAG             "[PC]"
@@ -146,7 +148,7 @@ static int pc_tone_play_end_callback(void *priv, enum stream_event event)
         return 0;
     }
     switch (event) {
-    case STREAM_EVENT_NONE:
+    /* case STREAM_EVENT_NONE: */
     case STREAM_EVENT_STOP:
         pc_task_start();
         app_send_message(APP_MSG_PC_START, 0);
@@ -183,7 +185,11 @@ static void app_pc_init()
         }
     }
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     btstack_init_in_other_mode();
 #endif
 
@@ -271,8 +277,7 @@ static int pc_mode_try_exit()
 #endif
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();
@@ -308,5 +313,6 @@ REGISTER_LP_TARGET(pc_lp_target) = {
 REGISTER_LOCAL_TWS_OPS(pc) = {
     .name 	= APP_MODE_PC,
     .local_audio_open = pc_local_start,
+    .get_play_status =  pc_spk_player_runing,
 };
 #endif

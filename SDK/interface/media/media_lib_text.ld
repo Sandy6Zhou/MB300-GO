@@ -290,27 +290,16 @@
     *(.adpcm_encode_sparse_const)
     . = ALIGN(4);
     . = ALIGN(4);
-    *(.lc3_decoder_code)
-    *(.lc3_decoder_const)	
 #if !AUDIO_LC3_CODEC_AT_RAM
     *(.lc3_dec.text.const)
     *(.lc3_dec.text)
     *(.lc3_enc.text.const)
     *(.lc3_enc.text)
-    *(.lc3_dec_const)
-    *(.lc3_dec_code)
     *(.lc3_codec_c_const)
     *(.lc3_codec_c_code)
-    *(.lc3_codec_ari_c_const)
-    *(.lc3_codec_ari_c_code)
+    *(.lc3_codec_c_sparse_code)
     *(.lc3_codec_d_code)
     *(.lc3_codec_e_code)
-    *(.lc3_codec_c_sparse_code)
-    *(.lc3_codec_t8k_code)
-    *(.lc3_codec_t16k_code)
-    *(.lc3_codec_t24k_code)
-    *(.lc3_codec_t32k_code)  
-    *(.lc3_codec_t441k_code)
     . = ALIGN(4);
 #endif
 #if !AUDIO_JLA_CODEC_AT_RAM
@@ -318,22 +307,54 @@
     *(.jla_dec.text)
     *(.jla_enc.text.const)
     *(.jla_enc.text)
-    *(.jla_dec_const)
-    *(.jla_dec_code)
     *(.jla_codec_c_const)
     *(.jla_codec_c_code)
-    *(.jla_codec_ari_c_const)
-    *(.jla_codec_ari_c_code)
+    *(.jla_codec_c_sparse_code)
     *(.jla_codec_d_code)
     *(.jla_codec_e_code)
-    *(.jla_codec_c_sparse_code)
-    *(.jla_codec_t8k_code)
-    *(.jla_codec_t16k_code)
-    *(.jla_codec_t24k_code)
-    *(.jla_codec_t32k_code)
-    *(.jla_codec_t441k_code)
     . = ALIGN(4);
 #endif
+#if !(AUDIO_JLA_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
+	*(.jl_codec_c_const) 
+	*(.jl_codec_c_code)  
+	*(.jl_codec_ari_c_const)
+	*(.jl_codec_ari_c_code)
+	*(.jl_codec_c_sparse_code)
+	*(.jl_codec_d_code)
+	*(.jl_codec_e_code)
+	*(.jl_codec_t8k_code)
+	*(.jl_codec_t16k_code)
+	*(.jl_codec_t24k_code)
+	*(.jl_codec_t32k_code)
+	*(.jl_codec_t441k_code)
+	*(.jl_codec_const) 
+#endif
+	*(.jla_lw_codec_const)
+	*(.jla_lw_codec_code)
+	*(.jla_lw.const)
+	*(.jla_lw.code)
+
+	*(.jla_ll.const)
+	*(.jla_ll.code)
+	*(.jla_ll_codec.text)
+	*(.jla_ll_codec.text.const)
+	*(.jla_ll_codec.text.cache.L2.decode)
+	*(.jla_ll_codec.text.cache.L2.const)
+	*(.jla_ll_codec.text.cache.L2.run)
+
+	*(.jla_v2_enc_const)
+	*(.jla_v2_enc_code)
+	*(.jla_v2_dec_const)
+	*(.jla_v2_dec_code)
+	*(.jla_v2_codec_c_const)
+	*(.jla_v2_codec_c_code)
+	*(.jla_v2_codec_ari_c_const)
+	*(.jla_v2_codec_ari_c_code)
+	*(.jla_v2_codec_c_sparse_code)
+	*(.jla_v2_codec_e_code)
+	*(.jla_v2_decoder_const)
+	*(.jla_v2_decoder_code)
+	*(.jla_v2_codec_d_code)
 
     *(.speex_code)
     *(.speex_encoder_code)
@@ -509,6 +530,72 @@
     *(.sur_LRDRIFT_cal_code)
     *(.sur_LRDRIFT_cal_const)
     *(.sur_cal_sparse_code)
+#if (AFX_LIMITER_AT_RAM == 0)
+	*(.limiter.text)
+    *(.limiter.text.const)
+	*(.limiter.text.cache.L2.code)
+	*(.limiter.text.cache.L2.const)
+#endif
+#if (AFX_MULTIBAND_LIMITER_AT_RAM == 0)
+	*(.multiband_limiter.text)
+	*(.multiband_limiter.text.const)
+#endif
+#if (AFX_MULTIBAND_CROSSOVER_AT_RAM == 0)
+    *(.multiband_crossover.text)
+	*(.multiband_crossover.text.const)
+#endif
+#if (AFX_MULTIBAND_DRC_AT_RAM == 0)
+    *(.multiband_drc.text)
+	*(.multiband_drc.text.const)
+#endif
+#if (AFX_VIRTUAL_SURRUOUND_PRO_AT_RAM == 0)
+	*(.virtual_surround_pro.text)
+	*(.virtual_surround_pro.text.const)
+	*(.sas.text.cache.L2.code)
+	*(.sas.text.cache.L2.const)
+    *(.sas.text)
+    *(.sas.text.code)
+#endif
+#if (AFX_SW_EQ_AT_RAM == 0)
+    *(.iir_filter.text.cache.L2.code)
+    *(.iir_filter.text.cache.L2.const)
+    *(.iir_filter.text)
+    *(.iir_filter.text.const)
+	*(.sof_eq.text)
+	*(.sof_eq.text.const)
+#endif
+
+#if (AFx_PHASER_AT_RAM == 0)
+	*(.Phaser.text.cache.L2.code)	
+	/* *(.Phaser.text)	 */
+	/* *(.Phaser.text.const)	 */
+#endif
+
+
+#if (AFx_FLANGER_AT_RAM == 0)
+	*(.flanger.text.cache.L2.code)	
+	/* *(.flanger.text)	 */
+	/* *(.flanger.text.const)	 */
+#endif
+
+#if (AFx_CHORUS_ADVANCE_AT_RAM == 0)
+	*(.chorus_adv.text.cache.L2.code)	
+	/* *(.chorus_adv.text)	 */
+	/* *(.chorus_adv.text.const)	 */
+#endif
+
+#if (AFx_PINGPONG_ECHO_AT_RAM == 0)
+	*(.pingpong_echo.text.cache.L2.code)	
+	/* *(.pingpong_echo.text)	 */
+	/* *(.pingpong_echo.text.const)	 */
+#endif
+
+#if AFx_DISTORTION_CLIPPING_AT_RAM == 0
+	*(.distortion.text.cache.L2.code)	
+	*(.distortion.text.cache.L2.const)	
+	/* *(.distortion.text)	 */
+	/* *(.distortion.text.const)	 */
+#endif
 
     . = ALIGN(4);
     media_code_begin = .;

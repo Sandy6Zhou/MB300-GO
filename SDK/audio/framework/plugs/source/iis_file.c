@@ -249,10 +249,9 @@ void iis_rx_init(struct iis_file_hdl *hdl)
     hdl->sample_rate = general_params->sample_rate;	//默认采样率值
     jlstream_read_node_data_by_cfg_index(hdl->plug_uuid, hdl->node->subid, 0, (void *)&hdl->ch_idx, NULL);
     if (!iis_hdl[hdl->module_idx]) {
-        int dma_len = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, 2);
         struct alink_param params = {0};
         params.module_idx = hdl->module_idx;
-        params.dma_size   = dma_len;
+        params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, 2);
         params.sr         = hdl->sample_rate;
         params.bit_width  = hdl->bit_width;
         params.fixed_pns  = const_out_dev_pns_time_ms;
@@ -262,6 +261,8 @@ void iis_rx_init(struct iis_file_hdl *hdl)
         log_debug("iis module_idx %d rx init err\n", hdl->module_idx);
         return;
     }
+    audio_iis_check_hw_cfg_status(hdl->module_idx, hdl->ch_idx, ALINK_DIR_RX);
+
     hdl->state = AUDIO_IIS_STATE_INIT;
 }
 

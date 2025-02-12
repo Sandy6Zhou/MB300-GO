@@ -22,6 +22,7 @@
 #include "clock_manager/clock_manager.h"
 #include "le_audio_stream.h"
 #include "bt_event_func.h"
+#include "le_audio_player.h"
 
 #if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
 
@@ -192,33 +193,6 @@ __again:
     g_cig_hdl = hdl;
     connected_mutex_post(&connected_mutex, __LINE__);
     return hdl;
-}
-
-static u32 connected_audio_reference_time(void *priv, u8 cmd, void *arg)
-{
-    struct connected_hdl *connected = (struct connected_hdl *)priv;
-    u32 time = 0;
-
-    switch (cmd) {
-    case LE_AUDIO_SYNC_ENABLE:
-        wireless_trans_audio_sync_enable(connected->role_name, (void *)((u32)connected->latch_cis_hdl), 0);
-        break;
-    case LE_AUDIO_CURRENT_TIME:
-        wireless_trans_get_cur_clk(connected->role_name, (void *)&time);
-        return time;
-    case LE_AUDIO_LATCH_ENABLE:
-        wireless_trans_trigger_latch_time(connected->role_name, (void *)((u32)connected->latch_cis_hdl));
-        break;
-    case LE_AUDIO_GET_LATCH_TIME:
-        wireless_trans_get_latch_time_us(connected->role_name,
-                                         &((struct le_audio_latch_time *)arg)->us_1_12th,
-                                         &((struct le_audio_latch_time *)arg)->us,
-                                         &((struct le_audio_latch_time *)arg)->event,
-                                         (void *)((u32)connected->latch_cis_hdl));
-        break;
-    }
-
-    return 0;
 }
 
 /* --------------------------------------------------------------------------*/
@@ -502,6 +476,7 @@ int connected_central_disconnect_deal(void *priv)
             for (i = 0; i < CIS_MAX_CONNECTABLE_NUMS; i++) {
                 if (p->cis_hdl_info[i].cis_hdl) {
                     p->latch_cis_hdl = p->cis_hdl_info[i].cis_hdl;
+                    break;
                 }
             }
 
@@ -877,7 +852,7 @@ int connected_perip_connect_deal(void *priv)
     params.fmt.sdu_period = get_cig_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
-    params.reference_time = connected_audio_reference_time;
+    params.latency = get_cig_tx_latency();
     params.conn = connected_hdl->latch_cis_hdl;
 
     connected_hdl->role_name = "cig_perip";
@@ -1006,6 +981,7 @@ int connected_perip_disconnect_deal(void *priv)
             for (i = 0; i < CIS_MAX_CONNECTABLE_NUMS; i++) {
                 if (p->cis_hdl_info[i].cis_hdl) {
                     p->latch_cis_hdl = p->cis_hdl_info[i].cis_hdl;
+                    break;
                 }
             }
 

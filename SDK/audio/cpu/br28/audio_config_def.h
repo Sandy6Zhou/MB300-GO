@@ -18,22 +18,39 @@
 //**************************************
 #define MEDIA_24BIT_ENABLE		TCFG_AUDIO_BIT_WIDTH
 
+//**************************************
+// 		    场景参数更新使能
+//**************************************
+#define TCFG_SCENE_UPDATE_ENABLE            0
 
 //**************************************
 // 			音频模块链接配置
 //**************************************
 /*音效处理链接配置*/
-#define AFx_VBASS_AT_RAM				1	//虚拟低音
-#define AFx_REVERB_AT_RAM				1	//混响
-#define AFx_ECHO_AT_RAM				    1	//回声
-#define AFx_VOICECHANGER_AT_RAM			1	//变声
-#define AFx_DRC_AT_RAM 					1	//DRC
-#define AFx_HARMONIC_EXCITER_AT_RAM 	1	//谐波激励
-#define AFx_DYN_EQ_AT_RAM 				1	//动态EQ
-#define AFx_NOTCH_HOWLING_AT_RAM 		1	//啸叫抑制：陷波
-#define AFx_FREQ_SHIFT_AT_RAM	 		1	//啸叫抑制：移频
-#define AFx_NOISEGATE_AT_RAM	 		1	//噪声门
-#define AFx_ADVAUDIO_PLC_AT_RAM	    	1
+#define AFx_VBASS_AT_RAM				    1	//虚拟低音
+#define AFx_REVERB_AT_RAM				    1	//混响
+#define AFx_ECHO_AT_RAM				        1	//回声
+#define AFx_VOICECHANGER_AT_RAM			    1	//变声
+#define AFx_DRC_AT_RAM 					    1	//DRC
+#define AFx_HARMONIC_EXCITER_AT_RAM 	    1	//谐波激励
+#define AFx_DYN_EQ_AT_RAM 				    1	//动态EQ
+#define AFx_NOTCH_HOWLING_AT_RAM 		    1	//啸叫抑制：陷波
+#define AFx_FREQ_SHIFT_AT_RAM	 		    1	//啸叫抑制：移频
+#define AFx_NOISEGATE_AT_RAM	 		    1	//噪声门
+#define AFx_ADVAUDIO_PLC_AT_RAM	    	    1
+#define AFX_AUDIO_LINK_AT_RAM               0   //iis驱动
+#define AFX_AUDIO_SYNC_AT_RAM               0   //sync
+#define AFx_EQ_AT_RAM                       0	//eq
+#define AFx_VOCAL_TRACK_AT_RAM              0   //声道组合与声道拆分
+#define AFX_AUDIO_DIGITAL_VOL_AT_RAM        0   //数字音量
+#define AFX_AUDIO_ENERGY_DET_AT_RAM         0   //能量检测
+#define AFX_LIMITER_AT_RAM                  0   //限幅器
+#define AFX_MULTIBAND_CROSSOVER_AT_RAM      0   //多带限幅器与多带drc使用的多带分频器
+#define AFX_MULTIBAND_LIMITER_AT_RAM        0   //多带限幅器
+#define AFX_MULTIBAND_DRC_AT_RAM            0   //多带drc
+#define AFX_VIRTUAL_SURRUOUND_PRO_AT_RAM    0   //虚拟环绕声pro/2t4/2t5
+#define AFX_SW_EQ_AT_RAM                    0   //软件EQ
+#define AFx_SPATIAL_EFFECT_AT_RAM           1   //空间音效
 
 /*通话语音处理算法*/
 #define AUDIO_CVP_TEXT_AT_RAM	    	0	//COMMON TEXT
@@ -71,6 +88,14 @@
 
 //***************End********************
 
+//**************************************
+// 			音效使能控制
+//**************************************
+#define AUDIO_VBASS_LINK_VOLUME     0 //虚拟低音与音量联动调节
+//**************************************
+// 			麦克风音效配置
+//**************************************
+#define DUAL_ADC_EFFECT     0 //两路ADC输入使能(如：麦克风+吉他)
 #if TCFG_BT_VOL_SYNC_ENABLE
 #define TCFG_MAX_VOL_PROMPT						 0
 #else
@@ -90,6 +115,11 @@
 #define AUDIO_LINEIN_IRQ_POINTS AUDIO_ADC_IRQ_POINTS
 #else
 #define AUDIO_LINEIN_IRQ_POINTS 128
+#endif
+
+#if (TCFG_LOCAL_TWS_ENABLE)
+#undef AUDIO_LINEIN_IRQ_POINTS
+#define AUDIO_LINEIN_IRQ_POINTS 256
 #endif
 
 #define AUDIO_DAC_MAX_SAMPLE_RATE           48000
@@ -119,6 +149,8 @@
 #error "Hi-Res Audio：请将全局采样率TCFG_AUDIO_GLOBAL_SAMPLE_RATE设置到至少96000，或Disable！"
 #endif
 #endif
+
+#define TCFG_AUDIO_DAC_NOISEGATE_ENABLE     1
 
 /*
  *该配置适用于没有音量按键的产品，防止打开音量同步之后
@@ -248,6 +280,14 @@
 
 //支持 ADC DIGITAL 按最大通道数开启, 中断拿数需按使用的ADC_CH拆分
 #define TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
+
+/*
+ * 2.1声道音量调节节点配置
+ */
+#define DVOL_2P1_CH_DVOL_ADJUST_TOTAL	    0	//2.1声道总增益
+#define DVOL_2P1_CH_DVOL_ADJUST_LR		    1	//2.1声道LR通路增益
+#define DVOL_2P1_CH_DVOL_ADJUST_SW		    2	//2.1声道低音通路增益
+#define DVOL_2P1_CH_DVOL_ADJUST_NODE		DVOL_2P1_CH_DVOL_ADJUST_TOTAL
 
 #define ANC_EXT_V1			1	//仅支持入耳
 #define ANC_EXT_V2			2	//支持入耳、半入耳

@@ -142,10 +142,11 @@ void bt_status_init_ok(void)
     return;
 #endif
 
+    le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
+
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
     if (g_bt_hdl.work_mode == BT_MODE_BROADCAST) {
         app_broadcast_init();
-        le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 #if TCFG_KBOX_1T3_MODE_EN
         app_broadcast_open();
 #endif
@@ -155,7 +156,6 @@ void bt_status_init_ok(void)
 #if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
     if (g_bt_hdl.work_mode == BT_MODE_CIG) {
         app_connected_init();
-        le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 #if TCFG_KBOX_1T3_MODE_EN
         if (is_open_cis_connet()) {
             app_connected_open(0);
@@ -164,10 +164,10 @@ void bt_status_init_ok(void)
     }
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
-    le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    app_auracast_init();
 #endif
+
 
 #if TCFG_TWS_INIT_AFTER_POWERON_TONE_PLAY_END
     if (tone_player_runing()) {

@@ -24,6 +24,10 @@
 #include "app_le_broadcast.h"
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#include "app_le_auracast.h"
+#endif
+
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[pcspk]"
 #define LOG_ERROR_ENABLE
@@ -50,6 +54,19 @@ struct pc_spk_player {
 static struct pc_spk_player *g_pc_spk_player = NULL;
 
 extern void dac_try_power_on_task_delete();
+
+static u8 pc_player_status = 0;
+
+/*
+ * @description: 判断usb检测是否有数
+ * @return：1 有数 0 无数
+ * @node:
+ */
+bool pc_get_status()
+{
+    /* g_printf("--pc_get_status is%d-", pc_player_status); */
+    return pc_player_status;
+}
 
 static void pc_spk_player_callback(void *private_data, int event)
 {
@@ -92,7 +109,7 @@ int pc_spk_player_open(void)
     int err = 0;
     struct pc_spk_player *player = NULL;;
 
-    if (g_pc_spk_player) {
+    if (g_pc_spk_player || !app_in_mode(APP_MODE_PC)) {
         return 0;
     }
 
@@ -194,6 +211,16 @@ static void pc_spk_player_restert(void)
         le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
     }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if (!get_auracast_role()) {
+        if (g_pc_spk_state == PC_SPK_STA_OPEN) {
+            pc_spk_player_close();
+            pc_spk_player_open();
+        }
+    } else { //广播模式则重启广播数据流
+        le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+        le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+    }
 #else
     if (g_pc_spk_state == PC_SPK_STA_OPEN) {
         pc_spk_player_close();
@@ -226,6 +253,9 @@ int pcspk_open_player_by_taskq(void)
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && !TCFG_KBOX_1T3_MODE_EN
     if ((g_pc_spk_state == PC_SPK_STA_CLOSE ||
          g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) && !get_broadcast_role()) {
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    if ((g_pc_spk_state == PC_SPK_STA_CLOSE ||
+         g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) && !get_auracast_role()) {
 #else
     if (g_pc_spk_state == PC_SPK_STA_CLOSE ||
         g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) {
@@ -256,7 +286,8 @@ static void pc_spk_set_volume(void)
         uac_speaker_stream_get_volume(&l_vol, &r_vol);
         if (cur_vol != ((l_vol + r_vol) / 2)) {
             app_audio_set_volume(APP_AUDIO_STATE_MUSIC, ((l_vol + r_vol) / 2), 1);
-            log_debug(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
+            printf(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
+            app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
         }
     }
 }
@@ -272,6 +303,77 @@ int pcspk_set_volume_by_taskq(void)
 #endif
     return ret;
 }
+
+
+int usb_device_event_handler(int *msg)
+{
+    switch (msg[0]) {
+    case APP_MSG_PC_AUDIO_PLAY_OPEN:
+        pc_player_status = 1;
+        printf("APP_MSG_PC_AUDIO_PLAY_OPEN\n");
+#if TCFG_KBOX_1T3_MODE_EN
+        if (pc_spk_player_runing() == 0) {
+            //打开播放器
+            pc_spk_player_open();
+        }
+#else
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+        if (!get_broadcast_role()) {
+            if (pc_spk_player_runing() == 0) {
+                //打开播放器
+                pc_spk_player_open();
+            }
+        } else {
+            le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+        }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (!get_auracast_role()) {
+            if (pc_spk_player_runing() == 0) {
+                //打开播放器
+                pc_spk_player_open();
+            }
+        } else {
+            le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+        }
+#else
+        if (pc_spk_player_runing() == 0) {
+            //打开播放器
+            pc_spk_player_open();
+        }
+#endif
+#endif
+        break;
+    case APP_MSG_PC_AUDIO_PLAY_CLOSE:
+        pc_player_status = 0;
+        printf("APP_MSG_PC_AUDIO_PLAY_CLOSE\n");
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+        if (get_broadcast_role()) {
+            //广播（发送端）
+            printf(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
+            le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+        } else {
+            pc_spk_player_close();
+        }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (get_auracast_role()) {
+            printf(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");
+            le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+        } else {
+            pc_spk_player_close();
+        }
+#else
+        pc_spk_player_close();
+#endif
+        break;
+    }
+    return 0;
+}
+
+APP_MSG_HANDLER(usb_device_app_msg_handler) = {
+    .owner      = 0xff,
+    .from       = MSG_FROM_APP,
+    .handler    = usb_device_event_handler,
+};
 
 #else
 

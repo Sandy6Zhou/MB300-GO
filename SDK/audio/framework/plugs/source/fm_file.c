@@ -25,10 +25,6 @@
 
 #if TCFG_AUDIO_FM_ENABLE
 
-#define FM_ADC_BUF_NUM        2		//linein_adc采样buf个数
-#define FM_ADC_IRQ_POINTS     256	//linein adc 中断点数
-#define FM_ADC_SAMPLE_RATE    44100	//linein adc 采样率
-
 struct fm_file_hdl {
     void *source_node;
     struct adc_linein_ch linein_ch;
@@ -173,8 +169,13 @@ static void adc_outside_fm_output_handler(void *_hdl, s16 *data, int len)
         len *= hdl->ch_num;
 
         frame->len          = len;
+#if 1
+        frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+        frame->timestamp    = audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR;
+#else
         frame->flags        = FRAME_FLAG_SYS_TIMESTAMP_ENABLE;
         frame->timestamp    = audio_jiffies_usec();
+#endif
 
         if (fm_mute_flag == 1) {
             memset(frame->data, 0, frame->len);
@@ -241,8 +242,13 @@ void fm_sample_output_handler(s16 *data, int len)
         return;
     }
     frame->len          = len;
+#if 1
+    frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+    frame->timestamp    = audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR;
+#else
     frame->flags        = FRAME_FLAG_SYS_TIMESTAMP_ENABLE;
     frame->timestamp    = audio_jiffies_usec();
+#endif
     memcpy(frame->data, data, len);
 
     source_plug_put_output_frame(hdl->source_node, frame);

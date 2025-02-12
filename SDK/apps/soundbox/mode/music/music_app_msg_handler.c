@@ -26,6 +26,11 @@
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
+#include "audio_config.h"
+#include "audio_config_def.h"
+#include "rcsp_device_status.h"
+#include "rcsp_music_func.h"
+#include "rcsp_config.h"
 
 extern struct __music music_hdl;
 
@@ -64,6 +69,7 @@ void music_player_err_deal(int err)
 
     switch (err) {
     case MUSIC_PLAYER_SUCC:
+        le_audio_scene_deal(LE_AUDIO_MUSIC_START);
         music_hdl.file_err_counter = 0;
         break;
     case MUSIC_PLAYER_ERR_NULL:
@@ -173,6 +179,29 @@ int music_app_msg_handler(int *msg)
     if (false == app_in_mode(APP_MODE_MUSIC)) {
         return 0;
     }
+
+    printf("music_app_msg type:0x%x", msg[0]);
+    u8 msg_type = msg[0];
+#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
+    if (get_broadcast_connect_status() &&
+        (msg_type == APP_MSG_MUSIC_PP
+         || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
+#if LEA_BIG_VOL_SYNC_EN
+         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
+#endif
+         || msg_type == APP_MSG_MUSIC_MOUNT_PLAY_START || msg_type == APP_MSG_MUSIC_PLAY_START
+         || msg_type == APP_MSG_MUSIC_PLAY_START_BY_SCLUST || msg_type == APP_MSG_MUSIC_PLAY_START_BY_DEV  //只屏蔽主动开启音乐播放的事件
+         || msg_type == APP_MSG_MUSIC_CHANGE_DEV
+        )) {
+
+        printf("BIS receiving state does not support the event %d", msg_type);
+
+        return 0;
+
+    }
+#endif
+
+
     u8 auto_next_dev;
     struct file_player *file_player = get_music_file_player();
     switch (msg[0]) {
@@ -182,11 +211,13 @@ int music_app_msg_handler(int *msg)
         break;
     case APP_MSG_MUSIC_PP:
         printf("app msg music pp\n");
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-#if 0//(LEA_BIG_FIX_ROLE==2)
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 music_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
-        if (get_broadcast_role() == 2) {
+        if (get_le_audio_curr_role() == 2) {
             //接收端已连上
             music_volume_mute_mark ^= 1;
             audio_app_mute_en(music_volume_mute_mark);
@@ -445,6 +476,15 @@ int music_app_msg_handler(int *msg)
         }
         break;
 #endif
+    case APP_MSG_MUSIC_PLAY_SUCCESS:
+        log_i("APP_MSG_MUSIC_PLAY_SUCCESS !!\n");
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+        if (le_audio_scene_deal(LE_AUDIO_MUSIC_START) > 0) {
+            app_send_message(APP_MSG_MUSIC_PLAY_STATUS, FILE_PLAYER_START);
+            break;
+        }
+#endif
+        break;
     case APP_MSG_MUSIC_MOUNT_PLAY_START:
         logo = (char *)msg[1];
         log_i("APP_MSG_MUSIC_MOUNT_PLAY_START %s\n", logo);
@@ -479,7 +519,7 @@ int music_app_msg_handler(int *msg)
         } else {
             err = music_player_play_first_file(music_hdl.player_hd, logo);
         }
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0))
+#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==0)
         //这段代码是为了解决：不固定广播角色下打开广播，点击pp键，音乐模式广播下的状态混乱
         if (get_broadcast_role()) {
             if (le_audio_scene_deal(LE_AUDIO_MUSIC_START) > 0) {
@@ -489,8 +529,7 @@ int music_app_msg_handler(int *msg)
         }
 #endif
 
-#if (((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN))) && (LEA_BIG_FIX_ROLE==0))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==0)
         //这段代码是为了解决：不固定广播角色下打开广播，点击pp键，音乐模式广播下的状态混乱
         if (get_auracast_role()) {
             if (le_audio_scene_deal(LE_AUDIO_MUSIC_START) > 0) {
@@ -558,6 +597,15 @@ int music_app_msg_handler(int *msg)
         break;
     }
     music_player_err_deal(err);
+
+
+
+#if (TCFG_APP_MUSIC_EN && !RCSP_APP_MUSIC_EN)
+    rcsp_device_status_update(MUSIC_FUNCTION_MASK,
+                              BIT(MUSIC_INFO_ATTR_STATUS) | BIT(MUSIC_INFO_ATTR_FILE_PLAY_MODE));
+#endif
+
+
     return 0;
 }
 
@@ -577,20 +625,12 @@ void music_set_broadcast_local_open_flag(u8 en)
 
 static int get_music_play_status(void)
 {
+    if (get_le_audio_app_mode_exit_flag()) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
 #if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
-    if (get_broadcast_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-#endif
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
-    if (get_auracast_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
-#endif
 #if (LEA_BIG_FIX_ROLE==1)
     if (music_hdl.music_local_audio_resume_onoff == 1) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -603,9 +643,6 @@ static int get_music_play_status(void)
     //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
     /* music_hdl.close_broadcast_need_resume_local_music_flag = 0; */
     if (music_hdl.close_broadcast_need_resume_local_music_flag == 1 || music_hdl.music_local_audio_resume_onoff == 1) {
-#else
-    if (music_file_get_player_status(get_music_file_player()) == FILE_PLAYER_START) {
-#endif
         /* y_printf("=============>>>>>>>>>>>>>>> %s, %d, return PLAY!\n", __func__, __LINE__); */
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
@@ -613,18 +650,13 @@ static int get_music_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 #endif
-
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
-    if (get_connected_app_mode_exit_flag()) {
-        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-    }
+#endif
 
     if (music_file_get_player_status(get_music_file_player()) == FILE_PLAYER_START) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
 }
 
 static int music_local_audio_open(void)
@@ -681,7 +713,9 @@ static int music_local_audio_close(void)
 #endif
 
     if (music_player_runing()) {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==2)
         /* if (music_player_runing()) {	//这句判断需要放在 music_player_stop之前 */
         music_hdl.close_broadcast_need_resume_local_music_flag = 1;
         /* } */
@@ -706,6 +740,9 @@ static void *music_tx_le_audio_open(void *fmt)
     int err;
     void *le_audio = NULL;
     g_le_audio_flag = 1;
+
+    char *logo = NULL;
+
     if (1) {//(get_music_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
         struct le_audio_stream_params *params = (struct le_audio_stream_params *)fmt;
@@ -721,8 +758,26 @@ static void *music_tx_le_audio_open(void *fmt)
         };
 
         music_app_set_btaddr(le_audio, &enc_fmt);
-        app_send_message(APP_MSG_MUSIC_PLAY_START, 0);
+        /* app_send_message(APP_MSG_MUSIC_PLAY_START, 0); */ // 注释是由于采用发送MUSIC_PLAY_START消息来开启解码音频数据流方式会导致固定发射端时会出现循环播放的问题
 
+        logo = dev_manager_get_logo(dev_manager_find_active(1));
+        if (music_player_runing()) {
+            if (dev_manager_get_logo(music_hdl.player_hd->dev) && logo) {///播放的设备跟当前活动的设备是同一个设备，关闭当前播放
+                if (0 == strcmp(logo, dev_manager_get_logo(music_hdl.player_hd->dev))) {
+                    music_player_stop(music_hdl.player_hd, 0);
+                }
+            }
+        }
+        if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
+            err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
+        } else {
+            err = music_player_play_first_file(music_hdl.player_hd, logo);
+        }
+
+        if (err == MUSIC_PLAYER_SUCC) {
+            update_le_audio_deal_scene(LE_AUDIO_MUSIC_START);
+        }
+        music_player_err_deal(err);
     }
 
     return le_audio;

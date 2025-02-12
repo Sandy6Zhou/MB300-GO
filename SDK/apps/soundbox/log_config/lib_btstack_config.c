@@ -117,6 +117,9 @@ int app_info_debug_enable = 0;//BIT(4);
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 	const int config_le_hci_connection_num = 2;//支持同时连接个数
 	const int config_le_sm_support_enable = 1; //是否支持加密配对
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+	const int config_le_hci_connection_num = 2;//支持同时连接个数
+	const int config_le_sm_support_enable = 0; //是否支持加密配对
 #else
 	const int config_le_hci_connection_num = 2;//支持同时连接个数
 	const int config_le_sm_support_enable = 1; //是否支持加密配对

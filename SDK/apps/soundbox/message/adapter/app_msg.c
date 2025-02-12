@@ -15,7 +15,8 @@ void app_send_message(int _msg, int arg)
 
     msg[0] = _msg;
     msg[1] = arg;
-    os_taskq_post_type("app_core", MSG_FROM_APP, 2, msg);
+    int err = os_taskq_post_type("app_core", MSG_FROM_APP, 2, msg);
+    ASSERT(err == OS_NO_ERR, "app_send_message:%d", err);
 }
 
 void app_send_message2(int _msg, int arg1, int arg2)
