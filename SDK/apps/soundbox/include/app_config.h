@@ -62,11 +62,10 @@
 #if !TCFG_APP_BT_EN
 #undef TCFG_BT_BACKGROUND_ENABLE
 #define TCFG_BT_BACKGROUND_ENABLE   0
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #undef TCFG_BT_SUPPORT_HFP
 #undef TCFG_BT_SUPPORT_AVCTP
 #undef TCFG_BT_SUPPORT_A2DP
@@ -122,10 +121,10 @@
 #define    LE_AUDIO_UNICAST_SINK_EN             (1 << 1)
 #define    LE_AUDIO_AURACAST_SOURCE_EN          (1 << 2)
 #define    LE_AUDIO_AURACAST_SINK_EN            (1 << 3)
-#define    LE_AUDIO_JL_UNICAST_SOURCE_EN        (1 << 4)
-#define    LE_AUDIO_JL_UNICAST_SINK_EN          (1 << 5)
-#define    LE_AUDIO_JL_AURACAST_SOURCE_EN       (1 << 6)
-#define    LE_AUDIO_JL_AURACAST_SINK_EN         (1 << 7)
+#define    LE_AUDIO_JL_CIS_CENTRAL_EN        (1 << 4)
+#define    LE_AUDIO_JL_CIS_PERIPHERAL_EN          (1 << 5)
+#define    LE_AUDIO_JL_BIS_TX_EN       (1 << 6)
+#define    LE_AUDIO_JL_BIS_RX_EN         (1 << 7)
 
 #ifndef TCFG_LE_AUDIO_APP_CONFIG
 #define TCFG_LE_AUDIO_APP_CONFIG                (0)
@@ -136,7 +135,7 @@
 #endif
 
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)     // rcsp与le audio共用 BLE ACL 时，使用不同地址
 #undef  TCFG_BT_BLE_BREDR_SAME_ADDR
@@ -166,6 +165,9 @@
 #define TCFG_AUDIO_FM_ENABLE     TCFG_APP_FM_EN
 #endif
 
+#ifndef TCFG_AUDIO_SPDIF_ENABLE
+#define TCFG_AUDIO_SPDIF_ENABLE     TCFG_APP_SPDIF_EN
+#endif
 
 /* ------------------rule check------------------ */
 #ifndef TCFG_APP_MUSIC_EN
@@ -218,6 +220,7 @@
 #endif
 #ifndef TCFG_REC_FILE_NAME
 #define TCFG_REC_FILE_NAME "aud_****"
+#define TCFG_REC_FILE_NAME_PREFIX	"aud_"			//录音文件前缀名
 #endif
 
 #if !(THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
@@ -823,11 +826,19 @@
 
 //FM 一部分代码动态加载到ram
 #define TCFG_CODE_RUN_RAM_FM_CODE            1
+
+#ifdef CONFIG_CPU_BR28
 //BT 一部分代码加载到ram
 #define TCFG_CODE_RUN_RAM_BT_CODE            1
-
 //AAC 一部分代码加载到ram
 #define TCFG_CODE_RUN_RAM_AAC_CODE           1
+#else
+//BT 一部分代码加载到ram
+#define TCFG_CODE_RUN_RAM_BT_CODE            0
+//AAC 一部分代码加载到ram
+#define TCFG_CODE_RUN_RAM_AAC_CODE           0
+#endif
+
 
 //AEC 一部分代码加载到ram
 #define TCFG_CODE_RUN_RAM_AEC_CODE           1
@@ -847,5 +858,14 @@
 #undef  TCFG_BT_BLE_BREDR_SAME_ADDR
 #define  TCFG_BT_BLE_BREDR_SAME_ADDR 0x1
 #endif
+
+//检查IAP与MSD
+#if TCFG_USB_APPLE_DOCK_EN && TCFG_USB_SLAVE_MSD_ENABLE
+#error "IAP 与 MSD 只能开启其中一个"
+#endif
+
+#define TCFG_FREE_ICACHE0_WAY_NUM              0
+#define TCFG_FREE_ICACHE1_WAY_NUM              0
+#define TCFG_FREE_DCACHE_WAY_NUM               0
 
 #endif

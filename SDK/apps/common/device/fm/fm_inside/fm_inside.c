@@ -18,7 +18,7 @@
 #include "mic_effect.h"
 #include "fm_api.h"
 #include "tone_player.h"
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #include "app_le_broadcast.h"
 #endif
 
@@ -88,7 +88,7 @@ void fm_inside_dac_clk_set(u32 freq)
             mic_effect_player_pause(0);
         }
 #endif
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_reset_transmitter();
 #endif
     }

@@ -1145,6 +1145,8 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
         printf("periodic adv sync lost\n");
 #if TCFG_AURACAST_SINK_CONNECT_BY_APP
         memset(no_past_broadcast_sink_notify.save_auracast_addr[no_past_broadcast_num], 0, 6);
+#else
+        auracast_sink_rescan();
 #endif
         break;
     case AURACAST_SINK_BIG_SYNC_FAIL_EVENT:

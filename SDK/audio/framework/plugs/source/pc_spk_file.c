@@ -18,7 +18,7 @@
 #include "circular_buf.h"
 #include "pc_spk_player.h"
 #include "uac_stream.h"
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
 #endif

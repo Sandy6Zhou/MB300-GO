@@ -42,8 +42,11 @@ static u8 g_play_addr[6];
 static u8 g_slience_addr[6];
 static u8 a2dp_play_status = 0;
 
-void app_set_a2dp_play_status(u8 st)
+void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 {
+    if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0)) {
+        return;
+    }
     a2dp_play_status = st;
 }
 
@@ -66,8 +69,10 @@ void tws_a2dp_player_close(u8 *bt_addr)
     a2dp_player_close(bt_addr);
     bt_stop_a2dp_slience_detect(bt_addr);
     a2dp_media_close(bt_addr);
-    memset(g_play_addr, 0xff, 6);
-    app_set_a2dp_play_status(0);
+    if (memcmp(bt_addr, g_play_addr, 6) == 0) {
+        memset(g_play_addr, 0xff, 6);
+        app_set_a2dp_play_status(bt_addr, 0);
+    }
 }
 
 static void tws_a2dp_play_in_task(u8 *data)
@@ -86,7 +91,7 @@ static void tws_a2dp_play_in_task(u8 *data)
         break;
     case CMD_A2DP_PLAY:
         g_printf("app_msg_bt_a2dp_play:%d\n", data[8]);
-        app_set_a2dp_play_status(1);        //从机播歌过程中加入链接需要置上播放标志
+        app_set_a2dp_play_status(bt_addr, 1);        //从机播歌过程中加入链接需要置上播放标志
         put_buf(bt_addr, 6);
         dev_vol = data[8];
 #if (TCFG_BT_BACKGROUND_ENABLE)
@@ -222,7 +227,7 @@ static int a2dp_bt_status_event_handler(int *event)
         if (app_var.goto_poweroff_flag) {
             break;
         }
-        app_set_a2dp_play_status(1);
+        app_set_a2dp_play_status(bt->args, 1);
         if (tws_api_get_role() == TWS_ROLE_MASTER &&
             bt_get_call_status_for_addr(bt->args) == BT_CALL_INCOMING) {
             //小米11来电挂断偶现没有hungup过来，hfp链路异常，重新断开hfp再连接
@@ -250,7 +255,7 @@ static int a2dp_bt_status_event_handler(int *event)
         break;
     case BT_STATUS_A2DP_MEDIA_STOP:
         puts("BT_STATUS_A2DP_MEDIA_STOP\n");
-        app_set_a2dp_play_status(0);
+        app_set_a2dp_play_status(bt->args, 0);
         if (tws_api_get_role() == TWS_ROLE_SLAVE) {
             break;
         }
@@ -283,7 +288,9 @@ static int a2dp_bt_hci_event_handler(int *event)
 
     switch (bt->event) {
     case HCI_EVENT_DISCONNECTION_COMPLETE:
-        app_set_a2dp_play_status(0);
+        if (memcmp(bt->args, g_play_addr, 6) == 0) {
+            app_set_a2dp_play_status(bt->args, 0);
+        }
         tws_a2dp_player_close(bt->args);
         break;
     }
@@ -434,11 +441,10 @@ int bt_get_low_latency_mode()
     return tws_api_get_low_latency_state();
 }
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 static int get_a2dp_play_status(void)
 {
     r_printf("a2dp_play_status:%d %d %d %d\n", get_le_audio_app_mode_exit_flag(), a2dp_play_status, get_a2dp_decoder_status(), a2dp_player_runing());

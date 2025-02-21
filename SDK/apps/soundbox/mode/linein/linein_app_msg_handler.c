@@ -35,7 +35,7 @@ int linein_app_msg_handler(int *msg)
 
     printf("linein_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
+#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -68,7 +68,7 @@ int linein_app_msg_handler(int *msg)
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */
         break;
     case APP_MSG_MUSIC_PP:
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)) && !TCFG_KBOX_1T3_MODE_EN
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2)) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_broadcast_role() == 2) {

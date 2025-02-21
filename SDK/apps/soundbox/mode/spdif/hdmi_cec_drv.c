@@ -1,3 +1,4 @@
+
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma bss_seg(".hdmi_cec_drv.data.bss")
 #pragma data_seg(".hdmi_cec_drv.data")
@@ -18,7 +19,11 @@
 #include "spdif_file.h"
 
 #if (TCFG_SPDIF_ENABLE)
-
+struct msg_list {
+    u8 msg[17];
+    u8 len;
+    struct list_head list;
+};
 struct hdmi_arc_t {
     u16 tid;
     u16 time_id;
@@ -27,7 +32,7 @@ struct hdmi_arc_t {
     u8 logic_addr;
     u8 rx_count;
     u8 rx_msg;
-    u8 idle_time;
+    u16 idle_time;
     u8 cec_ok;
     u8 eom;
     u8 follower ;
@@ -37,10 +42,24 @@ struct hdmi_arc_t {
     u8 tv_offline;
     u8 no_dcc_phyaddr;
     u8 req_tv_venderID;
+    bool SendErrorFlag;
+//    u8 msg_r_index;
+    u8 msg_w_index;
+    u8 tx_msg_w_index;
+//    u8 msg_cnt;
+    struct list_head msg_list_head;
+    struct list_head tx_msg_list_head;
 };
+
 
 static struct hdmi_arc_t arc_devcie;
 #define __this  (&arc_devcie)
+
+
+static struct msg_list cec_msg_list[8];
+static struct msg_list tx_cec_msg_list[8];
+static struct msg_list cec_msg_back;
+static struct msg_list resend_cec_msg;
 
 static void cec_set_wait_time(u32 us);
 
@@ -136,6 +155,28 @@ void cec_io_toogle(u32 cnt)
 {
     gpio_toggle_port(PORTA, PORT_PIN_6);
 }
+AT(.volatile_ram_code)
+static  u8 get_msg_write_index(void)
+{
+    u8 ret = __this->msg_w_index;
+    if (__this->msg_w_index < 7) {
+        __this->msg_w_index++;
+    } else {
+        __this->msg_w_index = 0;
+    }
+    return ret;
+}
+AT(.volatile_ram_code)
+static  u8 get_tx_msg_write_index(void)
+{
+    u8 ret = __this->tx_msg_w_index;
+    if (__this->tx_msg_w_index < 7) {
+        __this->tx_msg_w_index++;
+    } else {
+        __this->tx_msg_w_index = 0;
+    }
+    return ret;
+}
 static void cec_start_bit()
 {
     cec_state = CEC_XMIT_STARTBIT;
@@ -186,6 +227,7 @@ static void transmit_complete(u32 state)
     cec_frame.ack = state;
     cec_state = CEC_RECEIVE;
 }
+AT(.volatile_ram_code)
 static void tx_bit_isr()
 {
     if (high_period_time) {
@@ -213,7 +255,15 @@ static void tx_bit_isr()
                 cec_state = CEC_XMIT_BIT7;
             }
         } else {
+            __this->SendErrorFlag = 1;//数据没发完，数据重发
+
             if (cec_frame.tx_count == 1) {
+                if (cec_msg_back.len > 1) {
+                    u8 msg_index =  get_tx_msg_write_index();
+                    memcpy((u8 *)&tx_cec_msg_list[msg_index].msg, cec_msg_back.msg, cec_msg_back.len);
+                    tx_cec_msg_list[msg_index].len = cec_msg_back.len ;
+                    list_add(&tx_cec_msg_list[msg_index].list, &__this->tx_msg_list_head);
+                }
                 transmit_complete(NAK_HEAD);
             } else {
                 transmit_complete(NAK_DATA);
@@ -244,14 +294,20 @@ static void tx_bit_isr()
 
     case CEC_XMIT_ACK_PU:
         gpio_set_mode(IO_PORT_SPILT(__this->cec_port), PORT_INPUT_PULLUP_10K);
-        /* cec_set_wait_time(850 - 450); */
-        /* cec_set_wait_time(1000 - 450); */
         cec_set_wait_time(1000 - 600);
         cec_state++;
         break;
 
     case CEC_XMIT_CHECK_ACK:
-        cec_frame.ack = cec_frame.broadcast ? 1 : !cec_get_line_state();
+        // cec_frame.ack = cec_frame.broadcast ? 1 : !cec_get_line_state();
+        if (cec_frame.broadcast) {
+            cec_frame.ack  = 1;
+        } else {
+            cec_frame.ack = !cec_get_line_state();
+            if (!cec_frame.ack) {
+                __this->SendErrorFlag = 1;//TV未应答，数据重发
+            }
+        }
         cec_state++;
         /* cec_set_wait_time(2250 - 850); */
         cec_set_wait_time(2400 - 1000);
@@ -267,8 +323,9 @@ static void tx_bit_isr()
 
 static void cec_set_wait_time(u32 us)
 {
-    gptimer_set_work_mode(__this->tid, GPTIMER_MODE_TIMER);
+    gptimer_pause(__this->tid);
     gptimer_set_timer_period(__this->tid, us);
+    gptimer_set_work_mode(__this->tid, GPTIMER_MODE_TIMER);
 }
 static u32 cec_bit_time_check(u16 t, u16 min, u16 max)
 {
@@ -291,6 +348,8 @@ static s8 cec_get_bit_value(const u16 low_time, const u16 high_time)
 }
 
 static void cec_cmd_response();
+
+AT(.volatile_ram_code)
 static void rx_bit_isr()
 {
     static u16 low_time = 0;
@@ -310,8 +369,22 @@ static void rx_bit_isr()
         gpio_set_mode(IO_PORT_SPILT(__this->cec_port), PORT_INPUT_PULLUP_10K);
         __this->rx_count ++;
         if (__this->eom) {
-            __this->rx_msg = 2;
+            if (__this->rx_count > 1) {
+                if (__this->rx_msg == 0) {
+                    __this->rx_msg = 2;
+                }
+                u8 msg_index = get_msg_write_index();
+                memcpy((u8 *)&cec_msg_list[msg_index].msg, __this->msg, __this->rx_count);
+                cec_msg_list[msg_index].len = __this->rx_count ;
+                //list_add(&cec_msg_list[msg_index].list,&__this->msg_list_head);
+                list_add_tail(&cec_msg_list[msg_index].list, &__this->msg_list_head);
+            }
+            __this->rx_count = 0;
+            if (cec_work_mode == CEC_IDLE) {
+                cec_state = CEC_RECEIVE;
+            }
         } else {
+
             cec_state = CEC_CONTINUE_BIT;
         }
 
@@ -413,12 +486,14 @@ static void rx_bit_isr()
     }
 
 }
-#define     TIME_PRD    50
+//#define     TIME_PRD    50
+#define     TIME_PRD    10
+AT(.volatile_ram_code)
 static void cec_timer_isr(u32 tid, void *private_data)
 {
-    if (get_sfc_status()) {
-        return;
-    }
+//    if (get_sfc_status()) {
+//        return;
+//    }
     if (cec_work_mode == CEC_TX) {
         tx_bit_isr();
         if (cec_work_mode == CEC_IDLE) {
@@ -432,18 +507,25 @@ static void cec_timer_isr(u32 tid, void *private_data)
 
         rx_bit_isr();
     }
-
 }
 
 
 u32 cec_transmit_frame(unsigned char *buffer, int count)
 {
     cec_frame.ack = -1;
-    if (cec_work_mode != CEC_IDLE) {
-        printf("cec busy");
+//    if (cec_work_mode != CEC_IDLE) {
+    if (cec_work_mode == CEC_RX) {
+        printf("cec  mode[%d]", cec_work_mode);
         return 1;
     }
-//    put_buf(buffer, count);
+    if (cec_state < CEC_WAIT_IDLE) {
+        printf("cec state [%d] \n", cec_state);
+        return 1;
+    }
+    memcpy(cec_msg_back.msg, buffer, count);//备份发送数据
+    cec_msg_back.len = count;
+
+    // put_buf(buffer, count);
     __this->idle_time = 1;
     cec_work_mode = CEC_TX;
     cec_frame.msg = buffer;
@@ -488,24 +570,41 @@ typedef enum {
 
 static void decode_cec_command()
 {
-    u8 intiator = __this->msg[0] >> 4;
-    switch (__this->msg[1]) {
+    u32 ret = 0;
+    struct msg_list *p;
+    u8 msg[18];
+    msg[17] = 0;
+    list_for_each_entry(p, &__this->msg_list_head, list) {
+        memcpy(msg, p->msg, p->len);
+        msg[17] =  p->len;
+        break;
+    }
+//    u8 *msg =(u8*)&cec_msg_bak[__this->msg_r_index][0];
+    // u8 intiator = __this->msg[0] >> 4;
+
+    if (msg[17] == 0) {
+        return;
+    }
+
+    u8 intiator = msg[0] >> 4;
+//    printf("decode_cec len %d \n ",msg[17]);
+    switch (msg[1]) {
     case CECOP_FEATURE_ABORT:
         printf("__this->state < ARC_STATUS_INIT=0x%x\n", __this->state);
-        put_buf(__this->msg, __this->rx_count);
+        put_buf(msg, msg[17]);
         break;
     case CECOP_GIVE_PHYSICAL_ADDRESS:
         printf("CECOP_GIVE_PHYSICAL_ADDRESS");
-        cec_transmit_frame(Report_Physical_Add_Cmd, 5);
+        ret = cec_transmit_frame(Report_Physical_Add_Cmd, 5);
         break;
     case CECOP_GIVE_DEVICE_VENDOR_ID:
         printf("CECOP_GIVE_DEVICE_VENDOR_ID");
         spdif_hdmi_set_push_data_en(1);
-        cec_transmit_frame(Device_Vendor_Id_Cmd, 5);
+        ret = cec_transmit_frame(Device_Vendor_Id_Cmd, 5);
         break;
     case CECOP_GET_CEC_VERSION:
         printf("GET_CEC_VERSION");
-        cec_transmit_frame(CEC_Version_cmd, 3);
+        ret = cec_transmit_frame(CEC_Version_cmd, 3);
         break;
     case CECOP_ARC_REPORT_INITIATED:
         printf("CECOP_ARC_REPORT_INITIATED");
@@ -524,42 +623,42 @@ static void decode_cec_command()
         break;
     case CECOP_GIVE_OSD_NAME:
         printf("CECOP_SET_OSD_NAME");
-        cec_transmit_frame(Set_Osd_Name_cmd, sizeof(Set_Osd_Name_cmd));
+        ret = cec_transmit_frame(Set_Osd_Name_cmd, sizeof(Set_Osd_Name_cmd));
         break;
 
     case CECOP_REQUEST_SHORT_AUDIO_DESCRIPTOR:
         printf("CECOP_REQUEST_SHORT_AUDIO");
-        cec_transmit_frame(Report_Short_Audio_Desc_cmd, sizeof(Report_Short_Audio_Desc_cmd));
+        ret = cec_transmit_frame(Report_Short_Audio_Desc_cmd, sizeof(Report_Short_Audio_Desc_cmd));
         __this->idle_time = 3500 / TIME_PRD;
         break;
 
     case CECOP_SYSTEM_AUDIO_MODE_REQUEST:
         printf("CECOP_SYSTEM_AUDIO_MODE_REQUEST");
-        cec_transmit_frame(Set_System_Audio_Mode_cmd, sizeof(Set_System_Audio_Mode_cmd));
+        ret = cec_transmit_frame(Set_System_Audio_Mode_cmd, sizeof(Set_System_Audio_Mode_cmd));
         /* __this->state =  ARC_STATUS_REPORT_ADDR; */
         break;
     case CECOP_GIVE_AUDIO_STATUS:
         printf("CECOP_GIVE_AUDIO_STATUS");
-        cec_transmit_frame(Report_Audio_Status_cmd, sizeof(Report_Audio_Status_cmd));
+        ret = cec_transmit_frame(Report_Audio_Status_cmd, sizeof(Report_Audio_Status_cmd));
         break;
 
     case CECOP_GIVE_SYSTEM_AUDIO_MODE_STATUS:
         printf("CECOP_GIVE_SYSTEM_AUDIO_MODE_STATUS");
-        cec_transmit_frame(System_Audio_Mode_Status_cmd, sizeof(System_Audio_Mode_Status_cmd));
+        ret = cec_transmit_frame(System_Audio_Mode_Status_cmd, sizeof(System_Audio_Mode_Status_cmd));
         break;
     case CECOP_TUNER_DEVICE_STATUS:
         printf("CECOP_TUNER_DEVICE_STATUS");
-        cec_transmit_frame(Give_Tuner_Device_Status_cmd, sizeof(Give_Tuner_Device_Status_cmd) / sizeof(Give_Tuner_Device_Status_cmd[0]));
+        ret = cec_transmit_frame(Give_Tuner_Device_Status_cmd, sizeof(Give_Tuner_Device_Status_cmd) / sizeof(Give_Tuner_Device_Status_cmd[0]));
         break;
     case CECOP_GIVE_DEVICE_POWER_STATUS:
         printf("CECOP_GIVE_DEVICE_POWER_STATUS");
-        cec_transmit_frame(Report_Power_Status_cmd, sizeof(Report_Power_Status_cmd));
+        ret = cec_transmit_frame(Report_Power_Status_cmd, sizeof(Report_Power_Status_cmd));
         break;
     case CECOP_ARC_REQUEST_INITIATION:
         printf("CECOP_ARC_REQUEST_INITIATION");
         __this->cec_ok = 1;
         spdif_hdmi_set_push_data_en(1);
-        cec_transmit_frame(Initiate_Arc_cmd, 2);
+        ret = cec_transmit_frame(Initiate_Arc_cmd, 2);
         __this->req_tv_venderID = 2;
         __this->idle_time = 3500 / TIME_PRD;
         if (true == app_in_mode(APP_MODE_SPDIF)) {
@@ -581,7 +680,7 @@ static void decode_cec_command()
     case CECOP_ARC_REQUEST_TERMINATION:
         printf("CECOP_ARC_REQUEST_TERMINATION");
         //电视关机会发送该命令
-        cec_transmit_frame(Terminate_Arc_cmd, sizeof(Terminate_Arc_cmd));
+        ret = cec_transmit_frame(Terminate_Arc_cmd, sizeof(Terminate_Arc_cmd));
         __this->tv_offline = 4;
         __this->cec_ok = 0;
         __this->state = ARC_STATUS_PING;
@@ -600,7 +699,10 @@ static void decode_cec_command()
         if (false == app_in_mode(APP_MODE_SPDIF)) {
             break;
         }
-        switch (__this->msg[2]) {
+        if (msg[17] < 3) {
+            break;
+        }
+        switch (msg[2]) {
         case CEC_USER_CONTROL_CODE_MUTE:
             printf("mute press");
             app_send_message(APP_MSG_CEC_MUTE, 2);
@@ -617,7 +719,7 @@ static void decode_cec_command()
             puts("CEC_USER_CONTROL_CODE_POWER");
             break;
         default:
-            printf("CEC_USER_CONTROL_CODE_[%d] \n", __this->msg[2]);
+            printf("CEC_USER_CONTROL_CODE_[%d] \n", msg[2]);
             break;
         }
         break;
@@ -626,20 +728,27 @@ static void decode_cec_command()
         break;
     default:
         printf("unknow cec command ");
-        put_buf(__this->msg, __this->rx_count);
+        put_buf(msg, msg[17]);
         break;
     }
+    // printf("cec_transmit_frame ret %d",ret);
+    if (ret) {
+        return;
+    }
+
+    __list_del_entry(&p->list);
 }
 static void cec_cmd_response()
 {
-    if (__this->rx_count > 1) {
+
+    if (!list_empty(&__this->msg_list_head)) {
         if (__this->tv_offline) {
             __this->tv_offline--;
         }
         decode_cec_command();
     }
 
-//    putchar('1');
+
     if (__this->idle_time < (150 / TIME_PRD)) {
         __this->idle_time = 150 / TIME_PRD;
     }
@@ -647,10 +756,12 @@ static void cec_cmd_response()
     if (cec_work_mode == CEC_IDLE) {
         cec_state = CEC_RECEIVE;
     }
+
     __this->rx_msg = 0;
 }
 static void cec_timer_loop()
 {
+    struct msg_list *p;
     extern u8 bt_trim_status_get();
     static u8 bt_tram_mark = 0;
     if (bt_trim_status_get()) {
@@ -669,10 +780,20 @@ static void cec_timer_loop()
     }
 
     if (__this->rx_msg) {
+        if (__this->idle_time) {
+            __this->idle_time--;
+        }
         return;
+    }
+    if (!list_empty(&__this->msg_list_head)) {
+        usr_timeout_add(NULL, cec_cmd_response, CEC_NEW_FRAME_WAIT_TIME, 0);
+        __this->rx_msg = 1;
     }
 
     if (cec_work_mode) {
+        if (__this->idle_time) {
+            __this->idle_time--;
+        }
         return;
     }
 
@@ -680,9 +801,26 @@ static void cec_timer_loop()
         __this->idle_time--;
         return;
     }
+
+    if (!list_empty(&__this->tx_msg_list_head)) {
+        resend_cec_msg.len = 0;
+        list_for_each_entry(p, &__this->tx_msg_list_head, list) {
+            memcpy(resend_cec_msg.msg, p->msg, p->len);
+            resend_cec_msg.len =  p->len;
+            __list_del_entry(&p->list);
+            break;
+        }
+        if (resend_cec_msg.len) {
+            cec_transmit_frame(resend_cec_msg.msg, resend_cec_msg.len);
+            __this->idle_time = 300 / TIME_PRD;
+            return;
+        }
+    }
+
     if (__this->tv_offline) {
         return;
     }
+
     if (__this->cec_ok) {
         if (__this->req_tv_venderID) {
             __this->req_tv_venderID--;
@@ -788,7 +926,14 @@ int hdmi_cec_send_volume(u32 vol)
 
         if (msec >= CEC_SET_VOLUME_IGNORD_TIME) {
             start_time = jiffies_msec();
+
             cec_transmit_frame(volume_cmd, 3);
+#if 0
+            u8 msg_index = get_tx_msg_write_index();
+            memcpy((u8 *)&tx_cec_msg_list[msg_index].msg, volume_cmd, 3);
+            tx_cec_msg_list[msg_index].len = 3 ;
+            list_add_tail(&tx_cec_msg_list[msg_index].list, &__this->tx_msg_list_head);
+#endif // 0
         }
     }
     return 0;
@@ -817,7 +962,8 @@ void hdmi_cec_init(u8 cec_port, u8 cec_det_en)
     gpio_set_mode(IO_PORT_SPILT(__this->cec_port), PORT_INPUT_PULLUP_10K);
 
     __this->idle_time = 3500 / TIME_PRD;
-
+    INIT_LIST_HEAD(&__this->msg_list_head);
+    INIT_LIST_HEAD(&__this->tx_msg_list_head);
     struct gptimer_config cec_cfg = {
         .capture.port = __this->cec_port / 16,
         .capture.pin = BIT(__this->cec_port % 16),
@@ -830,6 +976,7 @@ void hdmi_cec_init(u8 cec_port, u8 cec_det_en)
     gptimer_start(__this->tid);
 
     __this->time_id = sys_timer_add(NULL, cec_timer_loop, TIME_PRD);
+
     g_printf("cec add timer %x %x %x", __this->time_id, __this->tid, __this->cec_port);
 }
 
@@ -841,13 +988,21 @@ void hdmi_cec_close(void)
         cec_transmit_frame(Broadcast_System_Audio_Mode_Off, 3);
         os_time_dly(10);
 
+        gptimer_pause(__this->tid);
         gptimer_set_work_mode(__this->tid, GPTIMER_MODE_CAPTURE_EDGE_RISE);
         gptimer_deinit(__this->tid);
         __this->tid = -1;
         sys_timer_del(__this->time_id);
         __this->time_id = 0;
+        list_del_init(&__this->msg_list_head);
+        list_del_init(&__this->tx_msg_list_head);
     }
+}
 
+//返回当前CEC状态，spdif_file 需要判断电视关机
+u8 hdmi_cec_get_state(void)
+{
+    return __this->state;
 }
 
 

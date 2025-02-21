@@ -42,6 +42,7 @@
 #include "rcsp_config.h"
 #include "bt_key_func.h"
 #include "btstack_rcsp_user.h"
+#include "app_le_auracast.h"
 
 #define LOG_TAG             "[APP_FM]"
 #define LOG_ERROR_ENABLE
@@ -476,7 +477,7 @@ void fm_volume_pp(void)
         return ;
     }
     //广播角色为接收端，不让控制fm的播放、暂停
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if (LEA_BIG_FIX_ROLE == 2) && !TCFG_KBOX_1T3_MODE_EN
     //固定为接收端
     u8 fm_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
@@ -604,7 +605,7 @@ void fm_volume_pp(void)
     }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (get_broadcast_role()) {
         le_audio_fm_volume_pp();
     } else {
@@ -621,14 +622,14 @@ void fm_volume_pp(void)
         le_audio_fm_volume_pp();
     } else {
         if (__this->fm_dev_mute) {
-            update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
+            update_app_auracast_deal_scene(LE_AUDIO_MUSIC_STOP);
         } else {
-            update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
+            update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
         }
     }
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if ((app_get_connected_role() == APP_CONNECTED_ROLE_TRANSMITTER) ||
         (app_get_connected_role() == APP_CONNECTED_ROLE_DUPLEX)) {
         le_audio_fm_volume_pp();
@@ -929,11 +930,10 @@ void txmode_fm_inside_freq_get(void)
 }
 #endif
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 static int get_fm_play_status(void)
 {
@@ -941,9 +941,9 @@ static int get_fm_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))) && (LEA_BIG_FIX_ROLE==1)
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==1)
     if (__this->fm_local_audio_resume_onoff) {
         __this->fm_dev_mute = 0;
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -979,7 +979,7 @@ static int fm_local_audio_close(void)
         //关闭本地播放
         fm_player_close();
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1)
         if (get_broadcast_role()) {
             __this->fm_local_audio_resume_onoff = 1;
         }
@@ -990,7 +990,7 @@ static int fm_local_audio_close(void)
         }
 #endif
     } else {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1)
         if (get_broadcast_role()) {
             __this->fm_local_audio_resume_onoff = 0;
         }

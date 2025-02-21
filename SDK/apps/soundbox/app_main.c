@@ -118,6 +118,12 @@ const struct task_info task_info_table[] = {
     {"mic_effect9",         6,     1,  768,   0 },
     {"mic_effecta",         6,     1,  768,   0 },
 
+    /*无线mic任务*/
+    {"wl_mic_effect1",      6,     1,  512,   0 },
+    {"wl_mic_effect2",      6,     1,  512,   0 },
+    {"wl_mic_effect3",      6,     1,  768,   0 },
+    {"wl_mic_effect4",      6,     1,  768,   0 },
+
     /*
      *为了防止dac buf太大，通话一开始一直解码，
      *导致编码输入数据需要很大的缓存，这里提高编码的优先级
@@ -552,7 +558,7 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
             if (key_msg == APP_MSG_NULL) {
                 return 1;
             }
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if (LEA_BIG_CUSTOM_DATA_EN && LEA_BIG_VOL_SYNC_EN && (!TCFG_KBOX_1T3_MODE_EN))
             if ((get_broadcast_role() == BROADCAST_ROLE_RECEIVER) && get_receiver_connected_status()) {
                 if ((key_msg == APP_MSG_VOL_UP) || (key_msg == APP_MSG_VOL_DOWN)) {

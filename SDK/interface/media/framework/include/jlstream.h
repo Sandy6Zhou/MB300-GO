@@ -88,6 +88,7 @@ struct jlstream;
 #define NODE_IOC_GET_MIXER_INFO     0x0002002f
 #define NODE_IOC_TWS_TX_SWITCH      0x00020030
 #define NODE_IOC_GET_ID3      		0x00020031
+#define NODE_IOC_GET_ENC_TIME       0x00020032		//获取编码时间
 
 #define NODE_IOC_START              (0x00040000 | NODE_STA_RUN)
 #define NODE_IOC_PAUSE              (0x00040000 | NODE_STA_PAUSE)

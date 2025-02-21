@@ -33,7 +33,7 @@ int pc_app_msg_handler(int *msg)
     }
     printf("pc_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  LEA_BIG_CTRLER_RX_EN && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
+#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -64,7 +64,7 @@ int pc_app_msg_handler(int *msg)
 #if TCFG_USB_SLAVE_HID_ENABLE
     case APP_MSG_MUSIC_PP:
         printf("APP_MSG_MUSIC_PP\n");
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2)
         //在pc模式下作为接收端时，控制mute（即播放暂停响应）
         u8 pc_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_broadcast_role() == 0) {
@@ -133,11 +133,10 @@ int pc_app_msg_handler(int *msg)
     return 0;
 }
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 static u8 g_le_audio_flag;
 static u8 wait_pc_open_broadcast_cb_deal_flag = 0;
@@ -249,7 +248,7 @@ static void *pc_tx_le_audio_open(void *args)
 #endif
 
     }
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))

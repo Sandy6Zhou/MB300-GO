@@ -258,6 +258,13 @@
 #if AFx_DYN_EQ_AT_RAM 				
 	*(.dynamiceq.text.cache.L2.code)
 #endif
+
+
+#if AFx_DYN_EQ_PRO_AT_RAM 				
+	*(.dynamicEQPro.text.cache.L2.code)
+	*(.dynamicEQPro.text.cache.L2.const)
+#endif
+
 #if AFx_EQ_AT_RAM 				
 	*(.eq.text)
 	*(.hw_eq.text)

@@ -143,6 +143,7 @@
                 "${workspaceFolder}/apps/common/third_party_profile/dma_protocol",
                 "${workspaceFolder}/apps/common/third_party_profile/gfps_protocol",
                 "${workspaceFolder}/apps/common/third_party_profile/custom_protocol_demo",
+                "${workspaceFolder}/interface/utils/apple_dock",
                 "${workspaceFolder}/apps/common/cJSON",
                 "${workspaceFolder}/interface/btstack",
                 "${workspaceFolder}/interface/media/cpu/br28",

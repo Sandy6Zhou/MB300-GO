@@ -48,7 +48,7 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_BROADCAST:
-#if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         //app_broadcast_close(APP_BROADCAST_STATUS_STOP);
         le_audio_scene_deal(LE_AUDIO_APP_CLOSE);
         app_broadcast_uninit();
@@ -61,6 +61,9 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_CIG:
+
+        break;
+    case BT_MODE_3IN1:
 
         break;
     }
@@ -79,7 +82,7 @@ int bt_work_mode_select(u8 mode)
         break;
     case BT_MODE_BROADCAST:
         dual_conn_page_device();
-#if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_init();
         app_broadcast_open();
         le_audio_scene_deal(LE_AUDIO_APP_OPEN);
@@ -96,6 +99,9 @@ int bt_work_mode_select(u8 mode)
     case BT_MODE_CIG:
 
         break;
+    case BT_MODE_3IN1:
+
+        break;
     }
     return 0;
 }
@@ -105,7 +111,7 @@ void bt_work_mode_switch_to_next(void)
     static u8 work_mode = BT_MODE_SIGLE_BOX;
     work_mode ++;
 #if TCFG_USER_TWS_ENABLE == 0
-#if LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (work_mode == BT_MODE_TWS) {
         work_mode = BT_MODE_BROADCAST;
     }
@@ -116,7 +122,7 @@ void bt_work_mode_switch_to_next(void)
 #endif
 #endif
 
-#if (!(LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN))
+#if (!(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)))
     if (work_mode ==  BT_MODE_BROADCAST) {
         work_mode =  BT_MODE_AURACAST;
     }

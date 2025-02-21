@@ -34,6 +34,7 @@
 #define AFx_DRC_AT_RAM 					    1	//DRC
 #define AFx_HARMONIC_EXCITER_AT_RAM 	    1	//谐波激励
 #define AFx_DYN_EQ_AT_RAM 				    1	//动态EQ
+#define AFx_DYN_EQ_PRO_AT_RAM 				0	//动态EQ Pro
 #define AFx_NOTCH_HOWLING_AT_RAM 		    1	//啸叫抑制：陷波
 #define AFx_FREQ_SHIFT_AT_RAM	 		    1	//啸叫抑制：移频
 #define AFx_NOISEGATE_AT_RAM	 		    1	//噪声门

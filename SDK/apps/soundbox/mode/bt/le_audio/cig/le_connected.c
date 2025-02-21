@@ -24,7 +24,7 @@
 #include "bt_event_func.h"
 #include "le_audio_player.h"
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 /**************************************************************************************************
   Macros
@@ -82,7 +82,6 @@ struct connected_hdl {
     struct list_head entry; /*!< cig链表项，用于多cig管理 */
     u8 del;
     u8 cig_hdl;
-    u16 latch_cis_hdl;
     cis_hdl_info_t cis_hdl_info[CIS_MAX_CONNECTABLE_NUMS];
     u32 cig_sync_delay;
     const char *role_name;
@@ -333,17 +332,15 @@ int connected_central_connect_deal(void *priv)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
-    params.conn = connected_hdl->latch_cis_hdl;
+    params.conn = hdl->cis_hdl;
 
     connected_hdl->role_name = "cig_central";
     connected_hdl->cig_hdl = hdl->cig_hdl;
     connected_hdl->cis_hdl_info[index].acl_hdl = hdl->acl_hdl;
     connected_hdl->cis_hdl_info[index].cis_hdl = hdl->cis_hdl;
-    if (!connected_hdl->latch_cis_hdl) {
-        connected_hdl->latch_cis_hdl = hdl->cis_hdl;
-    }
 
 #if (LEA_CIG_TRANS_MODE == 2)
 
@@ -473,19 +470,13 @@ int connected_central_disconnect_deal(void *priv)
                 }
             }
 
-            for (i = 0; i < CIS_MAX_CONNECTABLE_NUMS; i++) {
-                if (p->cis_hdl_info[i].cis_hdl) {
-                    p->latch_cis_hdl = p->cis_hdl_info[i].cis_hdl;
-                    break;
-                }
-            }
-
             spin_unlock(&connected_lock);
 
             if (recorder) {
                 //TODO:关闭recorder
                 if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                     le_audio_switch_ops->tx_le_audio_close(recorder);
+                    recorder = NULL;
                 }
             }
 
@@ -493,6 +484,8 @@ int connected_central_disconnect_deal(void *priv)
                 //TODO:关闭player
                 if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_close) {
                     le_audio_switch_ops->rx_le_audio_close(&player);
+                    player.le_audio = NULL;
+                    player.rx_stream = NULL;
                 }
             }
 
@@ -512,8 +505,6 @@ int connected_central_disconnect_deal(void *priv)
         connected_role |= BIT(7);   //断开连接后，或上BIT(7)，防止外部流程判断错误
 
         connected_hdl->cig_sync_delay = 0;
-
-        connected_hdl->latch_cis_hdl = 0;
 
 #if CIS_TIMSTAMP_CONVERT_TO_LOCOAL_TIME
         memset(&connected_hdl->ts_convert, 0, sizeof(struct cis_ts_convert_hdl));
@@ -841,19 +832,16 @@ int connected_perip_connect_deal(void *priv)
         le_audio_switch_ops->local_audio_close();
     }
 
-    if (!connected_hdl->latch_cis_hdl) {
-        connected_hdl->latch_cis_hdl = hdl->cis_hdl;
-    }
-
     params.fmt.nch = get_cig_audio_coding_nch();
     params.fmt.bit_rate = get_cig_audio_coding_bit_rate();
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
     params.latency = get_cig_tx_latency();
-    params.conn = connected_hdl->latch_cis_hdl;
+    params.conn = hdl->cis_hdl;
 
     connected_hdl->role_name = "cig_perip";
     connected_hdl->cig_hdl = hdl->cig_hdl;
@@ -978,25 +966,21 @@ int connected_perip_disconnect_deal(void *priv)
                 }
             }
 
-            for (i = 0; i < CIS_MAX_CONNECTABLE_NUMS; i++) {
-                if (p->cis_hdl_info[i].cis_hdl) {
-                    p->latch_cis_hdl = p->cis_hdl_info[i].cis_hdl;
-                    break;
-                }
-            }
-
             spin_unlock(&connected_lock);
 
             if (recorder) {
                 //TODO:关闭recorder
                 if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                     le_audio_switch_ops->tx_le_audio_close(recorder);
+                    recorder = NULL;
                 }
             }
             if (player.le_audio && player.rx_stream) {
                 //TODO:关闭player
                 if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_close) {
                     le_audio_switch_ops->rx_le_audio_close(&player);
+                    player.le_audio = NULL;
+                    player.rx_stream = NULL;
                 }
             }
 
@@ -1016,8 +1000,6 @@ int connected_perip_disconnect_deal(void *priv)
         connected_role |= BIT(7);   //断开连接后，或上BIT(7)，防止外部流程判断错误
 
         connected_hdl->cig_sync_delay = 0;
-
-        connected_hdl->latch_cis_hdl = 0;
 
         if (player_status == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
             //TODO:打开本地音频
@@ -1469,6 +1451,7 @@ void cis_audio_recorder_reset(u16 cis_hdl)
                 params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
                 params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_cig_sdu_period_us();
+                params.fmt.isoIntervalUs = get_cig_sdu_period_us();
                 params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
 #if ((LEA_CIG_TRANS_MODE == 1) && (LEA_CIG_CONNECT_MODE == 2))
                 //两发一收central做接收，使用接收解码声道配置
@@ -1476,8 +1459,6 @@ void cis_audio_recorder_reset(u16 cis_hdl)
 #else
                 params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
 #endif
-                params.conn = p->latch_cis_hdl;
-
                 //重新打开新的recorder
                 if (!p->cis_hdl_info[i].recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
@@ -1624,9 +1605,9 @@ int le_connected_audio_all_open(u16 cig_hdl)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
-    params.conn = connected_hdl->latch_cis_hdl;
     connected_hdl->role_name = "cig_central";
 
     connected_mutex_pend(&connected_mutex, __LINE__);

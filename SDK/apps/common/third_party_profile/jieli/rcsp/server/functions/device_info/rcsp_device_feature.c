@@ -243,7 +243,7 @@ static u32 target_feature_ble_only(void *priv, u8 attr, u8 *buf, u16 buf_size, u
 {
     u32 rlen = 0;
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
     u8 taddr_buf[8];
     taddr_buf[0] = 0;
     le_controller_get_mac(taddr_buf + 1);

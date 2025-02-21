@@ -26,7 +26,7 @@
 #include "audio_config.h"
 #include "le_audio_player.h"
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
 /**************************************************************************************************
   Macros
@@ -254,7 +254,7 @@ void broadcast_init(void)
 
     broadcast_init_flag = 1;
 
-#if LEA_BIG_CTRLER_TX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
     //初始化bis发送参数及注册回调
     ret = wireless_trans_init("big_tx", NULL);
     if (ret != 0) {
@@ -262,7 +262,7 @@ void broadcast_init(void)
     }
 #endif
 
-#if LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     //初始化bis接收参数及注册回调
     ret = wireless_trans_init("big_rx", NULL);
     if (ret != 0) {
@@ -287,14 +287,14 @@ void broadcast_uninit(void)
 
     broadcast_init_flag = 0;
 
-#if LEA_BIG_CTRLER_TX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
     ret = wireless_trans_uninit("big_tx", NULL);
     if (ret != 0) {
         log_error("wireless_trans_uninit fail:0x%x\n", ret);
     }
 #endif
 
-#if LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     ret = wireless_trans_uninit("big_rx", NULL);
     if (ret != 0) {
         log_error("wireless_trans_uninit fail:0x%x\n", ret);
@@ -523,7 +523,7 @@ int broadcast_transmitter(big_parameter_t *params)
 {
     int ret;
 
-#if !LEA_BIG_CTRLER_TX_EN
+#if !(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
     log_error("broadcast transmitter open fail");
     return -EPERM;
 #endif
@@ -1092,7 +1092,7 @@ int broadcast_receiver(big_parameter_t *params)
 {
     int ret;
 
-#if !LEA_BIG_CTRLER_RX_EN
+#if !(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     log_error("broadcast receiver open fail");
     return -EPERM;
 #endif

@@ -21,6 +21,7 @@
 #include "app_le_auracast.h"
 #include "app_le_connected.h"
 #include "app_le_broadcast.h"
+#include "le_broadcast.h"
 
 #if(TCFG_USER_TWS_ENABLE == 0)
 
@@ -63,7 +64,7 @@ void sys_auto_shut_down_enable(void)
 #endif
 
     //bis发射或者正在监听时不能自动关机
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if ((get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) || (get_receiver_connected_status())) {
         log_error("sys_auto_shut_down_enable cannot in le audio open\n");
         return;
@@ -71,7 +72,7 @@ void sys_auto_shut_down_enable(void)
 #endif
 
     //cis连接时不能自动关机
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (app_get_connected_role() && (!(app_get_connected_role() & BIT(7)))) {
         log_error("sys_auto_shut_down_enable cannot in le audio open\n");
         return;
@@ -182,12 +183,12 @@ void sys_enter_soft_poweroff(enum poweroff_reason reason)
 
     bt_stop_a2dp_slience_detect(NULL);
 
-#if (TCFG_KBOX_1T3_MODE_EN && (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN))
+#if (TCFG_KBOX_1T3_MODE_EN && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)))
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);
     app_broadcast_uninit();
 #endif
 
-#if (TCFG_KBOX_1T3_MODE_EN && (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN))
+#if (TCFG_KBOX_1T3_MODE_EN && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
     app_connected_close_all(APP_CONNECTED_STATUS_STOP);
     app_connected_uninit();
 #endif

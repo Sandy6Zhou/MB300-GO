@@ -247,7 +247,7 @@ static void local_tws_become_to_sink(enum app_mode_t mode)
 int local_tws_enter_mode(const char *file_name, void *priv)
 {
     u8 data = 0;
-    if (g_bt_hdl.work_mode != BT_MODE_TWS) {
+    if ((g_bt_hdl.work_mode != BT_MODE_TWS) && (g_bt_hdl.work_mode != BT_MODE_3IN1)) {
         return -1;
     }
     log_info("local_tws_enter_mode:%s\n", file_name);
@@ -294,7 +294,7 @@ int local_tws_enter_mode(const char *file_name, void *priv)
 void local_tws_exit_mode(void)
 {
     uint32_t rets_addr;
-    if (g_bt_hdl.work_mode != BT_MODE_TWS) {
+    if ((g_bt_hdl.work_mode != BT_MODE_TWS) && (g_bt_hdl.work_mode != BT_MODE_3IN1)) {
         return;
     }
     __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));

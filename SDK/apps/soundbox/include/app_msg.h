@@ -208,6 +208,8 @@ enum {
     APP_MSG_RTC_SW_POS,
 
     APP_MSG_REC_PP,
+    APP_MSG_REC_PAUSE,				//暂停录音
+    APP_MSG_REC_DEL_CUR_FILE,		//删除当前录音文件
     APP_MSG_ENC_START,
     APP_MSG_REVERB_OPNE,
     APP_MSG_MIC_VOL_UP,

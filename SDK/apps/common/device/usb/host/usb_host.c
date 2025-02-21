@@ -24,7 +24,7 @@
 #include "audio.h"
 #include "usb/usb_task.h"
 
-#if TCFG_USB_APPLE_DOCK_EN
+#if 0//TCFG_USB_APPLE_DOCK_EN
 #include "apple_dock/iAP.h"
 #include "apple_mfi.h"
 #endif
@@ -179,7 +179,7 @@ static int _usb_msd_parser(struct usb_host_device *host_dev, u8 interface_num, c
 static int _usb_apple_mfi_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
     log_info("find udisk @ interface %d", interface_num);
-#if TCFG_USB_APPLE_DOCK_EN
+#if 0//TCFG_USB_APPLE_DOCK_EN
     return   usb_apple_mfi_parser(host_dev, interface_num, pBuf);
 #else
     return USB_DT_INTERFACE_SIZE;

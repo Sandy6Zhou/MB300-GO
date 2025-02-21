@@ -118,7 +118,7 @@ void app_common_key_msg_handler(int *msg)
         app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
         break;
 #if TCFG_KBOX_1T3_MODE_EN
-#if TCFG_MIC_EFFECT_ENABLE && (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN || LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if TCFG_MIC_EFFECT_ENABLE && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN) || TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     case APP_MSG_SW_WIRED_MIC_OR_WIRELESS_MIC:
         //有线Mic和无线Mic切换
         if (app_get_current_mode()->name == APP_MODE_LINEIN) {
@@ -141,16 +141,16 @@ void app_common_key_msg_handler(int *msg)
             //关闭 connect，打开mic_effect
 
             if (app_get_current_mode()->name != APP_MODE_BT) {
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
                 app_connected_close_in_other_mode();
-#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
                 app_broadcast_close_in_other_mode();
 #endif
             } else {
                 //蓝牙模式下关闭cig
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
                 app_connected_close_all(APP_CONNECTED_STATUS_STOP);
-#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
                 app_broadcast_close(APP_BROADCAST_STATUS_STOP);
 #endif
             }
@@ -160,9 +160,9 @@ void app_common_key_msg_handler(int *msg)
             //关闭混响, 打开 connect
             mic_effect_player_close();
             os_time_dly(5);
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
             app_connected_open_in_other_mode();
-#elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
             app_broadcast_open_in_other_mode();
 #endif
             y_printf("+++++ Open Wireless Mic, Close Wired Mic!\n");
@@ -314,26 +314,26 @@ void app_common_key_msg_handler(int *msg)
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         g_printf("APP_MSG_LE_AURACAST_SW");
         app_auracast_switch();
-#elif ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN ) && (!TCFG_KBOX_1T3_MODE_EN))
+#elif ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN) ) && (!TCFG_KBOX_1T3_MODE_EN))
         g_printf("APP_MSG_LE_BROADCAST_SW");
         app_broadcast_switch();
 #endif
         break;
 
     case APP_MSG_LE_CONNECTED_SW:
-#if ((LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) && (!TCFG_KBOX_1T3_MODE_EN))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)) && (!TCFG_KBOX_1T3_MODE_EN))
         app_connected_switch();
 #endif
         break;
 
     case APP_MSG_LE_AUDIO_ENTER_PAIR:
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_enter_pair(BROADCAST_ROLE_UNKNOW, 0);
 #endif
         break;
 
     case APP_MSG_LE_AUDIO_EXIT_PAIR:
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_exit_pair(BROADCAST_ROLE_UNKNOW);
 #endif
         break;

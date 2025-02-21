@@ -96,6 +96,7 @@ static void *le_audio_file_init(void *priv, struct stream_node *node)
     struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)zalloc(sizeof(struct le_audio_file_handle));
 
     hdl->node = node;
+    node->type |= NODE_TYPE_IRQ | NODE_TYPE_FLOW_CTRL;
 
     return hdl;
 }
@@ -110,7 +111,7 @@ static void le_audio_rx_tick_handler(void *priv)
 {
     struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)priv;
 
-    if (hdl->start && (hdl->node->state & NODE_STA_SOURCE_NO_DATA)) {
+    if (hdl->start) {
         jlstream_wakeup_thread(NULL, hdl->node, NULL);
     }
 }

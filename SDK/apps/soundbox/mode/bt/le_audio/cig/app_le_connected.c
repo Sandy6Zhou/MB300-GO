@@ -38,7 +38,7 @@ extern void tws_dual_conn_state_handler();
 #include "btstack_rcsp_user.h"
 #endif
 
-#if LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 /**************************************************************************************************
   Macros
@@ -215,9 +215,11 @@ static int connected_tone_play_end_callback(void *priv, enum stream_event event)
         switch (index) {
         case TONE_INDEX_CONNECTED_OPEN:
             g_printf("TONE_INDEX_CONNECTED_OPEN");
+            app_connected_open(0);
             break;
         case TONE_INDEX_CONNECTED_CLOSE:
             g_printf("TONE_INDEX_CONNECTED_CLOSE");
+            app_connected_close_all(APP_CONNECTED_STATUS_STOP);
             break;
         default:
             break;
@@ -442,9 +444,6 @@ static int app_connected_conn_status_event_handler(int *msg)
         ret = connected_perip_connect_deal((void *)hdl);
         if (ret < 0) {
             r_printf("connected_perip_connect_deal fail");
-        } else {
-            //告知主机本机的设备标识
-            wireless_custom_data_send_to_sibling('I', &local_dev_identification, sizeof(local_dev_identification), remote_dev_identification);
         }
 
 #if TCFG_AUTO_SHUT_DOWN_TIME
@@ -989,12 +988,10 @@ int app_connected_switch(void)
         play_tone_file_alone_callback(get_tone_files()->le_connected_close,
                                       (void *)TONE_INDEX_CONNECTED_CLOSE,
                                       connected_tone_play_end_callback);
-        app_connected_close_all(APP_CONNECTED_STATUS_STOP);
     } else {
         play_tone_file_alone_callback(get_tone_files()->le_connected_open,
                                       (void *)TONE_INDEX_CONNECTED_OPEN,
                                       connected_tone_play_end_callback);
-        app_connected_open(0);
     }
     return 0;
 }
@@ -1393,7 +1390,7 @@ void app_connected_uninit(void)
 /* ----------------------------------------------------------------------------*/
 void app_connected_open_in_other_mode()
 {
-    if (!g_bt_hdl.init_ok || g_bt_hdl.work_mode != BT_MODE_CIG) {
+    if (!g_bt_hdl.init_ok || ((g_bt_hdl.work_mode != BT_MODE_CIG) && (g_bt_hdl.work_mode != BT_MODE_3IN1))) {
         return;
     }
 
@@ -1409,7 +1406,7 @@ void app_connected_open_in_other_mode()
 /* ----------------------------------------------------------------------------*/
 void app_connected_close_in_other_mode()
 {
-    if (!g_bt_hdl.init_ok || g_bt_hdl.work_mode != BT_MODE_CIG) {
+    if (!g_bt_hdl.init_ok || ((g_bt_hdl.work_mode != BT_MODE_CIG) && (g_bt_hdl.work_mode != BT_MODE_3IN1))) {
         return;
     }
 

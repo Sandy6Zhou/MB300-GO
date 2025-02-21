@@ -36,8 +36,11 @@ static void volume_up(void)
     u8 test_box_vol_up = 0x41;
     s8 cur_vol = 0;
     u8 call_status = bt_get_call_status();
+
+#if TCFG_BT_VOL_SYNC_ENABLE
     u8 data[6];
-    a2dp_player_get_btaddr(data);
+    u8 play_status = a2dp_player_get_btaddr(data);
+#endif
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -76,7 +79,11 @@ static void volume_up(void)
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
             opid_play_vol_sync_fun(&app_var.music_volume, 1);
-            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+            if (play_status) {
+                bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+            } else {
+                bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+            }
         }
 #endif/* TCFG_BT_VOL_SYNC_ENABLE */
         return;
@@ -95,10 +102,18 @@ static void volume_up(void)
 #endif/*TCFG_BT_VOL_SYNC_ENABLE*/
     printf("vol+: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
     if (bt_get_call_status() != BT_CALL_HANGUP) {
-        bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_UP, 0, NULL);
+        if (bt_get_curr_channel_state() & HID_CH) {
+            bt_cmd_prepare(USER_CTRL_HID_VOL_UP, 0, NULL);
+        } else {
+            bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_UP, 0, NULL);
+        }
     } else {
 #if TCFG_BT_VOL_SYNC_ENABLE
-        bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL); //使用HID调音量
+        if (play_status) {
+            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL); //使用HID调音量
+        } else {
+            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+        }
 #endif
     }
 }
@@ -117,8 +132,11 @@ static void volume_up(void)
 static void volume_down(void)
 {
     u8 test_box_vol_down = 0x42;
+
+#if TCFG_BT_VOL_SYNC_ENABLE
     u8 data[6];
-    a2dp_player_get_btaddr(data);
+    u8 play_status = a2dp_player_get_btaddr(data);
+#endif
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -142,7 +160,6 @@ static void volume_down(void)
                     bt_cmd_prepare(USER_CTRL_HID_VOL_DOWN, 0, NULL);
                 } else {
                     bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_DOWN, 0, NULL);
-
                 }
             }
             return;
@@ -150,7 +167,11 @@ static void volume_down(void)
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
             opid_play_vol_sync_fun(&app_var.music_volume, 0);
-            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+            if (play_status) {
+                bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+            } else {
+                bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+            }
         }
 #endif
         return;
@@ -169,14 +190,22 @@ static void volume_down(void)
 #endif/*TCFG_BT_VOL_SYNC_ENABLE*/
     printf("vol-: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
     if (bt_get_call_status() != BT_CALL_HANGUP) {
-        bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_DOWN, 0, NULL);
+        if (bt_get_curr_channel_state() & HID_CH) {
+            bt_cmd_prepare(USER_CTRL_HID_VOL_DOWN, 0, NULL);
+        } else {
+            bt_cmd_prepare(USER_CTRL_HFP_CALL_VOLUME_DOWN, 0, NULL);
+        }
     } else {
 #if TCFG_BT_VOL_SYNC_ENABLE
         /* opid_play_vol_sync_fun(&app_var.music_volume, 0); */
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == 0) {
             app_audio_volume_down(0);
         }
-        bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+        if (play_status) {
+            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+        } else {
+            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+        }
 #endif
     }
 }

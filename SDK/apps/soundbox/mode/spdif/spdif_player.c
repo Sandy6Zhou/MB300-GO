@@ -18,6 +18,10 @@
 #include "scene_switch.h"
 #include "audio_config_def.h"
 #include "effects/audio_vbass.h"
+#include "le_audio_player.h"
+#include "app_le_auracast.h"
+#include "spdif.h"
+#include "le_audio_recorder.h"
 
 #if TCFG_SPDIF_ENABLE
 
@@ -41,7 +45,10 @@ static void spdif_player_callback(void *private_data, int event)
 
     switch (event) {
     case STREAM_EVENT_START:
+#if TCFG_DAC_NODE_ENABLE
+        spdif_last_vol_state = !app_audio_get_dac_digital_mute();	//可能一进spdif模式就已经是mute的状态, 需更新mute状态
         app_audio_mute(spdif_last_vol_state);
+#endif
         app_send_message(APP_MSG_MUTE_CHANGED, !spdif_last_vol_state);
 #if AUDIO_VBASS_LINK_VOLUME
         vbass_link_volume();
@@ -54,7 +61,9 @@ static void spdif_player_callback(void *private_data, int event)
 void spdif_switch_source_unmute(void)
 {
     spdif_last_vol_state = 1;
+#if TCFG_DAC_NODE_ENABLE
     app_audio_mute(spdif_last_vol_state);
+#endif
     app_send_message(APP_MSG_MUTE_CHANGED, !spdif_last_vol_state);
 }
 
@@ -93,6 +102,9 @@ int spdif_player_open(void)
 
     jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, SPDIF_DATA_DMA_LEN);
 
+    //设置检测丢包间隔为2帧时间
+    float thread = 2.0f;
+    jlstream_node_ioctl(player->stream, NODE_UUID_PLAY_SYNC, NODE_IOC_SET_FMT, (int)&thread);
 
     jlstream_set_callback(player->stream, player->stream, spdif_player_callback);
     jlstream_set_scene(player->stream, STREAM_SCENE_SPDIF);
@@ -163,7 +175,7 @@ static void spdif_restart(void)
             spdif_player_close();
         }
     } else {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         if (get_broadcast_role()) {
             //关闭广播音频播放
             void *le_audio = spdif_get_le_audio_hdl();
@@ -224,7 +236,7 @@ int spdif_restart_by_taskq(void)
 static void spdif_open_player(int arg)
 {
     printf("================ open spdif player\n");
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) { //打开广播的数据流
         struct le_audio_stream_params *params   =  spdif_get_le_audio_params();
         void *le_audio = spdif_get_le_audio_hdl();

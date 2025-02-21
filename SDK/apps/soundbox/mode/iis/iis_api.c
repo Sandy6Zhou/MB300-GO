@@ -36,11 +36,11 @@ struct iis_opr {
     s16 volume ;
     u8 onoff;
     u8 audio_state; /*判断iis模式使用模拟音量还是数字音量*/
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==2)
     //如果固定为接收端，则会存在的问题：打开广播下从其它模式切进mic模式，关闭广播mic不会自动打开的问题
     u8 iis_broadcast_local_need_open_flag;	//当此flag置1时，需要打开mic
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==1)
     //固定为发送端
     //暂停中开广播再关闭：暂停。暂停中开广播点击pp后关闭：播放。播歌开广播点击pp后关闭广播：暂停. 该变量为1时表示关闭广播时需要本地音频需要是播放状态
     u8 iis_local_audio_resume_onoff;
@@ -91,7 +91,7 @@ int iis_volume_pp(void)
 {
     int ret = 0;
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if (LEA_BIG_FIX_ROLE==2)
     //固定为接收端, pp按键mute操作
     u8 iis_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
@@ -126,7 +126,7 @@ int iis_volume_pp(void)
 #endif
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if ((app_get_connected_role() == APP_CONNECTED_ROLE_TRANSMITTER) ||
         (app_get_connected_role() == APP_CONNECTED_ROLE_DUPLEX)) {
         ret = le_audio_iis_volume_pp();
@@ -216,24 +216,25 @@ void iis_key_vol_down(void)
     printf("vol-:%d\n", __this->volume);
 }
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) ||
+(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 //当固定为接收端时，其它模式下开广播切进mic模式，关闭广播后music模式不会自动播放
 void iis_set_broadcast_local_open_flag(u8 en)
 {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
     __this->iis_broadcast_local_need_open_flag = en;
 #endif
 }
 
 static int get_iis_play_status(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (get_broadcast_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
     if (get_broadcast_role()) {
         if (__this->iis_local_audio_resume_onoff) {
             return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -242,7 +243,7 @@ static int get_iis_play_status(void)
         }
     }
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
     if (__this->onoff || __this->iis_broadcast_local_need_open_flag) {
 #else
     if (__this->onoff) {
@@ -253,7 +254,7 @@ static int get_iis_play_status(void)
     }
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (get_connected_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
@@ -270,7 +271,7 @@ static int iis_local_audio_open(void)
 {
     if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开本地播放
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
         if (__this->iis_broadcast_local_need_open_flag) {
             __this->iis_broadcast_local_need_open_flag = 0;
         }
@@ -287,16 +288,16 @@ static int iis_local_audio_close(void)
 {
     /* if (get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) { */
     if (iis_player_runing()) {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
         __this->iis_broadcast_local_need_open_flag = 1;
 #endif
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
         __this->iis_local_audio_resume_onoff = 1;	//关闭广播需要恢复本地音频播放
 #endif
         //关闭本地播放
         iis_stop();
     } else {
-#if ((LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
         __this->iis_local_audio_resume_onoff = 0;	//关闭广播不用恢复本地音频播放
 #endif
     }
@@ -328,7 +329,7 @@ static void *iis_tx_le_audio_open(void *args)
         __this->onoff = 1;
     }
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
 
@@ -395,7 +396,7 @@ static int le_audio_iis_volume_pp(void)
 {
     int ret = 0;
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (__this->onoff == 0) {
         __this->onoff = 1;
         ret = app_broadcast_deal(LE_AUDIO_MUSIC_START);
@@ -415,7 +416,7 @@ static int le_audio_iis_volume_pp(void)
     }
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (__this->onoff == 0) {
         __this->onoff = 1;
         ret = app_connected_deal(LE_AUDIO_MUSIC_START);

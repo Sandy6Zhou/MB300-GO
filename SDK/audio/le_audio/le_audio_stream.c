@@ -13,6 +13,7 @@
 #include "audio_base.h"
 #include "circular_buf.h"
 #include "system/timer.h"
+#include "app_config.h"
 #define LE_AUDIO_TX_TEST        0
 
 struct le_audio_stream_buf {

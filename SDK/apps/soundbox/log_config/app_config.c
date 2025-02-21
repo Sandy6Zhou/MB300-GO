@@ -214,3 +214,9 @@ const char log_tag_const_d_APP_RTC  = FALSE;
 const char log_tag_const_w_APP_RTC  = TRUE;
 const char log_tag_const_e_APP_RTC  = TRUE;
 
+const char log_tag_const_v_IAP  = FALSE;
+const char log_tag_const_i_IAP  = TRUE;
+const char log_tag_const_w_IAP  = TRUE;
+const char log_tag_const_d_IAP  = FALSE;
+const char log_tag_const_e_IAP  = TRUE;
+

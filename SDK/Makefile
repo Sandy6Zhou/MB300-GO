@@ -237,6 +237,7 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/dma_protocol \
 	-Iapps/common/third_party_profile/gfps_protocol \
 	-Iapps/common/third_party_profile/custom_protocol_demo \
+	-Iinterface/utils/apple_dock \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
 	-Iinterface/media/cpu/br28 \
@@ -326,6 +327,7 @@ c_SRC_FILES := \
 	apps/common/device/usb/device/custom_hid.c \
 	apps/common/device/usb/device/descriptor.c \
 	apps/common/device/usb/device/hid.c \
+	apps/common/device/usb/device/iap.c \
 	apps/common/device/usb/device/midi.c \
 	apps/common/device/usb/device/msd.c \
 	apps/common/device/usb/device/msd_upgrade.c \
@@ -353,6 +355,10 @@ c_SRC_FILES := \
 	apps/common/fat_nor/virfat_flash.c \
 	apps/common/file_operate/file_bs_deal.c \
 	apps/common/file_operate/file_manager.c \
+	apps/common/iap/iAP_chip.c \
+	apps/common/iap/iAP_des.c \
+	apps/common/iap/iAP_device.c \
+	apps/common/iap/iAP_iic.c \
 	apps/common/le_audio/big.c \
 	apps/common/le_audio/cig.c \
 	apps/common/le_audio/wireless_trans_manager.c \
@@ -643,6 +649,7 @@ c_SRC_FILES := \
 	apps/soundbox/ui/led7/ui_linein.c \
 	apps/soundbox/ui/led7/ui_music.c \
 	apps/soundbox/ui/led7/ui_pc.c \
+	apps/soundbox/ui/led7/ui_record.c \
 	apps/soundbox/ui/led7/ui_rtc.c \
 	apps/soundbox/ui/led7/ui_sink.c \
 	apps/soundbox/ui/led7/ui_spdif.c \
@@ -1057,6 +1064,7 @@ LFLAGS := \
 	cpu/br28/liba/vm.a \
 	cpu/br28/liba/ftl.a \
 	cpu/br28/liba/debug_record.a \
+	cpu/br28/liba/apple_dock.a \
 	--end-group \
 	-Tcpu/br28/sdk.ld \
 	-M=cpu/br28/tools/sdk.map \

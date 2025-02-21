@@ -48,7 +48,7 @@
 #endif
 
 #if TCFG_USB_APPLE_DOCK_EN
-#include "apple_dock/iAP.h"
+#include "usb/device/iap.h"
 #endif
 
 #if TCFG_CFG_TOOL_ENABLE
@@ -98,6 +98,13 @@ static void usb_msd_reset_wakeup(struct usb_device_t *usb_device, u32 itf_num)
     } else {
         msd_reset(usb_device, 0);
     }
+}
+#endif
+
+#if TCFG_USB_APPLE_DOCK_EN
+static void usb_iap_wakeup(struct usb_device_t *usb_device)
+{
+    os_taskq_post_msg(USB_TASK_NAME, 2, USBSTACK_IAP_RUN, usb_device);
 }
 #endif
 
@@ -208,6 +215,9 @@ void usb_start(const usb_dev usbfd)
 #if TCFG_USB_SLAVE_PRINTER_ENABLE
     class |= PRINTER_CLASS;
 #endif
+#if TCFG_USB_APPLE_DOCK_EN
+    class |= IAP_CLASS;
+#endif
     g_printf("USB_DEVICE_CLASS_CONFIG:%x", class);
     usb_device_mode(usbfd, class);
 
@@ -239,6 +249,10 @@ void usb_start(const usb_dev usbfd)
 
     msd_set_wakeup_handle(usb_msd_wakeup);
     msd_set_reset_wakeup_handle(usb_msd_reset_wakeup);
+#endif
+
+#if TCFG_USB_APPLE_DOCK_EN
+    iap_set_wakeup_handler(usb_iap_wakeup);
 #endif
 
 #if TCFG_USB_SLAVE_CDC_ENABLE

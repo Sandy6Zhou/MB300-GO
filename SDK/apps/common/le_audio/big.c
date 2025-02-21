@@ -2,7 +2,7 @@
 #include "big.h"
 #include "wireless_trans_manager.h"
 
-#if LEA_BIG_CTRLER_TX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
 
 static int big_tx_init(void *priv)
 {
@@ -85,10 +85,10 @@ REGISTER_WIRELESS_DEV(big_tx_op) = {
     .close          = big_tx_close,
     .ioctrl         = big_tx_ioctrl,
 };
-#endif /* LEA_BIG_CTRLER_TX_EN */
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN) */
 
 
-#if LEA_BIG_CTRLER_RX_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
 
 static int big_rx_init(void *priv)
 {
@@ -161,6 +161,6 @@ REGISTER_WIRELESS_DEV(big_rx_op) = {
     .close          = big_rx_close,
     .ioctrl         = big_rx_ioctrl,
 };
-#endif /* LEA_BIG_CTRLER_RX_EN */
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) */
 
 

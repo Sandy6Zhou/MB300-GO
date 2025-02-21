@@ -431,10 +431,10 @@ const int JLA_CODEC_SOFT_DECISION_ENABLE = 0;
 
 #if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
 
-//{32, 40, 48, 60, 64, 80, 96, 120, 128, 160, 240, 320, 480}; 0~12. 编码支持得输入点数
+//{32, 40, 48, 60, 64, 80, 96, 120, 128, 160, 240, 320, 400, 480}; 0~13. 编码支持得输入点数
 
 //0~12位: 编码支持得输入点数配置, 代码优化使用，可以禁用掉不用的点数,节省代码量
-//最高位： 延时模式配置 	1: 延时=帧长点数.  0:延时1/4帧点.  注意： 160,240,320,480 固定延时1/4帧 不受配置影响.
+//最高位： 延时模式配置 	1: 延时=帧长点数.  0:延时1/4帧点.  注意： 160,240,320,400,480 固定延时1/4帧 不受配置影响.
 const unsigned short JLA_V2_FRAMELEN_MASK = 0xffff;
 
 //是否支持24bit编解码
@@ -449,7 +449,7 @@ const  int  JLA_V2_HW_FFT = 1;           //br27/br28置1，其他芯片置0
 const  int  JLA_V2_HW_FFT = 0;           //br27/br28置1，其他芯片置0
 #endif
 
-const int JLA_V2_PLC_EN = 1;     //pcl类型配置：0_fade,1_时域plc,2_频域plc,3补静音包;
+const int JLA_V2_PLC_EN = 2;     //pcl类型配置：0_fade,1_时域plc,2_频域plc,3补静音包;
 const int JLA_V2_PLC_FADE_OUT_START_POINT = 480;   //plc维持音量的点数.
 const int JLA_V2_PLC_FADE_OUT_POINTS = 120 * 5;    //plc维持指定点数后,淡出的速度,音量从满幅到0需要的点数.
 const int JLA_V2_PLC_FADE_IN_POINTS = 120 * 5;     //plc后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.
@@ -508,11 +508,11 @@ const int JLA_LW_BITSTREAM_WEIGHT_TAB[8] = { -2, 0, 0, 0, 4, 7, 9, 12 };
 //***********************
 //* 	LE Audio        *
 //***********************
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) || (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_CIS_CENTRAL_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 const int LE_AUDIO_TIME_ENABLE  = 1;
 #else
 const int LE_AUDIO_TIME_ENABLE  = 0;

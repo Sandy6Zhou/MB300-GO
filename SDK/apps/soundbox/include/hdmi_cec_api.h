@@ -10,6 +10,7 @@ void hdmi_cec_close(void);
 u32 hdmi_ddc_get_cec_physical_address(void);
 void hdmi_detect_timer_add();
 void hdmi_detect_timer_del();
+u8 hdmi_cec_get_state(void);
 
 extern const struct device_operations hdmi_dev_ops;
 #endif

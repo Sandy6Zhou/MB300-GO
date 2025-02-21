@@ -19,7 +19,7 @@
 #include "uac_stream.h"
 #include "audio_cvp.h"
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
 #endif
@@ -201,7 +201,7 @@ void pc_spk_player_close(void)
 
 static void pc_spk_player_restert(void)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (!get_broadcast_role()) {
         if (g_pc_spk_state == PC_SPK_STA_OPEN) {
             pc_spk_player_close();
@@ -250,7 +250,7 @@ int pcspk_open_player_by_taskq(void)
 {
     int msg[2];
     int ret = 0;
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && !TCFG_KBOX_1T3_MODE_EN
     if ((g_pc_spk_state == PC_SPK_STA_CLOSE ||
          g_pc_spk_state == PC_SPK_STA_WAIT_CLOSE) && !get_broadcast_role()) {
 #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
@@ -317,7 +317,7 @@ int usb_device_event_handler(int *msg)
             pc_spk_player_open();
         }
 #else
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         if (!get_broadcast_role()) {
             if (pc_spk_player_runing() == 0) {
                 //打开播放器
@@ -346,7 +346,7 @@ int usb_device_event_handler(int *msg)
     case APP_MSG_PC_AUDIO_PLAY_CLOSE:
         pc_player_status = 0;
         printf("APP_MSG_PC_AUDIO_PLAY_CLOSE\n");
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         if (get_broadcast_role()) {
             //广播（发送端）
             printf(">>[PC] spk lost audio stream, broadcast audio need suspend!\n");

@@ -2,7 +2,7 @@
 #include "cig.h"
 #include "wireless_trans_manager.h"
 
-#if LEA_CIG_CENTRAL_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN)
 
 static int cig_central_init(void *priv)
 {
@@ -74,10 +74,10 @@ REGISTER_WIRELESS_DEV(cig_central_op) = {
     .close          = cig_central_close,
     .ioctrl         = cig_central_ioctrl,
 };
-#endif /* LEA_CIG_CENTRAL_EN */
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN) */
 
 
-#if LEA_CIG_PERIPHERAL_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN)
 
 static int cig_perip_init(void *priv)
 {
@@ -147,5 +147,5 @@ REGISTER_WIRELESS_DEV(cig_perip_op) = {
     .ioctrl         = cig_perip_ioctrl,
 };
 
-#endif /* LEA_CIG_PERIPHERAL_EN */
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN) */
 

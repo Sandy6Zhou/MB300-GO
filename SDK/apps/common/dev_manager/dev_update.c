@@ -217,10 +217,10 @@ static void dev_update_param_private_handle(UPDATA_PARM *p)
             memset((void *)sd_start, 0, UPDATE_PRIV_PARAM_LEN);
         }
 
-        char io_port_stirng[4 * 3 + 1] = {0};
+        char io_port_stirng[5 * 3 + 1] = {0};
         sprintf(&io_port_stirng[0], "P%c%02d", TCFG_SD0_PORT_CLK / 16 + 'A', TCFG_SD0_PORT_CLK % 16);
-        sprintf(&io_port_stirng[4], "P%c%02d", TCFG_SD0_PORT_CMD / 16 + 'A', TCFG_SD0_PORT_CMD % 16);
-        sprintf(&io_port_stirng[8], "P%c%02d", TCFG_SD0_PORT_DA0 / 16 + 'A', TCFG_SD0_PORT_DA0 % 16);
+        sprintf(&io_port_stirng[5], "P%c%02d", TCFG_SD0_PORT_CMD / 16 + 'A', TCFG_SD0_PORT_CMD % 16);
+        sprintf(&io_port_stirng[10], "P%c%02d", TCFG_SD0_PORT_DA0 / 16 + 'A', TCFG_SD0_PORT_DA0 % 16);
         update_param_ext_fill(p, EXT_SD_IO_INFO, (u8 *)io_port_stirng, sizeof(io_port_stirng));
     }
 #endif

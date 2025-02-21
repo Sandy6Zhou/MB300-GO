@@ -258,7 +258,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
             break;
         }
 
-        app_set_a2dp_play_status(0);
+        app_set_a2dp_play_status(event->args, 0);
         if (g_bt_hdl.background.close_bt_hw_in_background) {
             //需要后台关闭蓝牙硬件的就不返回蓝牙了
             printf("close_bt_hw_in_background not go back\n");
@@ -323,12 +323,12 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
     /* 	break; */
     case BT_STATUS_A2DP_MEDIA_START:
         log_info("BT_STATUS_A2DP_MEDIA_START start slience detect\n");
-        app_set_a2dp_play_status(1);
+        app_set_a2dp_play_status(event->args, 1);
         bt_start_a2dp_slience_detect(event->args, 50);      //丢掉50包(约1s)之后才开始能量检测,过滤掉提示音，避免提示音引起抢占
         ret = BACKGROUND_A2DP_SLIENCE_DETECT;
         break;
     case BT_STATUS_A2DP_MEDIA_STOP:
-        app_set_a2dp_play_status(0);
+        app_set_a2dp_play_status(event->args, 0);
         bt_stop_a2dp_slience_detect(event->args);
 #if TCFG_USER_TWS_ENABLE
         void tws_a2dp_player_close(u8 * bt_addr);

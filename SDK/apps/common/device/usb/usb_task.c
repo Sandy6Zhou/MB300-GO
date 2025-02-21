@@ -179,14 +179,19 @@ static void usb_task(void *p)
             os_sem_post(&msg_sem);
             break;
 
+#if TCFG_USB_APPLE_DOCK_EN
+        case USBSTACK_IAP_RUN:
+            if (apple_mfi_link((void *)msg[2]) == IAP2_LINK_ERR) {
+                os_time_dly(1);
+                os_taskq_post_msg(USB_TASK_NAME, 2, USBSTACK_IAP_RUN, msg[2]);
+            }
+            break;
+#endif
+
 #if TCFG_USB_SLAVE_MSD_ENABLE
         case USBSTACK_MSD_RUN:
             msd_in_task = 1;
-#if TCFG_USB_APPLE_DOCK_EN
-            apple_mfi_link((void *)msg[2]);
-#else
             USB_MassStorage((void *)msg[2]);
-#endif
             if (msd_run_reset) {
                 msd_reset((struct usb_device_t *)msg[2], 0);
                 msd_run_reset = 0;

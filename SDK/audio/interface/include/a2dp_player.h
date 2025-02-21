@@ -43,6 +43,6 @@ u8 a2dp_file_get_low_latency_status(void);
 
 u8 *get_g_play_addr(void);
 
-void app_set_a2dp_play_status(u8 st);
+void app_set_a2dp_play_status(u8 *bt_addr, u8 st);
 
 #endif

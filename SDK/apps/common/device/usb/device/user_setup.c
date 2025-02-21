@@ -20,6 +20,7 @@
 
 #if TCFG_USB_APPLE_DOCK_EN
 #include "apple_dock/iAP.h"
+#include "usb/device/iap.h"
 #endif
 
 #define LOG_TAG_CONST       USB
@@ -147,13 +148,12 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
                 break;
 #endif
 #if TCFG_USB_APPLE_DOCK_EN
-            case MSD_STR_INDEX:
+            case IAP_STR_INDEX:
                 if (apple_mfi_chip_online_lib()) {
-                    y_printf("MSD_STR_INDEX \n");
+                    log_info("IAP_STR_INDEX \n");
                     usb_set_data_payload(usb_device, req, IAP_interface_string, sizeof(IAP_interface_string));
                     apple_mfi_pass_ready_set_api();
-                    extern void apple_usb_msd_wakeup(struct usb_device_t *usb_device);
-                    apple_usb_msd_wakeup(usb_device);
+                    apple_usb_iap_wakeup(usb_device);
                     ret = 1;
                     break;
                 }

@@ -12,7 +12,7 @@
 #include "le_broadcast.h"
 
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2)
 #include "le_broadcast.h"
 #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==2)
 #include "app_le_auracast.h"
@@ -72,9 +72,9 @@ static const struct ui_dis_api *const ui_dis_main[] = {
 #if TCFG_APP_FM_EN
     &fm_main,
 #endif
-    /*#if TCFG_APP_RECORD_EN
-        &record_main,
-    #endif*/
+#if TCFG_APP_RECORD_EN
+    &record_main,
+#endif
 #if TCFG_APP_LINEIN_EN
     &linein_main,
 #endif
@@ -288,7 +288,7 @@ static void ui_strick_loop()
 //=================================================================================//
 static void __ui_menu_reflash_action(u8 break_in)
 {
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN) && (LEA_BIG_FIX_ROLE==2)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2)
     if (get_broadcast_role() && app_get_current_mode()->name == APP_MODE_MUSIC) {
         if (__ui_display->ui && __ui_display->ui->ui_main) {
             __ui_display->ui->ui_main(__ui_display->ui_api, __ui_display->private); //刷新主页

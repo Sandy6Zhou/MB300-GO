@@ -28,6 +28,7 @@ enum {
     BT_MODE_BROADCAST,
     BT_MODE_AURACAST,
     BT_MODE_CIG,
+    BT_MODE_3IN1,
 };
 
 typedef struct _APP_VAR {

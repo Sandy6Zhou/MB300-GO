@@ -18,7 +18,8 @@
 #include "app_le_broadcast.h"
 #include "app_msg.h"
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 /**************************************************************************************************
   Macros
@@ -64,7 +65,7 @@ struct custom_data_transmit {
 /* ----------------------------------------------------------------------------*/
 int wireless_custom_data_send_to_sibling(u8 uuid, void *data, u16 len, u8 device_channel)
 {
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (!app_cis_is_connected(device_channel)) {
         return 0;
     }
@@ -82,10 +83,10 @@ int wireless_custom_data_send_to_sibling(u8 uuid, void *data, u16 len, u8 device
     /* dt->crc = CRC16(data, len); */
     memcpy((u8 *)dt + sizeof(*dt), data, len);
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     int slen = app_connected_send_custom_data(device_channel, (void *)dt, buffer_len);
 #endif
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     int slen = app_broadcast_send_custom_data(device_channel, (void *)dt, buffer_len);
 #endif
     if (!slen) {
@@ -205,7 +206,7 @@ int wireless_key_event_sync(int key_msg)
     return 0;
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (!app_cis_is_connected(WIRELESS_MASTER_DEV | WIRELESS_SLAVE_DEV1 | WIRELESS_SLAVE_DEV2)) {
         return 0;
     }
@@ -220,10 +221,10 @@ int wireless_key_event_sync(int key_msg)
     memcpy(buffer + 1, &key_msg, sizeof(int));
 
     if (buffer) {
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
         slen = app_connected_send_custom_data(device_channel, (void *)buffer, len);
 #endif
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         slen = app_broadcast_send_custom_data(device_channel, (void *)buffer, len);
 #endif
         if (!slen) {

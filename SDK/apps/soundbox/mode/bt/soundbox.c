@@ -682,7 +682,7 @@ static int bt_tone_play_end_callback(void *priv, enum stream_event event)
 {
 #if TCFG_USER_TWS_ENABLE && TCFG_TWS_INIT_AFTER_POWERON_TONE_PLAY_END
     if (event == STREAM_EVENT_STOP) {
-        if (g_bt_hdl.work_mode == BT_MODE_TWS) {
+        if ((g_bt_hdl.work_mode == BT_MODE_TWS) || (g_bt_hdl.work_mode == BT_MODE_3IN1)) {
             bt_tws_poweron();
         }
     }
@@ -758,12 +758,12 @@ static u8 bt_nobackground_exit()
     bt_cmd_prepare(USER_CTRL_CONNECTION_CANCEL, 0, NULL);
 
 #if (TCFG_KBOX_1T3_MODE_EN == 0)        //三合一退出模式不关闭le audio
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);
     app_broadcast_uninit();
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     app_connected_close_all(APP_CONNECTED_STATUS_STOP);
     app_connected_uninit();
 #endif
@@ -790,7 +790,6 @@ static u8 bt_nobackground_exit()
 
 static int app_bt_init()
 {
-    int ret = -1;
 #if TCFG_CODE_RUN_RAM_BT_CODE
     int bt_code_size = __bt_movable_region_end - __bt_movable_region_start;
     printf("bt_code_size:%d\n", bt_code_size);
@@ -825,7 +824,7 @@ static int app_bt_init()
     {
         tone_player_stop();
 #if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
-        ret = local_tws_enter_mode(get_tone_files()->bt_mode, NULL);
+        int ret = local_tws_enter_mode(get_tone_files()->bt_mode, NULL);
         if (ret != 0)
 #endif //TCFG_LOCAL_TWS_ENABLE
 
@@ -1009,7 +1008,7 @@ int bt_nobackground_status_event_handler(int *msg)
         trim_timer_add();
 
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if TCFG_KBOX_1T3_MODE_EN && TCFG_MIC_EFFECT_ENABLE
         if (!mic_effect_player_runing()) {
             app_broadcast_open_in_other_mode();
@@ -1019,7 +1018,7 @@ int bt_nobackground_status_event_handler(int *msg)
 #endif
 #endif
 
-#if (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #if TCFG_KBOX_1T3_MODE_EN && TCFG_MIC_EFFECT_ENABLE
         if (is_open_cis_connet() && !mic_effect_player_runing()) {
             app_connected_open_in_other_mode();

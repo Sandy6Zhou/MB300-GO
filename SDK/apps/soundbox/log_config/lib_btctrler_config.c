@@ -84,11 +84,10 @@ const int CONFIG_LNA_CHECK_VAL = -80;
  		#ifdef CONFIG_NEW_BREDR_ENABLE
  	    	#if (BT_FOR_APP_EN)
  		    	const int config_btctler_modules        = (BT_MODULE_CLASSIC | BT_MODULE_LE);
-            #elif (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN || LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN) || \
-                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)) || \
-                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)) || \
-                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_UNICAST_SOURCE_EN)) || \
-                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+            #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_JL_CIS_CENTRAL_EN)) || \
+                (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
                 const int config_btctler_modules        = (BT_MODULE_CLASSIC | BT_MODULE_LE);
  	        #else
  		        const int config_btctler_modules        = (BT_MODULE_CLASSIC);
@@ -158,7 +157,7 @@ const int CONFIG_LNA_CHECK_VAL = -80;
     #if (defined CONFIG_CPU_BR29) && (TCFG_USER_TWS_ENABLE)
         const int CONFIG_A2DP_MAX_BUF_SIZE          = 18 * 1024;
     #else
-        const int CONFIG_A2DP_MAX_BUF_SIZE          = 20 * 1024;
+        const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
     #endif
 #else
         const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
@@ -316,15 +315,15 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 
 #if (TCFG_USER_BLE_ENABLE)
 
-#if (LEA_BIG_CTRLER_TX_EN || LEA_BIG_CTRLER_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
     const int config_btctler_le_roles =
-    #if LEA_BIG_CTRLER_TX_EN
+    #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
         (LE_ADV | LE_SLAVE | LE_SCAN) |
-    #endif /* LEA_BIG_CTRLER_TX_EN */
-    #if LEA_BIG_CTRLER_RX_EN
+    #endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN) */
+    #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
         (LE_SCAN | LE_MASTER | LE_INIT | LE_ADV | LE_SLAVE) |
-    #endif /* LEA_BIG_CTRLER_RX_EN */
+    #endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) */
         0;
 
     #if TCFG_KBOX_1T3_MODE_EN
@@ -341,27 +340,27 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     #endif
 
     // LE RAM Control
-    const int config_btctler_le_rx_nums = LEA_BIG_CTRLER_RX_EN ? 20 : 5;
-    const int config_btctler_le_acl_packet_length = LEA_BIG_CTRLER_TX_EN ? 255 : 27;
+    const int config_btctler_le_rx_nums = (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) ? 20 : 5;
+    const int config_btctler_le_acl_packet_length = (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN) ? 255 : 27;
     const int config_btctler_le_acl_total_nums    = 10;
     const int config_btctler_le_hw_nums = 6;
 
-#elif (LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
     const int config_btctler_le_roles =
-    #if LEA_CIG_CENTRAL_EN
+    #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN)
         (LE_SCAN | LE_INIT | LE_MASTER) | LE_ADV |    //添加LE_ADV是为了测试盒用
-    #endif /* LEA_CIG_CENTRAL_EN */
-    #if LEA_CIG_PERIPHERAL_EN
+    #endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN) */
+    #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN)
         (LE_ADV | LE_SLAVE) |
-    #endif /*  LEA_CIG_PERIPHERAL_EN*/
+    #endif /*  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN)*/
         0;
 
     const uint64_t config_btctler_le_features = LE_FEATURES_CIS | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2;
 
     // LE RAM Control
-    const int config_btctler_le_rx_nums = LEA_CIG_PERIPHERAL_EN ? 20 : 5;
-    const int config_btctler_le_acl_packet_length =  LEA_CIG_CENTRAL_EN ? 255 : 27;
+    const int config_btctler_le_rx_nums = (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN) ? 20 : 5;
+    const int config_btctler_le_acl_packet_length =  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN) ? 255 : 27;
     const int config_btctler_le_acl_total_nums    = 10;
     const int config_bb_optimized_ctrl = BIT(13) | BIT(14) | BIT(20) | VENDOR_BB_ISO_DIRECT_PUSH | VENDOR_BB_DUAL_BD_SWITCH;
     const int config_btctler_le_hw_nums = 5;
@@ -381,7 +380,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 #else
     #define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV)
 
-    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
         #define LE_AUDIO_CIS_LE_FEATURES (LE_ENCRYPTION | LE_FEATURES_CIS | LE_2M_PHY|CHANNEL_SELECTION_ALGORITHM_2|LL_FEAT_LE_EXT_ADV)
     #else
         #define LE_AUDIO_CIS_LE_FEATURES  0
@@ -393,15 +392,15 @@ const int config_delete_link_key          = 1;           //配置是否连接失
         #define RCSP_MODE_LE_FEATURES 0
     #endif
 
-    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
         const int config_btctler_le_hw_nums = 5;
-    #elif ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
+    #elif ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_hw_nums = 5;
     #else
         const int config_btctler_le_hw_nums = 2;
     #endif
 
-    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
+    #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_roles    = (LE_MASTER | LE_SCAN);
         const uint64_t config_btctler_le_features = LE_FEATURES_BIS|LE_CORE_V50_FEATURES;
     #else
@@ -442,7 +441,7 @@ const int config_btctler_le_master_multilink = 0;
 const int config_btctler_le_slave_conn_update_winden = 2500;//range:100 to 2500
 
 // LE vendor baseband
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
     #define TWS_LE_AUDIO_LE_ROLE_SW_EN (0)
 #else
     #define TWS_LE_AUDIO_LE_ROLE_SW_EN (0)

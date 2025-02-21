@@ -17,7 +17,7 @@
 #include "le_connected.h"
 #include "wireless_trans.h"
 
-#if LEA_CIG_CENTRAL_EN || LEA_CIG_PERIPHERAL_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 /**************************************************************************************************
   Macros
@@ -284,6 +284,7 @@ static const struct connected_platform_data *get_connected_platform_data(u8 mode
 
 cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
 {
+    u8 round_up = 0;
     int ret;
     u64 pair_addr;
     cur_app_task = app_task;
@@ -316,14 +317,22 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
 
 #if (LEA_CIG_TRANS_MODE == 1)
 #if (LEA_CIG_CONNECT_MODE == 2)
-            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000;
+            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC % 1000) {
+                //向上取整
+                round_up = 1;
+            }
+            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
             central_params->sduIntUsPToC = data->args[platform_data_index].sdu_interval;
             central_params->cis[0].rtnPToC = data->args[platform_data_index].rtnPToC - 1;
             central_params->cis[1].rtnPToC = data->args[platform_data_index].rtnPToC - 1;
             central_params->cis[0].maxSduPToC = cig_transmit_data_len;
             central_params->cis[1].maxSduPToC = cig_transmit_data_len;
 #else
-            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000;
+            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP % 1000) {
+                //向上取整
+                round_up = 1;
+            }
+            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
             central_params->sduIntUsCToP = data->args[platform_data_index].sdu_interval;
             central_params->cis[0].rtnCToP = data->args[platform_data_index].rtnCToP - 1;
             central_params->cis[1].rtnCToP = data->args[platform_data_index].rtnCToP - 1;
@@ -333,8 +342,17 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
 #endif  //#if (LEA_CIG_TRANS_MODE == 1)
 
 #if (LEA_CIG_TRANS_MODE == 2)
-            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000;
-            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000;
+            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP % 1000) {
+                //向上取整
+                round_up = 1;
+            }
+            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
+            round_up = 0;
+            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC % 1000) {
+                //向上取整
+                round_up = 1;
+            }
+            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
             central_params->sduIntUsCToP = data->args[platform_data_index].sdu_interval;
             central_params->sduIntUsPToC = data->args[platform_data_index].sdu_interval;
 #if (LEA_TX_CHANNEL_SEPARATION && (LE_AUDIO_CODEC_CHANNEL == 2))
