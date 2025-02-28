@@ -20,6 +20,7 @@
 #include "bt_ability.h"
 #include "le_broadcast.h"
 #include "wireless_trans.h"
+#include "esco_player.h"
 
 int bt_app_msg_handler(int *msg)
 {
@@ -88,10 +89,57 @@ int bt_app_msg_handler(int *msg)
         puts("app msg vol down\n");
         bt_key_vol_down();
         break;
-    case APP_MSG_CALL_HANGUP:
-        puts("app msg call HangUp\n");
-        bt_key_call_hang_up();
+    case APP_MSG_CALL_ANSWER:
+        u8 temp_call_btaddr[6];
+        if (esco_player_get_btaddr(temp_call_btaddr)) {
+            if (bt_get_call_status() == BT_CALL_INCOMING) {
+                printf("APP_MSG_CALL_ANSWER: esco playing, device_addr:\n");
+                put_buf(temp_call_btaddr, 6);
+                bt_cmd_prepare_for_addr(temp_call_btaddr, USER_CTRL_HFP_CALL_ANSWER, 0, NULL);		// esco
+                break;
+            }
+        } else {
+            if (bt_get_call_status() == BT_CALL_INCOMING) {
+                printf("APP_MSG_CALL_ANSWER: esco no playing\n");
+                bt_cmd_prepare(USER_CTRL_HFP_CALL_ANSWER, 0, NULL);
+                break;
+            }
+        }
         break;
+    case APP_MSG_CALL_HANGUP:
+        u8 temp_btaddr[6];
+        if (esco_player_get_btaddr(temp_btaddr)) {
+            printf("APP_MSG_CALL_HANGUP: current esco playing\n");		// esco
+            put_buf(temp_btaddr, 6);
+            bt_cmd_prepare_for_addr(temp_btaddr, USER_CTRL_HFP_CALL_HANGUP, 0, NULL);
+            break;
+        } else {
+            u8 *addr = bt_get_current_remote_addr();
+            if (addr) {
+                memcpy(temp_btaddr, addr, 6);
+                u8 call_status = bt_get_call_status_for_addr(temp_btaddr);
+                if ((call_status >= BT_CALL_INCOMING) && (call_status <= BT_CALL_ACTIVE)) {
+                    printf("APP_MSG_CALL_HANGUP: current addr\n");
+                    put_buf(temp_btaddr, 6);
+                    bt_cmd_prepare_for_addr(temp_btaddr, USER_CTRL_HFP_CALL_HANGUP, 0, NULL);
+                    break;
+                }
+                u8 *other_conn_addr;
+                other_conn_addr = btstack_get_other_dev_addr(addr);
+                if (other_conn_addr) {
+                    printf("APP_MSG_CALL_HANGUP: other addr\n");
+                    memcpy(temp_btaddr, other_conn_addr, 6);
+                    put_buf(temp_btaddr, 6);
+                    call_status = bt_get_call_status_for_addr(temp_btaddr);
+                    if ((call_status >= BT_CALL_INCOMING) && (call_status <= BT_CALL_ACTIVE)) {
+                        bt_cmd_prepare_for_addr(temp_btaddr, USER_CTRL_HFP_CALL_HANGUP, 0, NULL);
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+
     case APP_MSG_CALL_LAST_NO:
         puts("app msg call last on\n");
         bt_key_call_last_on();
@@ -109,6 +157,13 @@ int bt_app_msg_handler(int *msg)
         int state = bt_get_low_latency_mode();
         bt_set_low_latency_mode(!state, 1, 300);
         break;
+#if TCFG_BT_SUPPORT_PBAP
+    case APP_MSG_ALL_PHONE_CARD:
+        puts("APP_MSG_ALL_PHONE_CARD\n");
+        bt_pbap_get_all();
+        break;
+#endif
+
     case APP_MSG_ADD_LINEIN_STREAM:
         //工具的蓝牙流程图需要添加对应的linein数据流!!
         puts("app msg add linein stream\n");

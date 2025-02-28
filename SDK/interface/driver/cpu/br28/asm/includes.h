@@ -2,7 +2,6 @@
 #define ASM_INCLUDES_H
 
 #include "asm/cpu.h"
-#include "crc.h"
 #include "clock.h"
 #include "gpio.h"
 #include "asm/spiflash.h"

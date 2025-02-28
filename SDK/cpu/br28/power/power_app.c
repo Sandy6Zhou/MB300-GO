@@ -81,10 +81,10 @@ u8 power_soff_callback()
 
     __mask_io_cfg();
 
-    gpio_config_uninit();
-
     void gpio_config_soft_poweroff(void);
     gpio_config_soft_poweroff();
+
+    gpio_config_uninit();
 
     return 0;
 }

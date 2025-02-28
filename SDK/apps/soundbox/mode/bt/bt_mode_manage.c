@@ -73,7 +73,9 @@ int bt_work_mode_select(u8 mode)
 
     switch (mode) {
     case BT_MODE_SIGLE_BOX:
-        dual_conn_page_device();
+        if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            dual_conn_page_device();
+        }
         break;
     case BT_MODE_TWS:
 #if TCFG_USER_TWS_ENABLE
@@ -81,19 +83,23 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_BROADCAST:
-        dual_conn_page_device();
+        if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            dual_conn_page_device();
+        }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_init();
-        app_broadcast_open();
         le_audio_scene_deal(LE_AUDIO_APP_OPEN);
+        app_broadcast_open();
 #endif
         break;
     case BT_MODE_AURACAST:
-        dual_conn_page_device();
+        if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            dual_conn_page_device();
+        }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         app_auracast_init();
-        app_auracast_open();
         le_audio_scene_deal(LE_AUDIO_APP_OPEN);
+        app_auracast_open();
 #endif
         break;
     case BT_MODE_CIG:

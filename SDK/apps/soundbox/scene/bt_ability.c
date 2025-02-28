@@ -14,7 +14,9 @@
 #include "bt_slience_detect.h"
 #include "low_latency.h"
 
-
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+#include "dma_platform_api.h"
+#endif
 
 #define BT_HCI_EVENT    0x1000
 #define BT_STACK_EVENT  0x2000
@@ -995,6 +997,21 @@ static void action_device_b(struct scene_param *param)
     u16 action = *(u16 *)param->arg;
     printf("action_device_b: %x\n", action);
     device_do_action(device, action);
+}
+
+static void action_open_third_part_ai(struct scene_param *param)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+    dma_start_voice_recognition(1);
+    dma_speech_timeout_start();
+#endif
+}
+
+static void action_close_third_part_ai(struct scene_param *param)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+    dma_start_voice_recognition(0);
+#endif
 }
 
 static const struct scene_action btstack_action_table[] = {

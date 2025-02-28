@@ -388,15 +388,21 @@ APP_MSG_HANDLER(le_audio_tws_msg_handler) = {
 int le_audio_scene_deal(int scene)
 {
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-    return app_broadcast_deal(scene);
+    if (g_bt_hdl.work_mode == BT_MODE_BROADCAST) {
+        return app_broadcast_deal(scene);
+    }
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-    return app_connected_deal(scene);
+    if (g_bt_hdl.work_mode == BT_MODE_CIG) {
+        return app_connected_deal(scene);
+    }
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
-    return app_auracast_deal(scene);
+    if (g_bt_hdl.work_mode == BT_MODE_AURACAST) {
+        return app_auracast_deal(scene);
+    }
 #endif
 
     return -EPERM;

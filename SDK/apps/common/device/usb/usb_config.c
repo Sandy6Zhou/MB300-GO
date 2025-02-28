@@ -14,6 +14,7 @@
 #include "timer.h"
 #include "app_config.h"
 #include "lbuf.h"
+#include "usb/device/usb_pll_trim.h"
 
 #ifdef CONFIG_ADAPTER_ENABLE
 #include "adapter_usb_hid.h"
@@ -202,7 +203,7 @@ void usb_isr(const usb_dev usb_id)
 #if TCFG_FUSB_PLL_TRIM
         log_info("FUSB_PLL_AUTO_TRIM RUN\n");
         /* fusb_pll_trim(USB_TRIM_HAND, 10); */
-        fusb_pll_trim(USB_TRIM_AUTO, 10);
+        usb_pll_trim_init(USB_TRIM_AUTO, 5, 80);
 #endif
 
 #if USB_SUSPEND_RESUME || USB_SUSPEND_RESUME_SYSTEM_NO_SLEEP

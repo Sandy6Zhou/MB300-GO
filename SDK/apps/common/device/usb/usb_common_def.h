@@ -114,6 +114,9 @@
 #ifndef TCFG_ADB_ENABLE
 #define TCFG_ADB_ENABLE                     0
 #endif
+#ifndef TCFG_HUB_HOST_ENABLE
+#define TCFG_HUB_HOST_ENABLE                0
+#endif
 
 #else
 #undef  TCFG_UDISK_ENABLE
@@ -126,6 +129,8 @@
 #define TCFG_AOA_ENABLE                     0
 #undef  TCFG_ADB_ENABLE
 #define TCFG_ADB_ENABLE                     0
+#undef  TCFG_HUB_HOST_ENABLE
+#define TCFG_HUB_HOST_ENABLE                0
 #endif
 
 #if TCFG_PC_ENABLE
@@ -148,6 +153,9 @@
 #ifndef TCFG_USB_CUSTOM_HID_ENABLE
 #define TCFG_USB_CUSTOM_HID_ENABLE          0
 #endif
+#ifndef TCFG_USB_SLAVE_MTP_ENABLE
+#define TCFG_USB_SLAVE_MTP_ENABLE           0
+#endif
 #ifndef TCFG_USB_SLAVE_MIDI_ENABLE
 #define TCFG_USB_SLAVE_MIDI_ENABLE          0
 #endif
@@ -169,6 +177,8 @@
 #define TCFG_USB_SLAVE_CDC_ENABLE           0
 #undef  TCFG_USB_CUSTOM_HID_ENABLE
 #define TCFG_USB_CUSTOM_HID_ENABLE          0
+#undef  TCFG_USB_SLAVE_MTP_ENABLE
+#define TCFG_USB_SLAVE_MTP_ENABLE           0
 #undef  TCFG_USB_SLAVE_MIDI_ENABLE
 #define TCFG_USB_SLAVE_MIDI_ENABLE          0
 #undef  TCFG_USB_SLAVE_PRINTER_ENABLE

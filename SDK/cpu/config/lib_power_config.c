@@ -59,15 +59,18 @@ const bool control_pdown = 1;
 const bool control_pdown = 0;
 #endif
 
-/* //使能soff模块 */
-/* const bool control_soff = 1; */
-/*  */
-/* //使能poff模块 */
-/* #if (TCFG_LOWPOWER_LOWPOWER_SEL==DEEP_SLEEP_EN) */
-/* const bool control_poff = 1; */
-/* #else */
-/* const bool control_poff = 0; */
-/* #endif */
+//使能soff模块
+const bool control_soff = 1;
+
+//使能poff模块
+#if (TCFG_LOWPOWER_LOWPOWER_SEL==DEEP_SLEEP_EN)
+const bool control_poff = 1;
+#else
+const bool control_poff = 0;
+#endif
+
+const bool control_rtc_enable = 1;
+
 
 //使能pdown模块
 const bool lib_pmu_config_pdown = 1;

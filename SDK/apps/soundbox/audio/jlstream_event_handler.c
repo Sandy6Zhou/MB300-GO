@@ -40,6 +40,7 @@
 #define PIPELINE_UUID_PC_AUDIO		0xDC8D
 #define PIPELINE_UUID_RECODER       0x49EC
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
+#define PIPELINE_UUID_AI_VOICE      0x5475
 
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
@@ -144,6 +145,11 @@ static int get_pipeline_uuid(const char *name)
         }
 #endif
     }
+
+    if (!strcmp(name, "ai_voice")) {
+        return PIPELINE_UUID_AI_VOICE;
+    }
+
     if (!strcmp(name, "music")) {
         clock_alloc("music", 24 * 1000000UL);
     }
@@ -336,6 +342,10 @@ static int load_decoder_handler(struct stream_decoder_info *info)
         info->frame_time = 15;
     }
 #endif
+
+    if (info->scene == STREAM_SCENE_LE_AUDIO) {
+        info->frame_time = 15;
+    }
 
     if (info->coding_type == AUDIO_CODING_LHDC || info->coding_type == AUDIO_CODING_LDAC) {
         info->task_name = "a2dp_dec";

@@ -211,12 +211,16 @@ int eSystemConfirmStopStatus(void)
      *   0:100 ms wakeup
      *   other: x ms wakeup
      */
+#if TCFG_CHARGE_POWERON_ENABLE
+    return 0;
+#else
     if (get_charge_full_flag()) {
         power_set_soft_poweroff();
         return 1;
     } else {
         return 0;
     }
+#endif
 }
 
 __attribute__((used))

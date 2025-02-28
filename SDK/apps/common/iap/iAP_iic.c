@@ -125,6 +125,9 @@ static u16 iAP_iic_X509(u8 *RxBuf, u16 max_len)
     iAP_iic_readn(ADDR_ACCESSORY_CERTIFICATE_DATA_LENGTH, certificate_len, 2);
     temp_len0 = ((u16)certificate_len[0] << 8) | certificate_len[1];
     temp_len1 = 0;
+
+    ASSERT(max_len >= temp_len0, "iic maybe err! %d, %d\n", max_len, temp_len0);
+
     u8 iaddr = ADDR_ACCESSORY_CERTIFICATE_DATA;
     while (temp_len0 != temp_len1) {
         u16 len = temp_len0 - temp_len1;
@@ -143,7 +146,7 @@ static u16 iAP_iic_X509(u8 *RxBuf, u16 max_len)
 static u16 iAP_iic_crack(u8 *TxBuf, u8 len)
 {
     u8 challenge_len[2];
-    u8 ac_status = 0;
+    u8 ac_status;
     u8 retry1;
     u8 retry2 = 20;
     log_info("%s", __FUNCTION__);

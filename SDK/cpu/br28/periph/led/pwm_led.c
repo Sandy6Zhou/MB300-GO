@@ -375,6 +375,7 @@ void pwm_led_io_unmount(void)
     if (soft_alternate_timer) {
         sys_timer_del(soft_alternate_timer);
         soft_alternate_timer = 0;
+        __this->alternate_out = 1;
     }
 
     if (__this->port0 < IO_PORT_MAX) {
@@ -486,6 +487,7 @@ void pwm_led_hw_init(void *pdata)
 void pwm_led_hw_close(void)
 {
     JL_PLED->CON0 &= ~BIT(0);
+    SFR(P11_SYSTEM->P2M_CLK_CON0, 5, 3, 0);
     pwm_led_io_unmount();
     pwm_led_data_init = 0;
 }
@@ -569,6 +571,9 @@ void pwm_led_get_sync_status(struct pwm_led_status_t *status)
     status->dir   = !!(cnt_rd & BIT(17));
     status->level = !!(cnt_rd & BIT(16));
     status->cur_cnt  = cnt_rd & 0xffff;
+    if ((JL_PLED->CON0 & BIT(1)) == 0) {//不是呼吸变化模式
+        status->cur_cnt  = cnt_rd & 0xff;
+    }
     status->cnt_max = pwm_led_get_cur_status_cnt_max(status->dir, status->level);
     pwm_led_get_next_dir_level(status->dir, status->level, (u32 *)&next_dir, (u32 *)&next_level);
     status->next_cnt_max = pwm_led_get_cur_status_cnt_max(next_dir, next_level);

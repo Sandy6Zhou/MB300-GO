@@ -483,8 +483,8 @@ const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmissio
 /*-----------------------------------------------------------*/
 //RF part
 const char log_tag_const_v_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_Analog  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_Analog  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_w_Analog  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_d_Analog  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_Analog  = CONFIG_DEBUG_LIB(0);
 

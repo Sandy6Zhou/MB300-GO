@@ -32,11 +32,15 @@ void key_wakeup_init()
 #if TCFG_ADKEY_ENABLE
     const struct adkey_platform_data *ad_data = get_adkey_platform_data();
     port0.gpio = ad_data->adkey_pin;
+    p33_io_wakeup_port_init(&port0);
+    p33_io_wakeup_enable(port0.gpio, 0);
 #endif
 
 #if TCFG_IRKEY_ENABLE
     const struct irkey_platform_data *ir_data = get_irkey_platform_data();
     port0.gpio = ir_data->port;
+    p33_io_wakeup_port_init(&port0);
+    p33_io_wakeup_enable(port0.gpio, 0);
 #endif
 
 #if TCFG_IOKEY_ENABLE
@@ -52,8 +56,8 @@ void key_wakeup_init()
         port0.edge  = FALLING_EDGE;
         port0.gpio  =  io_data->port[wakeup_key_num].key_type.two_io.in_port;
     }
-#endif
     p33_io_wakeup_port_init(&port0);
     p33_io_wakeup_enable(port0.gpio, 1);
+#endif
 #endif
 }

@@ -912,6 +912,46 @@ void audio_app_volume_set(u8 state, s16 volume, u8 fade)
 
 /*
 *********************************************************************
+*          			Audio Volume State MUTE
+* Description: 针对不同AUDIO STATE，将数据静音或者解开静音
+* Arguments  : mute_en	是否使能静音, 0:不使能,1:使能
+* Return	 : None.
+* Note(s)    : None.
+*********************************************************************
+*/
+void app_audio_set_mute_state(u8 state, u8 mute_en)
+{
+    u8 dvol_idx = 0; //记录音量通道供数字音量控制使用
+    switch (state) {
+    case APP_AUDIO_STATE_IDLE:
+    case APP_AUDIO_STATE_MUSIC:
+        dvol_idx = MUSIC_DVOL;
+        __this->music_mute_state = mute_en;
+        break;
+    case APP_AUDIO_STATE_CALL:
+        dvol_idx = CALL_DVOL;
+        __this->call_mute_state = mute_en;
+        break;
+    case APP_AUDIO_STATE_WTONE:
+#if WARNING_TONE_VOL_FIXED
+        return;
+#endif
+        dvol_idx = TONE_DVOL | RING_DVOL | KEY_TONE_DVOL;
+        __this->wtone_mute_state = mute_en;
+        break;
+    case APP_AUDIO_CURRENT_STATE:
+        app_audio_set_mute_state(__this->state, mute_en);
+        break;
+    default:
+        break;
+    }
+    u32 param = dvol_idx << 16 | mute_en;
+    /* app_audio_set_mute_timer_func((void *)param); */
+    sys_timeout_add((void *)param, app_audio_set_mute_timer_func, 5); //5ms后将数据mute 或者解mute
+}
+
+/*
+*********************************************************************
 *          			Audio Volume MUTE
 * Description: 将数据静音或者解开静音
 * Arguments  : mute_en	是否使能静音, 0:不使能,1:使能

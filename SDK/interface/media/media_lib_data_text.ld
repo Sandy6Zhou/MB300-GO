@@ -327,6 +327,9 @@
 	/* *(.distortion.text.const)	 */
 #endif
 
+#if AFx_DAC_IO_IRQ_HANDLER_AT_RAM
+	*(.dac_io_irq_handler.text.cache.L2)	
+#endif
 
 	*(.mixer.text.cache.L2)
 	*(.dac.text.cache.L2)

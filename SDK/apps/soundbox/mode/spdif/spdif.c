@@ -566,7 +566,7 @@ static int spdif_local_audio_close(void)
             }
         }
 #endif
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==0)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==0)
         //没有固定发送端或者是固定接收端
         if (get_auracast_role()) {
             app_spdif_hd.mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);

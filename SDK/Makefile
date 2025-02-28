@@ -124,7 +124,7 @@ DEFINES := \
 	-D__GCC_PI32V2__ \
 	-DCONFIG_NEW_ECC_ENABLE \
 	-DCONFIG_CODE_MOVABLE_ENABLE \
-	-DCONFIG_FLOAT_DEBUG_ENABLE \
+	-DCONFIG_RESFILE_SUPPORT_MULT_DEVICE=0 \
 	-DCONFIG_EFFECT_CORE_V2_ENABLE \
 	-DCONFIG_OS_AFFINITY_ENABLE=0 \
 	-DEVENT_HANDLER_NUM_CONFIG=2 \
@@ -233,8 +233,9 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/jieli/rcsp/server/functions/sensors/sport_data_info_opt \
 	-Iapps/common/third_party_profile/jieli/rcsp/server/functions/browser \
 	-Iapps/common/third_party_profile/jieli/rcsp/client/rcsp_m_update \
-	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/dma_protocol \
+	-Iapps/common/third_party_profile/dma_protocol/dma_use_lib \
+	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/gfps_protocol \
 	-Iapps/common/third_party_profile/custom_protocol_demo \
 	-Iinterface/utils/apple_dock \
@@ -331,6 +332,7 @@ c_SRC_FILES := \
 	apps/common/device/usb/device/midi.c \
 	apps/common/device/usb/device/msd.c \
 	apps/common/device/usb/device/msd_upgrade.c \
+	apps/common/device/usb/device/mtp.c \
 	apps/common/device/usb/device/printer.c \
 	apps/common/device/usb/device/rcsp_hid_inter.c \
 	apps/common/device/usb/device/task_pc.c \
@@ -338,10 +340,12 @@ c_SRC_FILES := \
 	apps/common/device/usb/device/uac2.c \
 	apps/common/device/usb/device/uac_stream.c \
 	apps/common/device/usb/device/usb_device.c \
+	apps/common/device/usb/device/usb_pll_trim.c \
 	apps/common/device/usb/device/user_setup.c \
 	apps/common/device/usb/host/adb.c \
 	apps/common/device/usb/host/aoa.c \
 	apps/common/device/usb/host/hid.c \
+	apps/common/device/usb/host/hub.c \
 	apps/common/device/usb/host/uac_host.c \
 	apps/common/device/usb/host/usb_bulk_transfer.c \
 	apps/common/device/usb/host/usb_ctrl_transfer.c \
@@ -371,10 +375,13 @@ c_SRC_FILES := \
 	apps/common/test/fs_test.c \
 	apps/common/third_party_profile/common/3th_profile_api.c \
 	apps/common/third_party_profile/common/custom_cfg.c \
+	apps/common/third_party_profile/common/mic_rec.c \
 	apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c \
-	apps/common/third_party_profile/dma_protocol/dma_config.c \
-	apps/common/third_party_profile/dma_protocol/dma_platform_api.c \
 	apps/common/third_party_profile/dma_protocol/dma_protocol.c \
+	apps/common/third_party_profile/dma_protocol/dma_use_lib/dma_le_port.c \
+	apps/common/third_party_profile/dma_protocol/dma_use_lib/dma_setting.c \
+	apps/common/third_party_profile/dma_protocol/dma_use_lib/dma_spp_port.c \
+	apps/common/third_party_profile/dma_protocol/dma_use_lib/platform_template.c \
 	apps/common/third_party_profile/gfps_protocol/gfps_protocol.c \
 	apps/common/third_party_profile/interface/app_protocol_api.c \
 	apps/common/third_party_profile/interface/app_protocol_common.c \
@@ -399,6 +406,7 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/jieli/rcsp/rcsp_functions/rcsp_event.c \
 	apps/common/third_party_profile/jieli/rcsp/rcsp_functions/rcsp_manage.c \
 	apps/common/third_party_profile/jieli/rcsp/rcsp_functions/rcsp_task.c \
+	apps/common/third_party_profile/jieli/rcsp/rcsp_interface.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/browser/rcsp_browser.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_bt_func.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/device_status_cmd/rcsp_fm_func.c \
@@ -845,7 +853,6 @@ c_SRC_FILES := \
 	cpu/br28/charge/chargestore_config.c \
 	cpu/br28/lua_port_api.c \
 	cpu/br28/overlay_code.c \
-	cpu/br28/periph/gpadc.c \
 	cpu/br28/periph/led/pwm_led.c \
 	cpu/br28/periph/mcpwm.c \
 	cpu/br28/periph/rdec.c \
@@ -867,7 +874,7 @@ c_SRC_FILES := \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
 	cpu/br28/ui_driver/led7/led7_driver.c \
 	cpu/br28/ui_driver/ui_common.c \
-	cpu/components/gpadc_utils.c \
+	cpu/components/gpadc_battery.c \
 	cpu/components/iic_api.c \
 	cpu/components/iic_soft.c \
 	cpu/components/ir_decoder.c \
@@ -948,6 +955,8 @@ LFLAGS := \
 	cpu/br28/liba/btstack.a \
 	cpu/br28/liba/rcsp_stack.a \
 	cpu/br28/liba/tme_stack.a \
+	cpu/br28/liba/libdma-protocol.a \
+	cpu/br28/liba/libdma-device-ota.a \
 	cpu/br28/liba/google_fps.a \
 	cpu/br28/liba/swift_pair.a \
 	cpu/br28/liba/btctrler.a \

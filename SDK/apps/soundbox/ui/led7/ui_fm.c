@@ -8,6 +8,8 @@
 #include "fm_api.h"
 #include "fm_rw.h"
 /* #include "fm_manage.h" */
+#include "le_broadcast.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_FM_EN
 #if (TCFG_UI_ENABLE && (CONFIG_UI_STYLE == STYLE_JL_LED7))
@@ -28,6 +30,16 @@ static void led7_show_fm(void *hd)
     dis->clear();
     dis->setXY(0, 0);
     dis->show_string((u8 *)" FM");
+    dis->lock(0);
+}
+
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
     dis->lock(0);
 }
 
@@ -71,6 +83,7 @@ static void led7_fm_show_station(void *hd, u32 arg)
 
 static void *ui_open_fm(void *hd)
 {
+    ui_set_auto_reflash(500);//设置主页500ms自动刷新
     return NULL;
 }
 
@@ -92,9 +105,21 @@ static void ui_fm_main(void *hd, void *private) //主界面显示
         return;
     }
     fre = fm_get_cur_fre();
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
+    if (get_le_audio_curr_role() == 2) {
+        led7_show_le(hd);
+    } else {
+        if (fre != 0) {
+            led7_fm_show_freq(hd, fre);
+        }
+    }
+#else
     if (fre != 0) {
         led7_fm_show_freq(hd, fre);
     }
+#endif
 }
 
 static int ui_fm_user(void *hd, void *private, int menu, int arg)//子界面显示 //返回true不继续传递 ，返回false由common统一处理

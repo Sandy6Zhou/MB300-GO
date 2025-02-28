@@ -12,6 +12,7 @@
 #include "scene_switch.h"
 #include "mic_effect.h"
 #include "rcsp_fm_func.h"
+#include "wireless_trans.h"
 
 #if (TCFG_SPI_LCD_ENABLE)
 #include "ui/ui_api.h"
@@ -35,6 +36,20 @@ int fm_app_msg_handler(int *msg)
         printf("app msg key change mode\n");
         app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
         break;
+    case APP_MSG_FM_START:
+        printf("app msg fm start\n");
+        if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
+            break;
+        }
+        fm_player_open();
+        /* fm_manage_start(); */
+
+#if (TCFG_PITCH_SPEED_NODE_ENABLE && FM_PLAYBACK_PITCH_KEEP)
+        audio_pitch_default_parm_set(app_var.pitch_mode);
+        fm_file_pitch_mode_init(app_var.pitch_mode);
+#endif
+        break;
+
     //暂停播放
     case APP_MSG_MUSIC_PP:
         printf("app msg fm pp\n");

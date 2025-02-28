@@ -112,7 +112,7 @@ u32 hdmi_ddc_get_cec_physical_address(void)
             put_buf(edid_data + i, 8);
         }
     }
-    iic_uninit(0);
+    iic_deinit(0);
 
 
 

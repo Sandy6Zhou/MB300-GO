@@ -45,24 +45,14 @@ extern u8 __fm_movable_region_start[];
 extern u8 __fm_movable_region_end[];
 
 
-static void fm_app_start(void)
+void fm_local_start(void *priv)
 {
-    if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
-        return;
-    }
-
     fm_player_open();
-    /* fm_manage_start(); */
 
 #if (TCFG_PITCH_SPEED_NODE_ENABLE && FM_PLAYBACK_PITCH_KEEP)
     audio_pitch_default_parm_set(app_var.pitch_mode);
     fm_file_pitch_mode_init(app_var.pitch_mode);
 #endif
-}
-
-void fm_local_start(void *priv)
-{
-    fm_app_start();
 }
 
 static int fm_tone_play_end_callback(void *priv, enum stream_event event)
@@ -73,7 +63,7 @@ static int fm_tone_play_end_callback(void *priv, enum stream_event event)
     switch (event) {
     case STREAM_EVENT_STOP:
         ///提示音播放结束，启动播放器播放
-        fm_app_start();
+        app_send_message(APP_MSG_FM_START, 0);
 
         break;
     default:

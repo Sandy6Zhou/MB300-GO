@@ -64,6 +64,7 @@ static void charge_full_deal(void)
         handler->handler(CHARGE_EVENT_CHARGE_FULL, 0);
     }
 
+    printf("%s poweron_en:%d\n", __func__, get_charge_poweron_en());
     if (get_charge_poweron_en() == 0) {
         /* power_set_soft_poweroff(); */
 #if (!TCFG_CHARGESTORE_ENABLE)

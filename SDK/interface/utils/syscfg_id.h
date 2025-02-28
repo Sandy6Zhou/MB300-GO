@@ -203,6 +203,8 @@ int syscfg_tools_init(void);
 #define     CFG_BT_MAC_ADDR             102
 #define     VM_OLD_RTC_TIME             105
 #define     VM_OLD_REAL_TIME            106
+#define     VM_OLD_RTC_TRIM             107
+
 #define     VM_BLE_LOCAL_INFO           109
 #define     CFG_BT_FRE_OFFSET			110
 #define 	VM_GMA_ALI_PARA				111

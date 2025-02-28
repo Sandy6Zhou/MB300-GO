@@ -196,6 +196,7 @@ enum stream_node_state : u16 {
     NODE_STA_OUTPUT_TO_FAST         = 0x0800,   //解码输出太多主动挂起
     NODE_STA_OUTPUT_BLOCKED         = 0x1000,   //终端节点缓存满,数据写不进去
     NODE_STA_OUTPUT_SPLIT           = 0x2000,
+    NODE_STA_DECODER_FADEOUT        = 0X4000,  //用来判断是否是解码节点的淡出
 };
 
 enum stream_node_type : u8 {

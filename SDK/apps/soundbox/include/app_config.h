@@ -230,30 +230,22 @@
 //单双备份的配置在board_xxx_global_cfg里配置，需要注意只有RCSP才支持单双备份，其余升级都是只支持双备份升级
 //支持TWS同步升级，OTA_TWS_SAME_TIME_NEW宏需要配置为1，旧的流程已不再支持
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-
 #define	   RCSP_MODE			     RCSP_MODE_SOUNDBOX
 #include "rcsp_cfg.h"
-// 详细功能参考rcsp_cfg.h
+#endif
 
-#elif (THIRD_PARTY_PROTOCOLS_SEL & (GFPS_EN | REALME_EN | TME_EN | DMA_EN | GMA_EN))
-#define    BT_MIC_EN                 0
-#define    TCFG_ENC_OPUS_ENABLE      0
+// 详细功能参考rcsp_cfg.h
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (TME_EN | DMA_EN | GMA_EN | XIMALAYA_EN)))
+#define    BT_MIC_EN                 1
 #define    TCFG_ENC_SPEEX_ENABLE     0
 #define    OTA_TWS_SAME_TIME_ENABLE  0     //是否支持TWS同步升级
-#elif (THIRD_PARTY_PROTOCOLS_SEL & LL_SYNC_EN)
-#define    OTA_TWS_SAME_TIME_ENABLE  1
-#define    OTA_TWS_SAME_TIME_NEW     1     //使用新的tws ota流程
-#define    TCFG_ENC_OPUS_ENABLE      0
-#define    TCFG_ENC_SPEEX_ENABLE     0
-#elif (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
-#define    OTA_TWS_SAME_TIME_ENABLE  0
-#define    OTA_TWS_SAME_TIME_NEW     0     //使用新的tws ota流程
-#define    TCFG_ENC_OPUS_ENABLE      0
+#elif (THIRD_PARTY_PROTOCOLS_SEL & (LL_SYNC_EN | TUYA_DEMO_EN))
+#define    OTA_TWS_SAME_TIME_ENABLE  (TCFG_USER_TWS_ENABLE)
+#define    OTA_TWS_SAME_TIME_NEW     (TCFG_USER_TWS_ENABLE)     //使用新的tws ota流程
 #define    TCFG_ENC_SPEEX_ENABLE     0
 #else
 #define    OTA_TWS_SAME_TIME_ENABLE  0
 #define    OTA_TWS_SAME_TIME_NEW     0     //使用新的tws ota流程
-#define    TCFG_ENC_OPUS_ENABLE      0
 #define    TCFG_ENC_SPEEX_ENABLE     0
 #endif
 
@@ -805,6 +797,15 @@
 #undef APP_ONLINE_DEBUG
 #define TCFG_BT_SUPPORT_SPP	1
 #define APP_ONLINE_DEBUG            1
+#endif
+
+#if APP_ONLINE_DEBUG
+#undef THIRD_PARTY_PROTOCOLS_SEL
+#if (TCFG_THIRD_PARTY_PROTOCOLS_ENABLE && (TCFG_THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | CUSTOM_DEMO_EN | XIMALAYA_EN))) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#define THIRD_PARTY_PROTOCOLS_SEL  (TCFG_THIRD_PARTY_PROTOCOLS_SEL | ONLINE_DEBUG_EN)
+#else
+#define THIRD_PARTY_PROTOCOLS_SEL  (ONLINE_DEBUG_EN)
+#endif
 #endif
 
 #if TCFG_CFG_TOOL_ENABLE

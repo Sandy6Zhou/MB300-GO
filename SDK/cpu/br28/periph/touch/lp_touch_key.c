@@ -37,8 +37,6 @@
 VM_MANAGE_ID_REG(touch_key0_algo_cfg, VM_LP_TOUCH_KEY0_ALOG_CFG);
 VM_MANAGE_ID_REG(touch_key1_algo_cfg, VM_LP_TOUCH_KEY1_ALOG_CFG);
 VM_MANAGE_ID_REG(touch_key2_algo_cfg, VM_LP_TOUCH_KEY2_ALOG_CFG);
-VM_MANAGE_ID_REG(touch_key3_algo_cfg, VM_LP_TOUCH_KEY3_ALOG_CFG);
-VM_MANAGE_ID_REG(touch_key4_algo_cfg, VM_LP_TOUCH_KEY4_ALOG_CFG);
 
 
 static volatile u8 is_lpkey_active = 0;
@@ -198,11 +196,10 @@ static void lp_touch_key_save_range_algo_data(u32 ch_idx)
 {
     log_debug("save algo rfg\n");
 
-    u32 ch = __this->pdata->key_cfg[ch_idx].key_ch;
     struct touch_key_range_algo_data *algo_data;
     algo_data = &(__this->arg[ch_idx].algo_data);
 
-    int ret = syscfg_write(VM_LP_TOUCH_KEY0_ALOG_CFG + ch, (void *)algo_data, sizeof(struct touch_key_range_algo_data));
+    int ret = syscfg_write(VM_LP_TOUCH_KEY0_ALOG_CFG + ch_idx, (void *)algo_data, sizeof(struct touch_key_range_algo_data));
     if (ret != sizeof(struct touch_key_range_algo_data)) {
         log_debug("write vm algo cfg error !\n");
     }
@@ -345,6 +342,24 @@ static void lp_touch_key_range_algo_init(u32 ch_idx, const struct touch_key_algo
     }
 }
 
+static u32 lp_touch_key_get_cur_ch_by_idx(u32 ch_idx)
+{
+    u32 ch = __this->pdata->key_cfg[ch_idx].key_ch;
+    return ch;
+}
+
+static u32 lp_touch_key_get_idx_by_cur_ch(u32 cur_ch)
+{
+    u32 ch_idx, ch;
+    for (ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+        ch = __this->pdata->key_cfg[ch_idx].key_ch;
+        if (cur_ch == ch) {
+            return ch_idx;
+        }
+    }
+    return 0;
+}
+
 void lp_touch_key_init(const struct lp_touch_key_platform_data *pdata)
 {
     log_info("%s >>>>", __func__);
@@ -365,12 +380,18 @@ void lp_touch_key_init(const struct lp_touch_key_platform_data *pdata)
         ch = key_cfg->key_ch;
         __this->lpctmu_cfg.ch_num = __this->pdata->key_num;
         __this->lpctmu_cfg.ch_list[ch_idx] = ch;
+        __this->lpctmu_cfg.ch_en |= BIT(ch);
         if (key_cfg->wakeup_enable) {
             __this->lpctmu_cfg.ch_wkp_en |= BIT(ch);
         }
     }
     if (__this->lpctmu_cfg.ch_wkp_en) {
-        __this->lpctmu_cfg.softoff_keep_work = 1;
+        __this->lpctmu_cfg.softoff_wakeup_cfg = LPCTMU_WAKEUP_EN_WITHOUT_CHARGE_ONLINE;
+        if (__this->pdata->charge_online_softoff_wakeup) {
+            __this->lpctmu_cfg.softoff_wakeup_cfg = LPCTMU_WAKEUP_EN_ALWAYS;
+        }
+    } else {
+        __this->lpctmu_cfg.softoff_wakeup_cfg = LPCTMU_WAKEUP_DISABLE;
     }
 
 
@@ -425,8 +446,8 @@ void lp_touch_key_init(const struct lp_touch_key_platform_data *pdata)
     }
 
     if ((!is_wakeup_source(PWR_WK_REASON_P11)) || \
-        (__this->pdata->ldo_wkp_reset && is_ldo5v_wakeup()) || \
-        (__this->pdata->charge_online_reset && get_charge_online_flag())) {
+        (__this->pdata->ldo_wkp_algo_reset && is_ldo5v_wakeup()) || \
+        (__this->pdata->charge_online_algo_reset && get_charge_online_flag())) {
         lp_touch_key_identify_algorithm_init();
     }
 
@@ -526,7 +547,7 @@ void lp_touch_key_event_irq_handler()
 
     u32 ctmu_event = P2M_CTMU_KEY_EVENT;
     u32 ch = P2M_CTMU_KEY_CNT;
-    u32 ch_idx = lpctmu_get_idx_by_cur_ch(ch);
+    u32 ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
     u16 ch_res = 0;
     u16 chx_res[LPCTMU_CHANNEL_SIZE];
     struct touch_key_arg *arg = &(__this->arg[ch_idx]);

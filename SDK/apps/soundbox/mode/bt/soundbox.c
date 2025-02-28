@@ -147,9 +147,6 @@ static u8 *bt_get_sdk_ver_info(u8 *len)
 void bredr_handle_register()
 {
 #if (TCFG_BT_SUPPORT_SPP==1)
-#if APP_ONLINE_DEBUG
-    online_spp_init();
-#endif
     bt_spp_data_deal_handle_register(spp_data_handler);
 #endif
     bt_fast_test_handle_register(bt_fast_test_api);//测试盒快速测试接口
@@ -725,7 +722,6 @@ static void bt_no_background_exit_check(void *priv)
     btstack_exit_edr();
 #endif
 
-    g_bt_hdl.init_ok = 0;
     g_bt_hdl.init_start = 0;
     g_bt_hdl.exit_check_timer = 0;
     bt_set_stack_exiting(0);
@@ -811,7 +807,9 @@ static int app_bt_init()
 #endif
 
     g_bt_hdl.init_start = 1;//蓝牙协议栈已经开始初始化标志位
+#if (TCFG_KBOX_1T3_MODE_EN == 0)    //开了三合一，ble需要一直运行，init_ok不能清0
     g_bt_hdl.init_ok = 0;
+#endif
     g_bt_hdl.exiting = 0;
     g_bt_hdl.wait_exit = 0;
     g_bt_hdl.ignore_discon_tone = 0;

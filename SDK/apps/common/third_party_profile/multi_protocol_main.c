@@ -161,10 +161,12 @@ extern int realme_protocol_exit(void);
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
-extern int dma_protocol_init(void);
-extern int dma_protocol_exit(void);
+extern int dma_protocol_all_init(void);
+extern int dma_protocol_all_exit(void);
 extern int dueros_process();
-extern int dueros_send_process();
+extern int dueros_send_process(void);
+extern void dma_tx_resume_register(void (*handler)(void));
+extern void dma_rx_resume_register(void (*handler)(void));
 
 extern const u8 sdp_dueros_spp_service_data[];
 extern const u8 sdp_dueros_ota_service_data[];
@@ -382,7 +384,7 @@ void multi_protocol_bt_init(void)
 #if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
     dma_tx_resume_register(multi_protocol_send_resume);
     dma_rx_resume_register(multi_protocol_resume);
-    dma_protocol_init();
+    dma_protocol_all_init();
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & ONLINE_DEBUG_EN)
@@ -420,7 +422,7 @@ void multi_protocol_bt_exit(void)
     swift_pair_all_exit();
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
-    dma_protocol_exit();
+    dma_protocol_all_exit();
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & ONLINE_DEBUG_EN)
     extern void online_spp_exit(void);

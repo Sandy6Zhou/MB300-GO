@@ -22,6 +22,7 @@
 #include "app_le_auracast.h"
 #include "spdif.h"
 #include "le_audio_recorder.h"
+#include "le_broadcast.h"
 
 #if TCFG_SPDIF_ENABLE
 

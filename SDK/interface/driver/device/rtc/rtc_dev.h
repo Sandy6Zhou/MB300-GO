@@ -4,6 +4,9 @@
 #include "typedef.h"
 #include "utils/sys_time.h"
 
+extern const bool control_rtc_enable;
+
+
 enum RTC_CLK {
     CLK_SEL_32K = 1,
     CLK_SEL_BTOSC_DIV1 = 2,
@@ -92,5 +95,7 @@ void rtc_write_alarm(struct sys_time *alarm_time);
 void rtc_debug_dump(void);
 void rtc_alarm_en(u8 set_alarm);
 u32 rtc_get_alarm_en(void);
+
+void poweroff_save_rtc_time();
 
 #endif // __RTC_API_H__
