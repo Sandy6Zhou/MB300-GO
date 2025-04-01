@@ -23,6 +23,9 @@ void le_audio_spdif_recorder_close(void);
 
 int le_audio_iis_recorder_open(void *params, void *le_audio, int latency);
 void le_audio_iis_recorder_close(void);
+// int le_audio_muti_ch_iis_recorder_open(void *params, void *le_audio, int latency);
+int le_audio_muti_ch_iis_recorder_open(void *params_ch0, void *params_ch1, void *le_audio, int latency);
+void le_audio_muti_ch_iis_recorder_close(void);
 
 int le_audio_mic_recorder_open(void *params, void *le_audio, int latency);
 void le_audio_mic_recorder_close(void);

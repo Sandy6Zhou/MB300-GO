@@ -28,7 +28,7 @@ extern "C" {
 /**************************************************************************************************
   Macros
 **************************************************************************************************/
-#if ((LEA_CIG_CONNECT_MODE != 1) && (LEA_CIG_FIX_ROLE == 1))
+#if ((LEA_CIG_CONNECT_MODE != LEA_CIG_1T1R_MODE) && (LEA_CIG_FIX_ROLE == LEA_ROLE_AS_CENTRAL))
 #define CIS_MAX_CONNECTABLE_NUMS    2
 #else
 #define CIS_MAX_CONNECTABLE_NUMS    1

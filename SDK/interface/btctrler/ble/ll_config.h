@@ -213,13 +213,49 @@ extern const int config_ble_adv_tx_pwr_level;
 extern const int config_rf_oob;
 extern const int config_bb_optimized_ctrl;
 
-//config_bb_optimized_ctrl 控制变量说明
-#define VENDOR_BB_ISO_DIRECT_PUSH BIT(21)
-#define VENDOR_BB_DUAL_BD_SWITCH  BIT(22)
+// config_bb_optimized_ctrl 控制变量说明
+#define LE_BB_OPT_FEAT_PKT_UNFILT		BIT(0)
+#define LE_BB_OPT_FEAT_EXT_UPLOAD_EN 	BIT(1)
+#define LE_BB_OPT_FEAT_CC_CODE_EN		BIT(2)
+#define LE_BB_OPT_FEAT_RESERVED0		BIT(3)
+#define LE_BB_OPT_FEAT_HARD_CMB_EN		BIT(4)
+#define LE_BB_OPT_FEAT_RX_LOG_EN		BIT(5) //only for big rx
+#define LE_BB_OPT_FEAT_RSSI_AFH_EN		BIT(6)
+#define LE_BB_OPT_FEAT_PWR_CTRL_EN		BIT(7)
+#define LE_BB_OPT_FEAT_RX_PRE_CLOSE		BIT(8)
+#define LE_BB_OPT_FEAT_TX_PWR_LOW_SEL	BIT(9) //only for br29
+#define LE_BB_OPT_FEAT_PER_AFH_EN		BIT(10)
+#define LE_BB_OPT_FEAT_RESERVED1		BIT(11)|BIT(12)
+#define LE_BB_OPT_FEAT_CIG_ENC_DIS		BIT(13)
+#define LE_BB_OPT_FEAT_CIG_SEVT_CLOSE	BIT(14)
+#define LE_BB_OPT_FEAT_CIG_PACK_MODE	BIT(16) //sequential or interleved
+#define LE_BB_OPT_FEAT_CODE_OPTIMIZED	BIT(17)
+#define LE_BB_OPT_FEAT_CIG_RSSI_GET_EN	BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_EN		BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_DYNAMIC   BIT(19) //only for rx
+#define LE_BB_OPT_FEAT_ISO_DIRECT_PUSH  BIT(21)
+#define LE_BB_OPT_FEAT_BCTRL_DISABLE    BIT(22)
+#define LE_BB_OPT_FEAT_PKT_V3_PLUS_EN   BIT(23)
+#define LE_BB_OPT_FEAT_RX_HMPR_EN   	BIT(24)
+#define LE_BB_OPT_FEAT_DUAL_BD_SWITCH   BIT(25)
 
-#define LE_ADV_AFH_CTRL_EN()	(config_bb_optimized_ctrl & BIT(6))
+#define LE_ADV_RSSI_AFH_EN()	(config_bb_optimized_ctrl & BIT(6))
+#define LE_ADV_PER_AFH_EN()		(config_bb_optimized_ctrl & BIT(10))
 #define LE_ADV_PWR_CTRL_EN()	(config_bb_optimized_ctrl & BIT(7))
 #define LE_BIS_RX_PRE_CLOSE()	(config_bb_optimized_ctrl & BIT(8))
+#define LE_VENDOR_API_EN()      (config_bb_optimized_ctrl & BIT(31))
+#define LE_SUPPORT_V3_PLUS_EN()			(config_bb_optimized_ctrl & BIT(23))
+#define LE_SUPPORT_RX_HMPR_EN()			(config_bb_optimized_ctrl & BIT(24))
+
+
+struct le_adv_link_param_cfg {
+    u8 param1;
+    s8 param2[2];
+    s8 param3[2];
+    u8 param4[2];
+    u8 param5;
+};
+
 /*-----------------------------------------------------------*/
 
 /*

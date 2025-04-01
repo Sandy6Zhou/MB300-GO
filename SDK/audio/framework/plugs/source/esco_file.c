@@ -10,7 +10,7 @@
 #include "media/bt_audio_timestamp.h"
 #include "reference_time.h"
 #include "system/timer.h"
-
+#include "app_config.h"
 
 struct esco_file_hdl {
     u8 start;
@@ -258,7 +258,7 @@ static void esco_release(void *_hdl)
     free(hdl);
 }
 
-
+#if TCFG_BT_SUPPORT_HFP
 REGISTER_SOURCE_NODE_PLUG(esco_file_plug) = {
     .uuid       = NODE_UUID_ESCO_RX,
     .init       = esco_init,
@@ -266,6 +266,7 @@ REGISTER_SOURCE_NODE_PLUG(esco_file_plug) = {
     .ioctl      = esco_ioctl,
     .release    = esco_release,
 };
+#endif
 
 
 

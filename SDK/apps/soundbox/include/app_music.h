@@ -68,7 +68,7 @@ extern int music_device_tone_play(char *logo);
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (LEA_BIG_FIX_ROLE==2)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
 //当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
 extern void music_set_broadcast_local_open_flag(u8 en);
 #endif

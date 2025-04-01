@@ -52,7 +52,7 @@ struct adc_file_hdl {
     s16 *adc_buf;
     struct adc_file_common *adc_f;
     int force_dump;
-    int value;
+    int value[4];
     u16 sample_rate;
     u16 irq_points;
     u8 adc_seq;
@@ -61,6 +61,7 @@ struct adc_file_hdl {
     u8 start;
     u8 dump_cnt;
     u8 ch_num;
+    u8 multi_ch_adc_en;
 };
 
 struct adc_file_common {
@@ -78,6 +79,111 @@ struct adc_file_global {
 
 static struct adc_file_common esco_adc_f;
 static struct adc_file_global esco_adc_file_g;
+
+
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+__NODE_CACHE_CODE(adc)
+static void audio_multi_ch_adc_fade_in(struct adc_file_hdl *hdl, void *buf, int len, u8 ch_idx)
+{
+    if (hdl->value[ch_idx] < FADE_GAIN_MAX) {
+        int fade_ms = 100;//ms
+        int fade_step = FADE_GAIN_MAX / (fade_ms * hdl->sample_rate / 1000);
+        if (adc_hdl.bit_width == ADC_BIT_WIDTH_16) {
+            hdl->value[ch_idx]  = jlstream_fade_in(hdl->value[ch_idx], fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
+        } else {
+            hdl->value[ch_idx]  = jlstream_fade_in_32bit(hdl->value[ch_idx], fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
+        }
+    }
+}
+
+/**
+ * @brief       MIC 的中断回调函数
+ *
+ * @param _hdl  MIC 节点的操作句柄
+ * @param data  MIC 中断采集到的数据地址
+ * @param len   MIC 单个通道中断采集到的数据字节长度
+ */
+__NODE_CACHE_CODE(adc)
+static void adc_mic_ch_output_handler(void *_hdl, s16 *data, int len, u8 ch_idx)
+{
+    struct adc_file_hdl *hdl = (struct adc_file_hdl *)_hdl;
+    struct stream_frame *frame;
+    frame = source_plug_get_output_frame_by_id(hdl->source_node, ch_idx, len);
+    if (!frame) {
+        return;
+    }
+
+    u8 data_ch_idx = get_adc_seq(&adc_hdl, BIT(ch_idx)); //查询模拟mic对应的ADC通道
+    if (hdl->force_dump) {
+        hdl->value[ch_idx] = 0;
+        return;
+    }
+    if (adc_hdl.bit_width != ADC_BIT_WIDTH_16) {
+        s32 *s32_src = (s32 *)data;
+        s32 *s32_dst = (s32 *)frame->data;
+        int points = len >> 2;
+        for (int i = 0; i < points; i++) {
+            s32_dst[i] = s32_src[adc_hdl.max_adc_num * i + data_ch_idx];
+        }
+    } else {
+        s16 *s16_src = data;
+        s16 *s16_dst = (s16 *)frame->data;
+        int points = len >> 1;
+        for (int i = 0; i < points; i++) {
+            s16_dst[i] = s16_src[adc_hdl.max_adc_num * i + data_ch_idx];
+        }
+    }
+    if (audio_common_mic_mute_en_get()) {	//mute ADC
+        memset((u8 *)frame->data, 0x0, len);
+    }
+    frame->len          = len;
+    frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+    frame->timestamp    = adc_hdl.timestamp * TIMESTAMP_US_DENOMINATOR;
+    audio_multi_ch_adc_fade_in(hdl, frame->data, frame->len, ch_idx);
+    source_plug_put_output_frame_by_id(hdl->source_node, ch_idx, frame);
+}
+
+static void adc_ch0_handle(void *priv, void *addr, int len)	//中断回调
+{
+    adc_mic_ch_output_handler(priv, addr, len, 0);
+}
+static  void adc_ch1_handle(void *priv, void *addr, int len)	//中断回调
+{
+    adc_mic_ch_output_handler(priv, addr, len, 1);
+}
+static  void adc_ch2_handle(void *priv, void *addr, int len)	//中断回调
+{
+    adc_mic_ch_output_handler(priv, addr, len, 2);
+}
+static void adc_ch3_handle(void *priv, void *addr, int len)	//中断回调
+{
+    adc_mic_ch_output_handler(priv, addr, len, 3);
+}
+static int adc_chx_handle[4] = {(int)adc_ch0_handle, (int)adc_ch1_handle, (int)adc_ch2_handle, (int)adc_ch3_handle};
+
+
+__NODE_CACHE_CODE(adc)
+static void multi_ch_adc_mic_output_handler(void *_hdl, s16 *data, int len)
+{
+    void (*handler)(void *, void *, int);
+    struct adc_file_hdl *hdl = (struct adc_file_hdl *)_hdl;
+    if (!hdl) {
+        return;
+    }
+    if (hdl->dump_cnt < 10) {
+        hdl->dump_cnt++;
+        return;
+    }
+    for (int i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
+        if (hdl->adc_f->cfg.mic_en_map & BIT(i)) {
+            handler = (void (*)(void *, void *, int))adc_chx_handle[i];
+            handler(_hdl, data, len);
+        }
+    }
+}
+#endif
+
+
 
 /*根据mic通道值获取使用的第几个mic*/
 u8 audio_get_mic_index(u8 mic_ch)
@@ -335,13 +441,13 @@ u8 audio_adc_file_get_mic_mode(u8 mic_index)
 __NODE_CACHE_CODE(adc)
 static void adc_file_fade_in(struct adc_file_hdl *hdl, void *buf, int len)
 {
-    if (hdl->value < FADE_GAIN_MAX) {
+    if (hdl->value[0] < FADE_GAIN_MAX) {
         int fade_ms = 100;//ms
         int fade_step = FADE_GAIN_MAX / (fade_ms * hdl->sample_rate / 1000);
         if (adc_hdl.bit_width == ADC_BIT_WIDTH_16) {
-            hdl->value  = jlstream_fade_in(hdl->value, fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
+            hdl->value[0]  = jlstream_fade_in(hdl->value[0], fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
         } else {
-            hdl->value  = jlstream_fade_in_32bit(hdl->value, fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
+            hdl->value[0]  = jlstream_fade_in_32bit(hdl->value[0], fade_step, buf, len, AUDIO_CH_NUM(hdl->channel_mode));
         }
     }
 }
@@ -368,7 +474,7 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
         return;
     }
     if (hdl->force_dump) {
-        hdl->value = 0;
+        hdl->value[0] = 0;
         return;
     }
 
@@ -443,9 +549,9 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
     }
 }
 
-static void *adc_init(void *source_node, struct stream_node *node)
+static void *adc_init_base(void *source_node, struct stream_node *node, void *_hdl)
 {
-    struct adc_file_hdl *hdl = zalloc(sizeof(*hdl));
+    struct adc_file_hdl *hdl = (struct adc_file_hdl *)_hdl;
     hdl->source_node = source_node;
     hdl->node = node;
     node->type |= NODE_TYPE_IRQ;
@@ -458,6 +564,21 @@ static void *adc_init(void *source_node, struct stream_node *node)
 
     return hdl;
 }
+static void *adc_init(void *source_node, struct stream_node *node)
+{
+    struct adc_file_hdl *hdl = zalloc(sizeof(*hdl));
+    return adc_init_base(source_node, node, hdl);
+}
+
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+static void *multi_ch_adc_init(void *source_node, struct stream_node *node)
+{
+    struct adc_file_hdl *hdl = zalloc(sizeof(*hdl));
+    hdl->multi_ch_adc_en = 1;
+    return adc_init_base(source_node, node, hdl);
+}
+#endif
+
 
 static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 {
@@ -470,7 +591,16 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
         hdl->adc_f = zalloc(sizeof(struct adc_file_common));
     }
     hdl->adc_f->hdl = hdl;
-    if (!jlstream_read_node_data_new(NODE_UUID_ADC, hdl->node->subid, (void *) & (hdl->adc_f->cfg), hdl->name)) {
+    u16 uuid = 0;
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+    if (hdl->multi_ch_adc_en) { //多通道dac每个通道都是单声道
+        uuid = NODE_UUID_MULTI_CH_ADC;
+    } else
+#endif
+    {
+        uuid = NODE_UUID_ADC;
+    }
+    if (!jlstream_read_node_data_new(uuid, hdl->node->subid, (void *) & (hdl->adc_f->cfg), hdl->name)) {
         printf("%s, read node data err\n", __FUNCTION__);
         ASSERT(0);
     }
@@ -493,7 +623,7 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
     }
 
     if (config_audio_cfg_online_enable) {
-        if (jlstream_read_effects_online_param(NODE_UUID_ADC, hdl->name, &hdl->adc_f->cfg, sizeof(hdl->adc_f->cfg))) {
+        if (jlstream_read_effects_online_param(uuid, hdl->name, &hdl->adc_f->cfg, sizeof(hdl->adc_f->cfg))) {
             adc_file_log("get adc online param\n");
         }
     }
@@ -514,6 +644,15 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
         fmt->sample_rate = 44100;
 #endif
         break;
+#if WIRELESS_MIC_PRODUCT_MODE
+    case STREAM_SCENE_WIRELESS_MIC:
+#if (defined(TCFG_AUDIO_ADC_SAMPLE_RATE) && TCFG_AUDIO_ADC_SAMPLE_RATE)
+        fmt->sample_rate    = TCFG_AUDIO_ADC_SAMPLE_RATE;
+#else
+        fmt->sample_rate    = LE_AUDIO_CODEC_SAMPLERATE;
+#endif
+        break;
+#endif/*WIRELESS_MIC_PRODUCT_MODE*/
     default:
 #if SUPPORT_CHAGE_AUDIO_CLK
         fmt->sample_rate    = audio_adc_sample_rate_mapping(44100);
@@ -531,6 +670,13 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
     } else {
         fmt->channel_mode   = AUDIO_CH_MIX;
     }
+
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+    if (hdl->multi_ch_adc_en) { //多通道dac每个通道都是单声道
+        hdl->ch_num = 1;
+        fmt->channel_mode   = AUDIO_CH_MIX;
+    }
+#endif
     printf("adc num: %d , channel_mode: %x", hdl->ch_num, fmt->channel_mode);
     if (adc_hdl.bit_width == ADC_BIT_WIDTH_24) {
         fmt->bit_wide = DATA_BIT_WIDE_24BIT;
@@ -666,7 +812,14 @@ static int adc_file_ioc_start(struct adc_file_hdl *hdl)
         }
 
         hdl->adc_output.priv    = hdl;
-        hdl->adc_output.handler = adc_mic_output_handler;
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+        if (hdl->multi_ch_adc_en) {
+            hdl->adc_output.handler = multi_ch_adc_mic_output_handler;
+        } else
+#endif
+        {
+            hdl->adc_output.handler = adc_mic_output_handler;
+        }
         audio_adc_add_output_handler(&adc_hdl, &hdl->adc_output);
 #ifdef CONFIG_CPU_BR36
         /*r_printf("-----create_adc_open_task\n");*/
@@ -680,7 +833,9 @@ static int adc_file_ioc_start(struct adc_file_hdl *hdl)
         audio_adc_mic_start(&hdl->mic_ch);
 #endif
     }
-    hdl->value = 0;
+    for (int i = 0; i < 4; i++) {
+        hdl->value[i] = 0;
+    }
     return ret;
 }
 
@@ -791,6 +946,7 @@ static void adc_release(void *_hdl)
 }
 
 
+#if TCFG_ADC_NODE_ENABLE
 REGISTER_SOURCE_NODE_PLUG(adc_file_plug) = {
     .uuid       = NODE_UUID_ADC,
     .init       = adc_init,
@@ -801,3 +957,17 @@ REGISTER_SOURCE_NODE_PLUG(adc_file_plug) = {
 REGISTER_ONLINE_ADJUST_TARGET(adc) = {
     .uuid = NODE_UUID_ADC,
 };
+#endif
+
+#if TCFG_MULTI_CH_ADC_NODE_ENABLE
+REGISTER_SOURCE_NODE_PLUG(multi_ch_adc_file_plug) = {
+    .uuid       = NODE_UUID_MULTI_CH_ADC,
+    .init       = multi_ch_adc_init,
+    .ioctl      = adc_ioctl,
+    .release    = adc_release,
+};
+
+REGISTER_ONLINE_ADJUST_TARGET(mulit_ch_adc) = {
+    .uuid = NODE_UUID_MULTI_CH_ADC,
+};
+#endif

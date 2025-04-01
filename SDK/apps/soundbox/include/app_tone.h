@@ -39,6 +39,7 @@ struct tone_files {
     const char *device_udisk;
     const char *fm_mode;
     const char *linein_mode;
+    const char *mic_mode;
     const char *pc_mode;
     const char *rtc_mode;
     const char *spdif_mode;
@@ -47,6 +48,7 @@ struct tone_files {
     const char *le_broadcast_close;
     const char *le_connected_open;
     const char *le_connected_close;
+    const char *surround_sound_mode;
 };
 
 

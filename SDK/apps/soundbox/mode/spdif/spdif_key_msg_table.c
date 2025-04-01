@@ -13,7 +13,7 @@
 //短按                  //长按                  //hold                       //长按抬起                  //双击                       //三击
 #if (CONFIG_UI_STYLE != STYLE_JL_SOUNDBOX)
 const int key_spdif_ad_num0_msg_table[KEY_ACTION_MAX] = {
-    APP_MSG_CHANGE_MODE,       APP_MSG_KEY_POWER_OFF,    	APP_MSG_KEY_POWER_OFF_HOLD, APP_MSG_KEY_POWER_OFF_RELEASE,    APP_MSG_NULL,    APP_MSG_NULL,
+    APP_MSG_CHANGE_MODE,       APP_MSG_KEY_POWER_OFF,    	APP_MSG_KEY_POWER_OFF_HOLD, APP_MSG_KEY_POWER_OFF_RELEASE,    APP_MSG_LE_BROADCAST_SW,    APP_MSG_NULL,
 };
 const int key_spdif_ad_num1_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_MUSIC_PP,      APP_MSG_NULL,    APP_MSG_NULL,          APP_MSG_NULL,          APP_MSG_NULL,   APP_MSG_NULL,

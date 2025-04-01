@@ -49,12 +49,19 @@
 #define     CFG_WIRELESS_MIC0_VOLUME         29
 #define     CFG_WIRELESS_MIC1_VOLUME         30
 
+#define     CFG_DACLDO_TRIM                  31//保存DACLDO配置参数id
+
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49
 #define     CFG_RCSP_ADV_HIGH_LOW_VOL        50
 
 #define     CFG_RCSP_MISC_REVERB_ON_OFF      52
 #define     CFG_RCSP_MISC_DRC_SETTING        53
+
+//charge
+#define     CFG_CHARGE_FULL_VBAT_VOLTAGE    54//充满电后记当前的VBAT的ADC值
+#define     VM_CHARGE_PROGI_VOLT            55//恒流充电的PROGI
+
 
 //=================================================================================//
 //                             用户自定义配置项 暂时只能使用 [1 ~ 49]                            //

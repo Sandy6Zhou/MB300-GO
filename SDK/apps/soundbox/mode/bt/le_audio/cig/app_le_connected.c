@@ -609,9 +609,9 @@ u8 get_connected_app_mode_exit_flag(void)
 /* ----------------------------------------------------------------------------*/
 static bool is_connected_as_central()
 {
-#if (LEA_CIG_FIX_ROLE == 1)
+#if (LEA_CIG_FIX_ROLE == LEA_ROLE_AS_CENTRAL)
     return true;
-#elif (LEA_CIG_FIX_ROLE == 2)
+#elif (LEA_CIG_FIX_ROLE == LEA_ROLE_AS_PERIPHERAL)
     return false;
 #endif
 
@@ -1430,8 +1430,8 @@ u8 app_get_connected_role(void)
         bit7_value = 1;
         connected_role &= ~BIT(7);
     }
-#if (LEA_CIG_TRANS_MODE == 1)
-#if (LEA_CIG_CONNECT_MODE == 2)
+#if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
+#if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
     if (connected_role == CONNECTED_ROLE_CENTRAL) {
         role = APP_CONNECTED_ROLE_RECEIVER;
     } else if (connected_role == CONNECTED_ROLE_PERIP) {
@@ -1444,7 +1444,7 @@ u8 app_get_connected_role(void)
         role = APP_CONNECTED_ROLE_RECEIVER;
     }
 #endif
-#elif (LEA_CIG_TRANS_MODE == 2)
+#elif (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
     if ((connected_role == CONNECTED_ROLE_CENTRAL) ||
         (connected_role == CONNECTED_ROLE_PERIP)) {
         role = APP_CONNECTED_ROLE_DUPLEX;

@@ -86,6 +86,7 @@ extern int app_ble_check_hdl_vaild(void *_hdl);
 extern u16 app_ble_get_hdl_con_handle(void *_hdl);
 extern int app_ble_att_vaild_len_get(void *_hdl);
 extern int app_ble_no_profile_flag_set(void *_hdl, u8 flag);
+extern int app_ble_connected_num_get(void);
 
 extern u8 *app_ble_adv_addr_get(void *_hdl);
 extern u8 *app_ble_local_mac_addr_get(void *_hdl);

@@ -237,6 +237,9 @@ void fm_sample_output_handler(s16 *data, int len)
     struct fm_file_hdl *hdl = adc_f.hdl;
     struct stream_frame *frame;
 
+    if (hdl->start == 0) {
+        return;
+    }
     frame = source_plug_get_output_frame(hdl->source_node, len);
     if (!frame) {
         return;

@@ -118,6 +118,7 @@ void bt_init_ok_search_index(void)
 void bt_status_init_ok(void)
 {
     g_bt_hdl.init_ok = 1;
+    g_bt_hdl.initializing = 0;
 
     bt_init_ok_search_index();
 #if TCFG_NORMAL_SET_DUT_MODE
@@ -142,7 +143,6 @@ void bt_status_init_ok(void)
     return;
 #endif
 
-    le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if TCFG_KBOX_1T3_MODE_EN
@@ -150,6 +150,7 @@ void bt_status_init_ok(void)
 #endif
     if ((g_bt_hdl.work_mode == BT_MODE_BROADCAST) || (g_bt_hdl.work_mode == BT_MODE_3IN1)) {
         app_broadcast_init();
+        le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 #if TCFG_KBOX_1T3_MODE_EN
         app_broadcast_open();
 #endif
@@ -162,6 +163,7 @@ void bt_status_init_ok(void)
 #endif
     if ((g_bt_hdl.work_mode == BT_MODE_CIG) || (g_bt_hdl.work_mode == BT_MODE_3IN1)) {
         app_connected_init();
+        le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 #if TCFG_KBOX_1T3_MODE_EN
         if (is_open_cis_connet()) {
             app_connected_open(0);
@@ -172,6 +174,7 @@ void bt_status_init_ok(void)
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
     app_auracast_init();
+    le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
 #endif
 
 

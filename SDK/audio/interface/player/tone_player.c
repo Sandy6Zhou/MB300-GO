@@ -175,7 +175,7 @@ static int tone_file_read(void *p_file, u8 *buf, int len)
         if ((len -= rlen) == 0) {
             break;
         }
-        if (player->scene == STREAM_SCENE_RING) {
+        if (player->scene == STREAM_SCENE_RING && player->coding_type != AUDIO_CODING_MTY) {
             if (player->coding_type == AUDIO_CODING_WTGV2) {
                 //WTS拼接提示音时，去掉头1byte
                 resfile_seek(player->file, 1, RESFILE_SEEK_SET);

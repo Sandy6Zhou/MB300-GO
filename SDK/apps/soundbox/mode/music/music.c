@@ -648,7 +648,7 @@ static int app_music_init()
     btstack_init_in_other_mode();
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==2)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
     //当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
     music_set_broadcast_local_open_flag(1);
 #endif
@@ -780,9 +780,8 @@ int music_device_msg_handler(int *msg)
                 }
                 memset(__this->device_tone_dev, 0, sizeof(__this->device_tone_dev));
                 if (music_player_runing()) {
-
-                    ///停止解码,防止设备掉线后还继续使用
-                    music_player_stop(__this->player_hd, 1);
+                    /* ///停止解码,防止设备掉线后还继续使用 */
+                    /* music_player_stop(__this->player_hd, 1); */
                     ///重新选择活动设备播放
                     /* app_task_put_key_msg(KEY_MUSIC_PLAYER_START, 0);//卸载了设备再执行 */
                     app_send_message(APP_MSG_MUSIC_PLAY_START, 0);
@@ -859,6 +858,8 @@ static int music_mode_try_enter(int arg)
 
 static int music_mode_try_exit()
 {
+    putchar('l');
+    int ret = 0;
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -876,7 +877,7 @@ static int music_mode_try_exit()
 #endif
 
 #if (!TCFG_KBOX_1T3_MODE_EN)
-    btstack_exit_in_other_mode();
+    ret = btstack_exit_in_other_mode();
 #endif
 #endif
 
@@ -884,11 +885,11 @@ static int music_mode_try_exit()
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();
-    btstack_exit_in_other_mode();
+    ret = btstack_exit_in_other_mode();
 #endif
 #endif
 
-    return __this->music_busy;
+    return __this->music_busy | ret;
 }
 
 static const struct app_mode_ops music_mode_ops = {

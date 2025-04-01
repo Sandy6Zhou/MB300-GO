@@ -13,4 +13,6 @@ extern void dual_conn_state_handler();
 
 extern void dual_conn_page_device();
 
+void clr_page_mode_active(void);
+
 #endif

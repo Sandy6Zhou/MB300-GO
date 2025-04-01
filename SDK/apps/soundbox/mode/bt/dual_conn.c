@@ -21,6 +21,7 @@
 #define TIMEOUT_CONN_DEVICE_OPEN_PAGE  1 //第二台设备超时断开回连一直开启page
 
 static void page_next_device(void *p);
+void dual_conn_page_device();
 
 struct page_device_info {
     struct list_head entry;
@@ -134,13 +135,20 @@ static void close_inquiry_scan(void *p)
 
 static int dual_conn_try_open_inquiry_scan()
 {
-#if TCFG_DUAL_CONN_INQUIRY_SCAN_TIME
-    if (g_dual_conn.inquiry_scan_disable) {
-        return 0;
-    }
-    write_scan_conn_enable(1, 1);
+    int connect_device = bt_get_total_connect_dev();
+    printf("try_open_inquiry_scan:%d\n", connect_device);
+    if (connect_device == 0) {
+        write_scan_conn_enable(1, 1);
+    } else if (connect_device == 1) {
+        if (g_dual_conn.device_num_recorded > 1) {
+#if TCFG_BT_DUAL_CONN_ENABLE
+            write_scan_conn_enable(0, 1);
 #endif
-    return 1;
+        } else {
+            write_scan_conn_enable(0, 0);
+        }
+    }
+    return 0;
 }
 
 static int add_device_2_page_list(u8 *mac_addr, u32 timeout)
@@ -227,9 +235,11 @@ static u8 *get_device_addr_in_page_list()
 
 void dual_conn_state_handler()
 {
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
     int connect_device      = bt_get_total_connect_dev();
     int have_page_device    = page_list_empty() ? false : true;
-    printf("page_state: %d, %d\n", connect_device, have_page_device);
+    printf("page_state: %d, %d %d %x\n", connect_device, have_page_device, g_dual_conn.device_num_recorded, rets);
     if (g_dual_conn.timer) {
         sys_timeout_del(g_dual_conn.timer);
         g_dual_conn.timer = 0;
@@ -239,7 +249,12 @@ void dual_conn_state_handler()
     } else if (connect_device == 1) {
 #if TCFG_BT_DUAL_CONN_ENABLE
         if (g_dual_conn.device_num_recorded > 1) {
-            write_scan_conn_enable(0, 1);
+            if (have_page_device) {
+                r_printf("have_page_device\n");
+                dual_conn_page_device();
+            } else {
+                write_scan_conn_enable(0, 1);
+            }
         }
 #endif
     }
@@ -281,7 +296,7 @@ static void dual_conn_page_device_timeout(void *p)
             printf("page_device_timeout: %lu, %d\n", jiffies, info->timeout);
             info->timer = 0;
             list_del(&info->entry);
-            if (time_after(jiffies, info->timeout)) {
+            if (time_after(jiffies, info->timeout) || (jiffies == info->timeout)) {
                 del_device_from_page_list(info->mac_addr);
                 free(info);
             } else {
@@ -293,9 +308,9 @@ static void dual_conn_page_device_timeout(void *p)
                     sys_timeout_del(g_dual_conn.timer);
                     g_dual_conn.timer = 0;
                 }
-                g_dual_conn.timer = sys_timeout_add(NULL, page_next_device, 2000);
+                g_dual_conn.timer = sys_timeout_add(NULL, page_next_device, 6000);
                 //增加2s可发现可连接
-                write_scan_conn_enable(1, 1);
+                dual_conn_try_open_inquiry_scan();
                 page_mode_active = 0;
                 return;
             }
@@ -415,12 +430,13 @@ static int dual_conn_btstack_event_handler(int *_event)
         }
         del_device_from_page_list(event->args);
         memcpy(g_dual_conn.remote_addr[0], event->args, 6);
+
+        page_mode_active = 0;
         if (!page_list_empty()) {
             g_dual_conn.timer = sys_timeout_add(NULL, page_next_device, 500);
             return 0;
         }
 
-        page_mode_active = 0;
         if (g_dual_conn.device_num_recorded == 0) {
             g_dual_conn.device_num_recorded++;
             memcpy(g_dual_conn.remote_addr[2], event->args, 6);
@@ -432,11 +448,7 @@ static int dual_conn_btstack_event_handler(int *_event)
             }
             g_dual_conn.device_num_recorded++;
         }
-#if TCFG_BT_DUAL_CONN_ENABLE
-        write_scan_conn_enable(0, 1);
-#else
-        write_scan_conn_enable(0, 0);
-#endif
+        dual_conn_try_open_inquiry_scan();
         break;
     case BT_STATUS_SECOND_CONNECTED:
         puts("dual_conn BT_STATUS_SECOND_CONNECTED");
@@ -449,6 +461,7 @@ static int dual_conn_btstack_event_handler(int *_event)
         }
         clr_device_in_page_list();
         memcpy(g_dual_conn.remote_addr[1], event->args, 6);
+        page_mode_active = 0;
         break;
     }
 
@@ -540,7 +553,9 @@ static int dual_conn_hci_event_handler(int *_event)
         }
     }
 
-    dual_conn_state_handler();
+    if (page_mode_active == 0) {    //防止回连中继续调用造成递归调用
+        dual_conn_state_handler();
+    }
 
     return 0;
 }

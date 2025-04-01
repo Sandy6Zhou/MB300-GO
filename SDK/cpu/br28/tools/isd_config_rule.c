@@ -125,7 +125,7 @@ ENTRY = CONFIG_ENTRY_ADDRESS;
 PID = CONFIG_PID;
 VID = CONFIG_VID;
 
-SDK_VERSION = jl701n_V100; //jenkins脚本生成
+SDK_VERSION = jl701n_V200; //jenkins脚本生成
 
 RESERVED_OPT = 0;
 /* OTP_CFG_SIZE = 512; //votp区域 */

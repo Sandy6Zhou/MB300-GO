@@ -184,9 +184,9 @@ int get_cig_tx_rtn(void)
 {
     int rtn = 0;
 
-#if (LEA_CIG_TRANS_MODE == 1)
+#if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
 
-#if (LEA_CIG_CONNECT_MODE == 2)
+#if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
     rtn = platform_data.args[platform_data_index].rtnPToC;
 #else
     rtn = platform_data.args[platform_data_index].rtnCToP;
@@ -309,14 +309,14 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
         enc_output_buf_len = calcul_cig_enc_output_buf_len(cig_transmit_data_len);
         if (central_params) {
 
-#if (LEA_CIG_CONNECT_MODE == 1)
+#if (LEA_CIG_CONNECT_MODE == LEA_CIG_1T1R_MODE)
             central_params->num_cis = 1;
 #else
             central_params->num_cis = 2;
 #endif
 
-#if (LEA_CIG_TRANS_MODE == 1)
-#if (LEA_CIG_CONNECT_MODE == 2)
+#if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
+#if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
             if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC % 1000) {
                 //向上取整
                 round_up = 1;
@@ -339,9 +339,9 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
             central_params->cis[0].maxSduCToP = cig_transmit_data_len;
             central_params->cis[1].maxSduCToP = cig_transmit_data_len;
 #endif
-#endif  //#if (LEA_CIG_TRANS_MODE == 1)
+#endif  //#if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
 
-#if (LEA_CIG_TRANS_MODE == 2)
+#if (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
             if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP % 1000) {
                 //向上取整
                 round_up = 1;
@@ -378,7 +378,7 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
             central_params->cis[1].maxSduCToP = cig_transmit_data_len;
             central_params->cis[1].maxSduPToC = cig_transmit_data_len;
 #endif
-#endif  //#if (LEA_CIG_TRANS_MODE == 2)
+#endif  //#if (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
 
         }
 

@@ -12,6 +12,7 @@
 #include "le_audio_stream.h"
 #include "reference_time.h"
 #include "system/timer.h"
+#include "app_config.h"
 
 struct le_audio_file_handle {
     u8 start;
@@ -96,7 +97,11 @@ static void *le_audio_file_init(void *priv, struct stream_node *node)
     struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)zalloc(sizeof(struct le_audio_file_handle));
 
     hdl->node = node;
-    node->type |= NODE_TYPE_IRQ | NODE_TYPE_FLOW_CTRL;
+#if (defined(WIRELESS_MIC_PRODUCT_MODE)&& WIRELESS_MIC_PRODUCT_MODE)
+    node->type |= NODE_TYPE_IRQ | NODE_TYPE_FLOW_CTRL;		//无线mic应用 使用irq类型,优化效率,需要要保证所有节点没有拆包输出.
+#else
+    node->type |= /* NODE_TYPE_IRQ | */ NODE_TYPE_FLOW_CTRL;//关闭irq类型的配置，避免解码器拆包的情况下，激活不及时的问题
+#endif
 
     return hdl;
 }

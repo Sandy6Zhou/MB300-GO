@@ -250,11 +250,13 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     case STREAM_SCENE_A2DP:
     case STREAM_SCENE_LINEIN:
     case STREAM_SCENE_IIS:
+    case STREAM_SCENE_MUTI_CH_IIS:
     case STREAM_SCENE_SPDIF:
     case STREAM_SCENE_PC_SPK:
     case STREAM_SCENE_PC_MIC:
     case STREAM_SCENE_MUSIC:
     case STREAM_SCENE_FM:
+    case STREAM_SCENE_MIC:
     case STREAM_SCENE_MIC_EFFECT:
     case STREAM_SCENE_HEARING_AID:
     case STREAM_SCENE_WIRELESS_MIC:

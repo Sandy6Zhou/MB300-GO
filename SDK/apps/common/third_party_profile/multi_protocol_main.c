@@ -18,7 +18,7 @@
 #endif
 
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN)) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)))
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN)) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) && (!defined (CONFIG_WIRELESS_MIC_ENABLE)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
 #define ATT_RAM_BUFSIZE           (ATT_CTRL_BLOCK_SIZE + ATT_LOCAL_PAYLOAD_SIZE + ATT_SEND_CBUF_SIZE)                   //note:
@@ -117,6 +117,7 @@ extern void *xm_app_ble_hdl;
 extern int  xm_all_init(void);
 extern int  xm_all_exit(void);
 extern void xm_ble_profile_init(void);
+extern int xm_bt_ble_disconnect(void *priv);
 extern void xm_bt_ble_init(void);
 extern void xm_bt_ble_exit(void);
 extern void xm_bt_ble_adv_enable(u8 enable);
@@ -167,6 +168,7 @@ extern int dueros_process();
 extern int dueros_send_process(void);
 extern void dma_tx_resume_register(void (*handler)(void));
 extern void dma_rx_resume_register(void (*handler)(void));
+extern void dma_ble_module_enable(u8 en);
 
 extern const u8 sdp_dueros_spp_service_data[];
 extern const u8 sdp_dueros_ota_service_data[];
@@ -192,6 +194,8 @@ SDP_RECORD_REGISTER(spp_sdp_record_item) = {
 
 extern void custom_demo_all_init(void);
 extern void custom_demo_all_exit(void);
+extern void custom_demo_ble_disconnect(void);
+extern int custom_demo_adv_enable(u8 enable);
 
 // uuid:00001101-0000-1000-8000-00805F9B34FB
 const u8 sdp_honor_spp_service_data[96] = {
@@ -441,7 +445,25 @@ void multi_protocol_bt_exit(void)
 #endif
 }
 
-void bt_ble_adv_enable(u8 enable)
+void multi_protocol_bt_ble_disconnect(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    rcsp_ble_app_disconnect();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MMA_EN)
+    xm_bt_ble_disconnect(NULL);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+    extern void fmy_test_disconnect(void);
+    fmy_test_disconnect();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+    extern custom_demo_ble_disconnect(void);
+    custom_demo_ble_disconnect();
+#endif
+}
+
+void multi_protocol_bt_ble_enable(u8 enable)
 {
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     rcsp_bt_ble_adv_enable(enable);
@@ -449,8 +471,36 @@ void bt_ble_adv_enable(u8 enable)
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
     gfps_bt_ble_adv_enable(enable);
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MMA_EN)
+    xm_bt_ble_adv_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
+    realme_ble_adv_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+    extern int fmy_enable(bool en);
+    fmy_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & SWIFT_PAIR_EN)
+    swift_pair_exit_pair_mode();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+    dma_ble_module_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+    custom_demo_adv_enable(enable);
+#endif
 }
 
+int multi_protocol_bt_ble_connect_num(void)
+{
+    return app_ble_connected_num_get();
+}
+
+void bt_ble_adv_enable(u8 enable)
+{
+    multi_protocol_bt_ble_enable(enable);
+}
 
 //编译问题加几个空的
 _WEAK_ void bt_ble_init(void)

@@ -203,6 +203,22 @@
 	*(.jl_codec_const) 
 #endif
 
+#if AUDIO_JLA_V2_CODEC_AT_RAM
+	*(.jla_v2_enc_const)
+	*(.jla_v2_enc_code)
+	*(.jla_v2_dec_const)
+	*(.jla_v2_dec_code)
+	*(.jla_v2_codec_c_const)
+	*(.jla_v2_codec_c_code)
+	*(.jla_v2_codec_ari_c_const)
+	*(.jla_v2_codec_ari_c_code)
+	*(.jla_v2_codec_c_sparse_code)
+	*(.jla_v2_codec_e_code)
+	*(.jla_v2_decoder_const)
+	*(.jla_v2_decoder_code)
+	*(.jla_v2_codec_d_code)
+#endif
+
 #if AFx_VBASS_AT_RAM
     *(.vbss.text.cache.L2.code)	
 #endif
@@ -327,15 +343,38 @@
 	/* *(.distortion.text.const)	 */
 #endif
 
+#if AFx_FREQUENCY_COMPRESSOR_AT_RAM
+	*(.freq_compressor.text.cache.L2.code)
+	*(.freq_compressor.text.cache.L2.const)
+#endif
+
 #if AFx_DAC_IO_IRQ_HANDLER_AT_RAM
 	*(.dac_io_irq_handler.text.cache.L2)	
 #endif
 
+#if AFx_MIXER_TEXT_AT_RAM
 	*(.mixer.text.cache.L2)
+#endif
+#if AFx_DAC_TEXT_AT_RAM
 	*(.dac.text.cache.L2)
+#endif
+#if AFx_CONVERT_TEXT_AT_RAM
 	*(.convert.text.cache.L2.code)
+#endif
+#if AFx_VOCAL_REMOVER_TEXT_AT_RAM
 	*(.VocalRemove.text.cache.L2.code)
+#endif
 
+#if AFx_SPECTRUM_ADV_TEXT_AT_RAM
+	*(.spectrum_adv.text)
+    *(.SPECTRUMTOOL.text)
+    *(.SPECTRUMTOOL.text.L2)
+#endif
+
+#if (AUDIO_JLSTREAM_TEXT_AT_RAM)
+    *(.jlstream.text.cache.L2)
+#endif
     . = ALIGN(4);
     media_data_code_end = .;
+    media_data_code_size = media_data_code_end - media_data_code_start;
 

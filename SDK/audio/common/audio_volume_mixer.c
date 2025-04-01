@@ -35,6 +35,9 @@
 #include "volume_node.h"
 #include "tone_player.h"
 #include "ring_player.h"
+#if AUDIO_EQ_LINK_VOLUME
+#include "effects/eq_config.h"
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #include "app_le_broadcast.h"
@@ -682,9 +685,16 @@ static void app_audio_volume_change(void)
 
 int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
 {
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+    //虚拟环绕声2.0与2.1流程使用的音量节点名，如有多通路的音量节点需要调音，需自行实现
+    sprintf(node_name, "%s%s", "VolLR", "Media");
+    return 0;
+#endif
+
     struct app_mode *mode;
     mode = app_get_current_mode();
     int i = 0;
+
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -717,11 +727,15 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
                     break;
                 }
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
+#if TCFG_BT_SUPPORT_HFP
                 if (esco_player_is_playing(NULL)) { //用于区分通话和播歌的提示音
                     sprintf(node_name, "%s%s", "Vol_Btc", dvol_type[i]);
                 } else {
                     sprintf(node_name, "%s%s", "Vol_Btm", dvol_type[i]);
                 }
+#else
+                sprintf(node_name, "%s%s", "Vol_Btm", dvol_type[i]);
+#endif
                 printf("vol_name:%d,%s\n", __LINE__, node_name);
                 break;
 #if TCFG_APP_LINEIN_EN
@@ -1098,7 +1112,11 @@ void app_audio_mute(u8 value)
 }
 u8 app_audio_get_dac_digital_mute() //获取DAC 是否mute
 {
+#if TCFG_DAC_NODE_ENABLE
     return audio_dac_digital_mute_state(&dac_hdl);
+#else
+    return 0;
+#endif
 }
 
 /*
@@ -1307,7 +1325,11 @@ void app_audio_state_switch(u8 state, s16 max_volume, dvol_handle *dvol_hdl)
 #if (TCFG_AUDIO_ANC_ENABLE)
     dB_value = (dB_value > ANC_MODE_DIG_VOL_LIMIT) ? ANC_MODE_DIG_VOL_LIMIT : dB_value;
 #endif/*TCFG_AUDIO_ANC_ENABLE*/
+#ifdef CONFIG_CPU_BR56
+    u16 dvol_max = (u16)(16100.0f * dB_Convert_Mag(dB_value));
+#else
     u16 dvol_max = (u16)(16384.0f * dB_Convert_Mag(dB_value));
+#endif
 
     /*记录当前状态对应的最大音量*/
     __this->max_volume[state] = max_volume;
@@ -1333,9 +1355,11 @@ void app_audio_state_exit(u8 state)
 {
     if (state == __this->state) {
         __this->state = __this->prev_state;
+#if TCFG_BT_SUPPORT_HFP
         if ((__this->prev_state == APP_AUDIO_STATE_CALL) && (!esco_player_is_playing(NULL))) { //切回通话状态需要判断通话的数据流是否在跑
             __this->state = APP_AUDIO_STATE_IDLE;
         }
+#endif
         __this->prev_state = __this->prev_state_save;
         __this->prev_state_save = APP_AUDIO_STATE_IDLE;
     } else if (state == __this->prev_state) {
@@ -1546,6 +1570,11 @@ void app_audio_set_volume(u8 state, s16 volume, u8 fade)
         vbass_link_volume();
     }
 #endif
+#if AUDIO_EQ_LINK_VOLUME
+    if (state == APP_AUDIO_STATE_MUSIC) {
+        eq_link_volume();
+    }
+#endif
 }
 
 void app_audio_change_volume(u8 state, s16 volume)
@@ -1588,10 +1617,21 @@ void app_audio_volume_down(u8 value)
 
 s16 app_audio_volume_max_query(audio_vol_index_t index)
 {
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+    if ((index < SysVol_TONE) && (index != AppVol_BT_CALL)) {
+        return volume_ioc_get_max_level(audio_vol_str[Vol_VIRTUAL_SURROUND]);
+    } else if (index >= Vol_NULL) {
+        return volume_ioc_get_max_level(audio_vol_str[Vol_NULL]);
+    } else {
+        return volume_ioc_get_max_level(audio_vol_str[index]);
+    }
+
+#else
     if (index < Vol_NULL) {
         return volume_ioc_get_max_level(audio_vol_str[index]);
     } else {
         return volume_ioc_get_max_level(audio_vol_str[Vol_NULL]);
     }
+#endif
 }
 

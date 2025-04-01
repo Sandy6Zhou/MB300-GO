@@ -198,7 +198,7 @@ static void esco_tx_release(struct stream_node *node)
 
 }
 
-
+#if TCFG_BT_SUPPORT_HFP
 REGISTER_STREAM_NODE_ADAPTER(esco_tx_adapter) = {
     .name       = "esco_tx",
     .uuid       = NODE_UUID_ESCO_TX,
@@ -207,4 +207,4 @@ REGISTER_STREAM_NODE_ADAPTER(esco_tx_adapter) = {
     .release    = esco_tx_release,
     .hdl_size   = sizeof(struct esco_tx_hdl),
 };
-
+#endif

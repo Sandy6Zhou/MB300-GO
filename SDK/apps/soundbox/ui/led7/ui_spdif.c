@@ -6,6 +6,7 @@
 #endif
 #include "ui/ui_api.h"
 #include "system/includes.h"
+#include "wireless_trans.h"
 
 #if TCFG_APP_SPDIF_EN
 #if (TCFG_UI_ENABLE&&(CONFIG_UI_STYLE == STYLE_JL_LED7))
@@ -29,11 +30,20 @@ static void led7_show_spdif(void *hd)
 }
 
 
+static void led7_show_le(void *hd)
+{
+    LCD_API *dis = (LCD_API *)hd;
+    dis->lock(1);
+    dis->clear();
+    dis->setXY(0, 0);
+    dis->show_string((u8 *)" LE");
+    dis->lock(0);
+}
 
 
 static void *ui_open_spdif(void *hd)
 {
-    /* ui_set_auto_reflash(500);//设置主页500ms自动刷新 */
+    ui_set_auto_reflash(500);//设置主页500ms自动刷新
     return NULL;
 }
 
@@ -54,7 +64,17 @@ static void ui_spdif_main(void *hd, void *private) //主界面显示
     if (!hd) {
         return;
     }
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
+    if (get_le_audio_curr_role() == 2) {
+        led7_show_le(hd);
+    } else {
+        led7_show_spdif(hd);
+    }
+#else
     led7_show_spdif(hd);
+#endif
 }
 
 

@@ -93,7 +93,6 @@ int adda_loop_player_open()
 
     jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE, NODE_IOC_NODE_CONFIG, adda_loop_get_adc_num());
 
-    jlstream_node_ioctl(player->stream, NODE_UUID_VOCAL_TRACK_SYNTHESIS, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);//四声道时，指定声道合并单个声道的点数
 
     player->channel = AUDIO_CH_L;
     jlstream_ioctl(player->stream, NODE_IOC_SET_CHANNEL, player->channel);

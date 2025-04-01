@@ -308,6 +308,7 @@ u16 dev_update_check(char *logo)
             return UPDATA_PARM_ERR;
         }
 
+#if 0
         //最新设备升级只支持fat32(省flash空间)，此处截断
         struct vfs_partition *part = fget_partition((const char *)dev_manager_get_root_path(dev));
         if (part) {
@@ -320,6 +321,7 @@ u16 dev_update_check(char *logo)
             printf(">>>[test]:dev part err!!!\n");
             return UPDATA_PARM_ERR;
         }
+#endif
 
         //<尝试按照路径打开升级文件
         char *updata_file = (char *)updata_file_name;

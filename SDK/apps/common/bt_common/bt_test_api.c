@@ -183,12 +183,24 @@ static hci_transport_config_uart_t config = {
     NULL,
 };
 
-#if 0
+#if 1
 void h4_uart_init_override(struct uart_config *cfg)
 {
-    cfg->baud_rate = 460800;
-    cfg->tx_pin = IO_PORTA_08;
-    cfg->rx_pin = IO_PORTA_09;
+#ifndef TCFG_H4_UART_BAUD
+    cfg->baud_rate = 115200;
+#else
+    cfg->baud_rate = TCFG_H4_UART_BAUD;
+#endif
+#ifndef TCFG_H4_UART_TX_PIN
+    cfg->tx_pin = IO_PORT_DP;
+#else
+    cfg->tx_pin = TCFG_H4_UART_TX_PIN;
+#endif
+#ifndef TCFG_H4_UART_RX_PIN
+    cfg->tx_pin = IO_PORT_DM;
+#else
+    cfg->rx_pin = TCFG_H4_UART_RX_PIN;
+#endif
     log_info("h4 uart init override\n");
 }
 #endif

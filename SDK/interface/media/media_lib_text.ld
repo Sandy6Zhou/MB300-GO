@@ -314,7 +314,7 @@
     *(.jla_codec_e_code)
     . = ALIGN(4);
 #endif
-#if !(AUDIO_JLA_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
+#if !(AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
 	*(.jl_codec_c_const) 
 	*(.jl_codec_c_code)  
 	*(.jl_codec_ari_c_const)
@@ -342,6 +342,7 @@
 	*(.jla_ll_codec.text.cache.L2.const)
 	*(.jla_ll_codec.text.cache.L2.run)
 
+#if !AUDIO_JLA_V2_CODEC_AT_RAM
 	*(.jla_v2_enc_const)
 	*(.jla_v2_enc_code)
 	*(.jla_v2_dec_const)
@@ -355,7 +356,7 @@
 	*(.jla_v2_decoder_const)
 	*(.jla_v2_decoder_code)
 	*(.jla_v2_codec_d_code)
-
+#endif
     *(.speex_code)
     *(.speex_encoder_code)
     *(.opus_code)
@@ -590,11 +591,16 @@
 	/* *(.pingpong_echo.text.const)	 */
 #endif
 
-#if AFx_DISTORTION_CLIPPING_AT_RAM == 0
+#if (AFx_DISTORTION_CLIPPING_AT_RAM == 0)
 	*(.distortion.text.cache.L2.code)	
 	*(.distortion.text.cache.L2.const)	
 	/* *(.distortion.text)	 */
 	/* *(.distortion.text.const)	 */
+#endif
+
+#if (AFx_FREQUENCY_COMPRESSOR_AT_RAM == 0)
+	*(.freq_compressor.text.cache.L2.code)
+	*(.freq_compressor.text.cache.L2.const)
 #endif
 
     . = ALIGN(4);

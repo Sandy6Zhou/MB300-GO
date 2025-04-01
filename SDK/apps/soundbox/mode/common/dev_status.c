@@ -14,6 +14,7 @@
 #include "usb/usb_task.h"
 #include "undef_func.h"
 #include "app_config.h"
+#include "wireless_trans.h"
 
 #if RCSP_MODE
 #include "rcsp.h"
@@ -246,9 +247,18 @@ int dev_status_event_filter(int *msg)
         dev_manager_del_prepare(msg);
         dev_manager_del(del);
         dev_manager_del_after(msg, 0);
-        if (dev_manager_get_total(1) == 0 && app_in_mode(APP_MODE_MUSIC)) {        //这里防止没有设备在线了,还不退出音乐模式
-            app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+        (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+        (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+        (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+        if (get_le_audio_curr_role() == 2) {        //接收状态时解码已经关闭，需要在这里发退出命令
+            if (dev_manager_get_total(1) == 0 && app_in_mode(APP_MODE_MUSIC)) {        //这里防止没有设备在线了,还不退出音乐模式
+                app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
+            }
         }
+#endif
+
     }
 #if (RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE && TCFG_DEV_MANAGER_ENABLE)
     rcsp_device_status_update(COMMON_FUNCTION, BIT(RCSP_DEVICE_STATUS_ATTR_TYPE_DEV_INFO));

@@ -46,6 +46,7 @@ struct local_tws_source_context {
     u32 tws_timestamp;
 };
 
+extern const unsigned short JLA_V2_FRAMELEN_MASK;
 extern int tws_conn_system_clock_init(u8 factor);
 extern u32 tws_conn_local_to_master_time(u32 usec);
 extern u32 bt_audio_reference_clock_time(u8 network);
@@ -188,6 +189,18 @@ static int local_tws_param_data_init(struct stream_node *node, u16 uuid, struct 
     return 0;
 }
 
+static int jla_v2_look_ahead_pcm_frames(int sample_rate, int frame_dms)
+{
+    int input_point = frame_dms * sample_rate / 10 / 1000;
+
+    if (!(JLA_V2_FRAMELEN_MASK & 0x8000) || input_point >= 160) { //最高位是0或者点数大于160,jla_v2的延时是1/4帧
+        return input_point / 4;
+    } else {
+        return input_point;
+    }
+
+}
+
 static int jla_look_ahead_pcm_frames(int sample_rate, int frame_dms)
 {
     if (frame_dms == 100 || frame_dms == 50 || frame_dms == 25) {
@@ -302,6 +315,10 @@ static int local_tws_source_ioc_start(struct stream_iport *iport)
             frame_len += ((blocks * channels * ctx->sbc_fmt.bitpool) + 7) >> 3;
         }
         printf("sbc_len = %d\n", frame_len);
+    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
+        frame_len = ctx->fmt.bit_rate / 8 * ctx->fmt.frame_dms / 1000 / 10 + 2;
+    } else {
+        printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
     }
     ctx->packet_len = sizeof(struct jl_tws_header) + frame_len * ctx->frame_num;
     printf("packet : %d, %lu, %d\n", ctx->packet_len, sizeof(struct jl_tws_header), frame_len * ctx->frame_num);
@@ -377,6 +394,11 @@ static int local_tws_source_ioc_fmt_nego(struct stream_iport *iport)
         } else if (ctx->fmt.coding_type == AUDIO_CODING_SBC) {
             ctx->look_ahead_latency = (int)((u64)sbc_look_ahead_pcm_frames(ctx->sbc_fmt.subbands) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
             ctx->frame_latency = 128 * 1000000 / in_fmt->sample_rate;
+        } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
+            ctx->look_ahead_latency = (int)((u64)jla_v2_look_ahead_pcm_frames(in_fmt->sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
+            ctx->frame_latency = ctx->fmt.frame_dms * 100; //us
+        } else {
+            printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
         }
     }
     g_printf("local tws sample rate : %d, look_ahead_latency : %dus, frame latency : %dus\n", ctx->fmt.sample_rate, ctx->look_ahead_latency / TIMESTAMP_US_DENOMINATOR, ctx->frame_latency);

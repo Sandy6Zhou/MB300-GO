@@ -198,9 +198,9 @@ struct app_mode *app_enter_bt_mode(int arg);
 void tone_ring_player_stop();
 bool bt_check_already_initializes(void);
 void btstack_init_in_other_mode(void);
-void btstack_exit_in_other_mode(void);
+int btstack_exit_in_other_mode(void);
 void btstack_init_for_app(void);
-void btstack_exit_for_app(void);
+int btstack_exit_for_app(void);
 
 void bt_work_mode_switch_to_next(void);
 

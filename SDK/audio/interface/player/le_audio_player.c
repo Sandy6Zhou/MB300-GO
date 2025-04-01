@@ -20,7 +20,7 @@ struct le_audio_player {
     void *le_audio;
     u16 timer;
     u8 inused;
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     u8 *stream_addr;
     char name[16];
     u8 le_audio_num;
@@ -35,7 +35,7 @@ struct le_audio_player {
 static struct le_audio_player g_le_audio_player = {0};
 
 
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
 
 static struct le_audio_player g_le_audio_player_file[2] = {0};
 
@@ -226,7 +226,7 @@ void le_audio_dvol_down(u8 le_audio_num)
 static void le_audio_player_callback(void *private_data, int event)
 {
     struct le_audio_player *player = &g_le_audio_player;
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     player = (struct le_audio_player *)private_data;
 #endif
 
@@ -245,7 +245,7 @@ static void le_audio_player_callback(void *private_data, int event)
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
         musci_vocal_remover_update_parm();
 #endif
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
         int ret = syscfg_read(CFG_WIRELESS_MIC0_VOLUME + player->le_audio_num, &player->dvol, 2);
         if (ret < 0) {
             player->dvol = app_var.mic_eff_volume; //先使用mic_effect的音量配置
@@ -272,7 +272,7 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
 
 
 
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     err = le_audio_player_create(conn);
     struct le_audio_player *player = get_le_audio_player_handle(conn);
     if (err) {
@@ -327,7 +327,7 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
                               NODE_IOC_SET_BTADDR, (int)player->le_audio);
 
     if (err == 0) {
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
         if (player->le_audio_num) {
             jlstream_add_thread(player->stream, "wl_mic_effect2");
             //jlstream_add_thread(player->stream, "wl_mic_effect4");
@@ -350,7 +350,7 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
 
 void le_audio_player_close(u8 *conn)
 {
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     struct le_audio_player *player = get_le_audio_player_handle(conn);
     /* if (memcmp(player->stream_addr, conn, 6)) { */
     /*     return; */
@@ -372,7 +372,7 @@ void le_audio_player_close(u8 *conn)
         return;
     }
 
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     le_audio_player_handle_close(conn);
 #else
     g_le_audio_player.inused = 0;
@@ -386,7 +386,7 @@ void le_audio_player_close(u8 *conn)
         jlstream_release(player->stream);
         player->stream = NULL;
     }
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
 #else
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"le_audio");
@@ -397,7 +397,7 @@ void le_audio_player_close(u8 *conn)
 
 bool le_audio_player_is_playing(void)
 {
-#if TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     if (get_cur_le_audio_player_handle()) {
         return 1;
     }

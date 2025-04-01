@@ -400,7 +400,7 @@ typedef struct {
     uint32_t        Packet_Status_Flag  : 2;
 
     uint8_t         ISO_SDU_Fragment[0];
-} _GNU_PACKED_ hci_iso_data_packets_t ;
+} _GNU_PACKED_ hci_iso_data_packets_t;
 
 typedef struct {
     u32 handle  : 12;

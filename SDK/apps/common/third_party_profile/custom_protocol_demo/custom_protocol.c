@@ -297,6 +297,13 @@ void custom_demo_all_init(void)
     // SPP init end
 }
 
+void custom_demo_ble_disconnect(void)
+{
+    if (app_ble_get_hdl_con_handle(custom_demo_ble_hdl)) {
+        app_ble_disconnect(custom_demo_ble_hdl);
+    }
+}
+
 void custom_demo_all_exit(void)
 {
     printf("custom_demo_all_exit\n");

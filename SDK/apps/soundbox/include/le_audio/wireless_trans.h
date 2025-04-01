@@ -75,6 +75,22 @@ struct broadcast_platform_data {
     struct broadcast_cfg_args args[CONFIG_LE_AUDIO_PARAMS_MAX_NUM];
 
     //非可视化工具的参数反正下面
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    //环绕声项目两个解码器参数
+    //立体声解码器
+    u8 dual_nch;			//编码声道数
+    u8 dual_frame_len;		//帧持续时间
+    u32 dual_coding_type;	//编码格式
+    u32 dual_sample_rate;	//采样率
+    u32 dual_bit_rate;		//码率
+    //单声道解码器
+    u8 mono_nch;
+    u8 mono_frame_len;
+    u32 mono_coding_type;
+    u32 mono_sample_rate;
+    u32 mono_bit_rate;		//码率
+#endif
+    //普通广播一个解码器参数
     u8 nch;
     u8 frame_len;
     u32 coding_type;
@@ -258,6 +274,21 @@ void set_big_hdl(u8 role, u8 big_hdl);
 void update_receiver_big_codec_params(void *sync_data);
 void update_receiver_big_params(uint16_t Max_PDU, uint16_t iso_Interval);
 big_parameter_t *set_big_params(u8 app_task, u8 role, u8 big_hdl);
+
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+//环绕声项目
+int get_dual_big_audio_coding_nch(void);
+int get_dual_big_audio_coding_bit_rate(void);
+int get_dual_big_audio_coding_frame_duration(void);
+int get_mono_big_audio_coding_nch(void);
+int get_mono_big_audio_coding_bit_rate(void);
+int get_mono_big_audio_coding_frame_duration(void);
+
+u32 get_enc_dual_output_frame_len(void);
+u32 get_enc_mono_output_frame_len(void);
+
+#endif
+
 int get_big_audio_coding_nch(void);
 int get_big_audio_coding_bit_rate(void);
 int get_big_audio_coding_frame_duration(void);

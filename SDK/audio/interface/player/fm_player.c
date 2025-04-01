@@ -11,6 +11,9 @@
 #include "scene_switch.h"
 #include "audio_config_def.h"
 #include "effects/audio_vbass.h"
+#if AUDIO_EQ_LINK_VOLUME
+#include "effects/eq_config.h"
+#endif
 struct fm_player {
     struct jlstream *stream;
     s8 fm_pitch_mode;
@@ -30,6 +33,9 @@ static void fm_player_callback(void *private_data, int event)
 #endif
 #if AUDIO_VBASS_LINK_VOLUME
         vbass_link_volume();
+#endif
+#if AUDIO_EQ_LINK_VOLUME
+        eq_link_volume();
 #endif
         break;
     }
@@ -67,6 +73,14 @@ int fm_player_open()
 
     jlstream_set_callback(player->stream, player->stream, fm_player_callback);
     jlstream_set_scene(player->stream, STREAM_SCENE_FM);
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+    //解码帧长短得情况下，使用三线程推数
+    jlstream_add_thread(player->stream, "media0");
+    jlstream_add_thread(player->stream, "media1");
+#if defined(CONFIG_CPU_BR28)
+    jlstream_add_thread(player->stream, "media2");
+#endif
+#endif
     err = jlstream_start(player->stream);
     if (err) {
         goto __exit1;

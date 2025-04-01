@@ -74,6 +74,13 @@ const int config_force_bt_pwr_tab_using_normal_level  = 0;
 //配置BLE广播发射功率的等级:0-最大功率等级;1~10-固定发射功率等级
 const int config_ble_adv_tx_pwr_level  = 0;
 
+//only for br52
+#ifdef CONFIG_CPU_BR52
+const u8 config_fre_offset_trim_mode = 1; //0:trim pll 1:trim osc 2:trim pll&osc
+#else
+const u8 config_fre_offset_trim_mode = 0; //0:trim pll 1:trim osc 2:trim pll&osc
+#endif
+
 const int CONFIG_BLE_SYNC_WORD_BIT = 30;
 const int CONFIG_LNA_CHECK_VAL = -80;
 
@@ -330,9 +337,9 @@ const int config_delete_link_key          = 1;           //配置是否连接失
         const uint64_t config_btctler_le_features = LL_FEAT_ISO_SYNC | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LL_FEAT_VENDOR_BIG_SYNC_TRANSFER;
         //pkt_v3 optimized_en:BIT(18)
         #if defined(TCFG_BB_PKT_V3_EN) && TCFG_BB_PKT_V3_EN
-            const int config_bb_optimized_ctrl = BIT(18) | BIT(19) | VENDOR_BB_ISO_DIRECT_PUSH; //BIT(7);//|BIT(8);
+            const int config_bb_optimized_ctrl = BIT(18) | BIT(19) | LE_BB_OPT_FEAT_ISO_DIRECT_PUSH; //BIT(7);//|BIT(8);
         #else
-            const int config_bb_optimized_ctrl = VENDOR_BB_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
+            const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
         #endif
     #else
         const int config_bb_optimized_ctrl = 0;//BIT(7);//|BIT(8);
@@ -362,7 +369,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_rx_nums = (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN) ? 20 : 5;
     const int config_btctler_le_acl_packet_length =  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN) ? 255 : 27;
     const int config_btctler_le_acl_total_nums    = 10;
-    const int config_bb_optimized_ctrl = BIT(13) | BIT(14) | BIT(20) | VENDOR_BB_ISO_DIRECT_PUSH | VENDOR_BB_DUAL_BD_SWITCH;
+    const int config_bb_optimized_ctrl = BIT(13) | BIT(14) | BIT(20) | LE_BB_OPT_FEAT_ISO_DIRECT_PUSH | LE_BB_OPT_FEAT_DUAL_BD_SWITCH;
     const int config_btctler_le_hw_nums = 5;
 
 #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
@@ -375,7 +382,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_rx_nums = 20;
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
-    const int config_bb_optimized_ctrl =VENDOR_BB_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
+    const int config_bb_optimized_ctrl =LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
 
 #else
     #define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV)
@@ -410,7 +417,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_rx_nums = 20;
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
-    const int config_bb_optimized_ctrl =VENDOR_BB_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
+    const int config_bb_optimized_ctrl =LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
 #endif
 
 #else /* TCFG_USER_BLE_ENABLE */
@@ -420,7 +427,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_rx_nums = 20;
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
-    const int config_bb_optimized_ctrl =VENDOR_BB_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
+    const int config_bb_optimized_ctrl =LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
 #endif//end TCFG_USER_BLE_ENABLE
 
 // Slave multi-link
@@ -483,7 +490,7 @@ const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmissio
 /*-----------------------------------------------------------*/
 //RF part
 const char log_tag_const_v_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_Analog  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_i_Analog  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_w_Analog  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_d_Analog  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_Analog  = CONFIG_DEBUG_LIB(0);

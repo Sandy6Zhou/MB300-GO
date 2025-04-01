@@ -7,7 +7,11 @@
 /* #define SPDIF_DEC_DATA_BUF_LEN  1024*4 */
 // SPDIF 一个包是192个，设置为768则是4个包的数据
 //16bit:x*2*2*2, 24bit:192*4*2*2
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#define SPDIF_DATA_DMA_LEN     (192 * 2 * 2 * 2 * 2)
+#else
 #define SPDIF_DATA_DMA_LEN     (192 * 2 * 2 * 2)
+#endif
 #define SPDIF_INF_DMA_LEN	   (192 * 2 * 2 / 2)
 enum hdmi_det_mode_enum {
     HDMI_DET_UNUSED,
@@ -95,6 +99,12 @@ void spdif_hdmi_set_push_data_en(u8 en);
 
 /* 获取 spdif 输入源的IO */
 u8 get_spdif_source_io(void);
+
+/* spdif 数据清零设置函数 */
+void spdif_set_data_clean(u8 on);
+
+/* spdif 数据清零标志位获取函数 */
+u8 spdif_get_data_clean_flag(void);
 
 /* 当前HDMI是否插入(HDMI检测脚检测), 500ms更新值 */
 extern u8 hdmi_is_online(void);

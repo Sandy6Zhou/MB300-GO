@@ -146,6 +146,19 @@
 // #define  TCFG_LOWPOWER_LOWPOWER_SEL 0x0//低功耗连接还有问题
 #endif
 
+#define LEA_TRANS_SIMPLEX       (1 << 0)
+#define LEA_TRANS_DUPLEX        (1 << 1)
+
+#define LEA_ROLE_UNFIX          (0 << 0)
+#define LEA_ROLE_AS_TX          (1 << 0)
+#define LEA_ROLE_AS_RX          (1 << 1)
+
+#define LEA_ROLE_AS_CENTRAL     (1 << 0)
+#define LEA_ROLE_AS_PERIPHERAL  (1 << 1)
+
+#define LEA_CIG_1T1R_MODE       (1 << 0)
+#define LEA_CIG_2T1R_MODE       (1 << 1)
+#define LEA_CIG_1T2R_MODE       (1 << 2)
 
 /* -----------------独立模式 PC/LINEIN/SPDIF 模块默认控制------- */
 //没有独立模式的 需要在sdk_config.h定义对应的宏，有独立模式的，根据模式宏的值默认定义对应的宏
@@ -167,6 +180,10 @@
 
 #ifndef TCFG_AUDIO_SPDIF_ENABLE
 #define TCFG_AUDIO_SPDIF_ENABLE     TCFG_APP_SPDIF_EN
+#endif
+
+#ifndef TCFG_AUDIO_MIC_ENABLE
+#define TCFG_AUDIO_MIC_ENABLE     TCFG_APP_MIC_EN
 #endif
 
 /* ------------------rule check------------------ */
@@ -825,6 +842,10 @@
 
 #define TCFG_USER_RSSI_TEST_EN   0   //通过spp获取耳机RSSI值，需要使能USER_SUPPORT_PROFILE_SPP
 
+
+#ifdef CONFIG_CODE_MOVABLE_ENABLE
+///支持代码动态加载到ram
+
 //FM 一部分代码动态加载到ram
 #define TCFG_CODE_RUN_RAM_FM_CODE            1
 
@@ -841,13 +862,26 @@
 #endif
 
 
+#ifdef CONFIG_CPU_BR56
 //AEC 一部分代码加载到ram
+#define TCFG_CODE_RUN_RAM_AEC_CODE           0
+#else
 #define TCFG_CODE_RUN_RAM_AEC_CODE           1
+#endif
 
 #ifdef CONFIG_CPU_BR27
 #define TCFG_CODE_RUN_RAM_MIC_EFF_CODE       0
 #else
 #define TCFG_CODE_RUN_RAM_MIC_EFF_CODE       1
+#endif
+
+#else
+///不支持代码动态加载到ram
+#define TCFG_CODE_RUN_RAM_FM_CODE            0
+#define TCFG_CODE_RUN_RAM_BT_CODE            0
+#define TCFG_CODE_RUN_RAM_AAC_CODE           0
+#define TCFG_CODE_RUN_RAM_AEC_CODE           0
+#define TCFG_CODE_RUN_RAM_MIC_EFF_CODE       0
 #endif
 
 #ifndef TCFG_LP_TOUCH_KEY_ENABLE
@@ -865,8 +899,17 @@
 #error "IAP 与 MSD 只能开启其中一个"
 #endif
 
+#define TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE (TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE || TCFG_VIRTUAL_SURROUND_2T4_MODULE_NODE_ENABLE || TCFG_VIRTUAL_SURROUND_2T5_MODULE_NODE_ENABLE)
+
+
+#if TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#define TCFG_FREE_ICACHE0_WAY_NUM              5
+#define TCFG_FREE_ICACHE1_WAY_NUM              5
+#define TCFG_FREE_DCACHE_WAY_NUM               3
+#else
 #define TCFG_FREE_ICACHE0_WAY_NUM              0
 #define TCFG_FREE_ICACHE1_WAY_NUM              0
 #define TCFG_FREE_DCACHE_WAY_NUM               0
+#endif
 
 #endif
