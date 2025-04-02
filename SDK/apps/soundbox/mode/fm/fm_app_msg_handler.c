@@ -13,7 +13,6 @@
 #include "mic_effect.h"
 #include "rcsp_fm_func.h"
 #include "wireless_trans.h"
-#include "le_broadcast.h"
 
 #if (TCFG_SPI_LCD_ENABLE)
 #include "ui/ui_api.h"
@@ -25,25 +24,6 @@ int fm_app_msg_handler(int *msg)
     if (false == app_in_mode(APP_MODE_FM)) {
         return 0;
     }
-    u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
-    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER &&
-        (msg_type == APP_MSG_FM_SCAN_ALL
-         || msg_type == APP_MSG_FM_SCAN_ALL_DOWN || msg_type == APP_MSG_FM_SCAN_ALL_UP
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
-         || msg_type == APP_MSG_FM_SCAN_DOWN || msg_type == APP_MSG_FM_SCAN_UP || msg_type == APP_MSG_MUSIC_PP
-         || msg_type == APP_MSG_FM_START  || msg_type == APP_MSG_FM_PREV_STATION || msg_type == APP_MSG_FM_NEXT_STATION
-         || msg_type == APP_MSG_FM_PREV_FREQ || msg_type == APP_MSG_FM_NEXT_FREQ
-        )) {
-
-        printf("BIS receiving state does not support the event %d", msg_type);
-
-        return 0;
-
-    }
-#endif
 
 #if (TCFG_SPI_LCD_ENABLE)
     if (key_is_ui_takeover()) {
@@ -61,10 +41,8 @@ int fm_app_msg_handler(int *msg)
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             break;
         }
-        if (!fm_get_scan_flag()) {
-            fm_player_open();
-            /* fm_manage_start(); */
-        }
+        fm_player_open();
+        /* fm_manage_start(); */
 
 #if (TCFG_PITCH_SPEED_NODE_ENABLE && FM_PLAYBACK_PITCH_KEEP)
         audio_pitch_default_parm_set(app_var.pitch_mode);

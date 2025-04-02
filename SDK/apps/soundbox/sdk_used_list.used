@@ -55,6 +55,13 @@ sbc_encoder_soft_plug
 
 
 cvsd_encoder_plug
+iis_node_adapter
+iis1_node_adapter
+iis_file_plug
+iis1_file_plug
+
+
+
 linein_file_plug
 
 

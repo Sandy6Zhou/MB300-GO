@@ -127,7 +127,6 @@ enum stream_event {
 
     STREAM_EVENT_GET_SWITCH_CALLBACK,
     STREAM_EVENT_GET_MERGER_CALLBACK,
-    STREAM_EVENT_GET_SPATIAL_ADV_CALLBACK,
 };
 
 enum stream_scene : u8 {
@@ -144,7 +143,6 @@ enum stream_scene : u8 {
     STREAM_SCENE_PC_SPK,
     STREAM_SCENE_PC_MIC,
     STREAM_SCENE_IIS,
-    STREAM_SCENE_MUTI_CH_IIS,
     STREAM_SCENE_MIC,			//mic 模式
     STREAM_SCENE_MIC_EFFECT,
     STREAM_SCENE_MIC_EFFECT2,
@@ -674,7 +672,6 @@ int jlstream_get_node_param_s(void *node, void *param, u16 param_len);
 void jlstream_put_node(void *);
 
 int jlstream_set_node_param(u16 node_uuid, const char *name, void *param, u16 param_len);
-int jlstream_set_node_specify_param(u16 node_uuid, const char *name, int cmd, void *param, u16 param_len);
 
 int jlstream_get_node_param(u16 node_uuid, const char *name, void *param, u16 param_len);
 

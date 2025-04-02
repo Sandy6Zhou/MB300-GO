@@ -3,7 +3,7 @@
 #include "sync/audio_syncts.h"
 #include "circular_buf.h"
 #include "audio_splicing.h"
-#include "media/audio_iis.h"
+#include "audio_dai/audio_iis.h"
 #include "app_config.h"
 #include "gpio.h"
 #include "audio_cvp.h"
@@ -84,11 +84,10 @@ platform_initcall(miis_global_hdl_init);
 
 
 struct iis_write_cb_t {
-    u8 is_after_write_over; //是否在写iis后拿数据，0：写iis前拿数据，1：写iis后拿数据
     u8 scene;
     const char *name;
     struct list_head entry;
-    void (*write_callback)(void *priv, void *buf, int len);
+    void (*write_callback)(void *buf, int len);
 };
 
 struct iis_gloabl_hdl_t {
@@ -203,7 +202,7 @@ static int iis_adpater_detect_multi_timestamp(struct iis_node_hdl *hdl, struct s
     }
     int slience_frames = (u64)diff * hdl->sample_rate / 1000000;
 
-    u32 dma_len = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch, AUDIO_DAC_MAX_SAMPLE_RATE);
+    u32 dma_len = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch);
     int point_offset = hdl->bit_width ? 2 : 1;
     int max_frames = (dma_len >> point_offset) / hdl->nch - 4;
     if (slience_frames > max_frames) {
@@ -245,7 +244,7 @@ syncts_start:
     return 0;
 }
 
-void muliti_ch_iis_node_write_callback_add(const char *name, u8 is_after_write_over, u8 scene, void (*cb)(void *, void *, int))
+void muliti_ch_iis_node_write_callback_add(const char *name, u8 scene, void (*cb)(void *, int))
 {
     if (!iis_gloabl_hdl.init) {
         iis_gloabl_hdl.init = 1;
@@ -255,7 +254,6 @@ void muliti_ch_iis_node_write_callback_add(const char *name, u8 is_after_write_o
     bulk->name = name;
     bulk->write_callback = cb;
     bulk->scene = scene;
-    bulk->is_after_write_over = is_after_write_over;
     list_add(&bulk->entry, &iis_gloabl_hdl.head);
 }
 
@@ -274,29 +272,15 @@ void muliti_ch_iis_node_write_callback_del(const char *name)
 
 
 
-static void muliti_ch_iis_node_write_callback_deal(u8 is_after_write_over, struct iis_ch_hdl *iis, void *priv, void *data, int len)
+static void muliti_ch_iis_node_write_callback_deal(u8 scene, struct stream_frame *frame)
 {
     struct iis_write_cb_t *bulk;
     struct iis_write_cb_t *temp;
     if (iis_gloabl_hdl.init) {
         list_for_each_entry_safe(bulk, temp, &iis_gloabl_hdl.head, entry) {
             if (bulk->write_callback) {
-                if (is_after_write_over) {
-                    /*获取写iis后的数据时，里面是包含4个通道的数据*/
-                    for (int i = 0; i < 4; i++) {
-                        if ((bulk->scene == iis[i].scene) || (bulk->scene == 0XFF)) {
-                            bulk->write_callback((void *)i, data, len);
-                            break;
-                        }
-                    }
-
-                } else {
-                    /*获取写iis后的数据时，里面是包含4个通道的数据*/
-                    if ((bulk->scene == iis->scene) || (bulk->scene == 0XFF)) {
-                        if (is_after_write_over == bulk->is_after_write_over) {
-                            bulk->write_callback(priv, data, len);
-                        }
-                    }
+                if ((bulk->scene == scene) || (bulk->scene == 0XFF)) {
+                    bulk->write_callback(frame->data, frame->len);
                 }
             }
         }
@@ -368,10 +352,6 @@ static int iis_multi_write(struct iis_node_hdl *hdl)
         }
     }
     audio_iis_multi_channel_write(&mch, data, remain, wlen);
-
-    /*写iis后拿数据*/
-    muliti_ch_iis_node_write_callback_deal(1, hdl->iis, NULL, data, (int)wlen);
-
     u8 num = 0;
     for (int i = 0; i < 4; i++) {
         if (hdl->iis[i].frame) {
@@ -414,9 +394,7 @@ static int iis_iport_write(struct stream_iport *iport, struct stream_note *note)
             return 0;
         }
         iis->frame->offset = 0;
-        int port_id = iport->id;
-        /*写iis前拿数据*/
-        muliti_ch_iis_node_write_callback_deal(0, iis, (void *)(port_id), iis->frame->data, iis->frame->len);
+        muliti_ch_iis_node_write_callback_deal(iis->scene, iis->frame);
     }
     for (int i = 0; i < 4; i++) {
         if (hdl->attr.ch_idx & BIT(i)) {
@@ -666,7 +644,7 @@ static void iis_ioc_start(struct iis_node_hdl *hdl, struct stream_iport *iport)
     if (!iis_hdl[hdl->module_idx]) {
         struct alink_param params = {0};
         params.module_idx = hdl->module_idx;
-        params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch, AUDIO_DAC_MAX_SAMPLE_RATE);
+        params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch);
         params.sr         = hdl->sample_rate;
         params.bit_width  = hdl->bit_width;
         params.fixed_pns  = const_out_dev_pns_time_ms;

@@ -127,7 +127,7 @@ static int get_pipeline_uuid(const char *name)
 
     if (!strcmp(name, "pc_spk")) {
         clock_alloc("pc_spk", 96 * 1000000UL);
-        /* return PIPELINE_UUID_PC_AUDIO; *///统一使用媒体的pipeline_uuid
+        return PIPELINE_UUID_PC_AUDIO;
     }
     if (!strcmp(name, "pc_mic")) {
         clock_alloc("pc_mic", 96 * 1000000UL);
@@ -159,10 +159,6 @@ static int get_pipeline_uuid(const char *name)
     }
     if (!strcmp(name, "fm")) {
         clock_alloc("fm", 48 * 1000000UL);
-    }
-
-    if (!strcmp(name, "mic")) {
-        clock_alloc("mic", 24 * 1000000UL);
     }
 
     if (!strcmp(name, "tdm")) {
@@ -216,18 +212,6 @@ static void player_close_handler(const char *name)
     }
     if (!strcmp(name, "iis")) {
         clock_free("iis");
-    }
-
-    if (!strcmp(name, "a2dp_le_audio") || \
-        !strcmp(name, "music_le_audio") || \
-        !strcmp(name, "linein_le_audio") || \
-        !strcmp(name, "fm_le_audio") || \
-        !strcmp(name, "spdif_le_audio") || \
-        !strcmp(name, "iis_le_audio") || \
-        !strcmp(name, "mic_le_audio") || \
-        !strcmp(name, "pc_le_audio") || \
-        !strcmp(name, "le_audio")) {
-        clock_free(name);
     }
 
 }
@@ -313,7 +297,7 @@ void aec_code_movable_unload(void)
 #endif
 }
 
-#if defined(TCFG_HI_RES_AUDIO_ENEBALE) || (TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE && (defined(CONFIG_CPU_BR28) || defined(CONFIG_CPU_BR27)))
+#if defined(TCFG_HI_RES_AUDIO_ENEBALE) || TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
 //调整解码器输出帧长
 static const int frame_unit_size[] = { 64, 128, 256, 384, 512, 1024, 2048, 4096, 8192};
 int decoder_check_frame_unit_size(int dest_len)
@@ -348,7 +332,7 @@ static int load_decoder_handler(struct stream_decoder_info *info)
         }
 #endif
 
-#if (TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE && (defined(CONFIG_CPU_BR28) || defined(CONFIG_CPU_BR27)))
+#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
         info->frame_time = 16;
 #endif
     }

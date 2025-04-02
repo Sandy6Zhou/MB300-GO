@@ -93,10 +93,6 @@ const u32 lib_config_uart_flow_enable = 1;
 
 //需要对应的功能，就或上对应的宏定义，支持多种鉴权同时打开
 const u32 lib_config_enable_auth_check = 0b0000;
-
-//fm搜台调试信息保存, 打开后搜完台使用dump_fm_debug_info打印
-const int config_fm_scan_debug = 0;
-
 /**
  * @brief Log (Verbose/Info/Debug/Warn/Error)
  */
@@ -296,12 +292,6 @@ const char log_tag_const_i_EXTI  = CONFIG_DEBUG_LIB(FALSE);
 const char log_tag_const_d_EXTI  = CONFIG_DEBUG_LIB(FALSE);
 const char log_tag_const_w_EXTI  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_EXTI  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_GPIO  = CONFIG_DEBUG_LIB(TRUE);
 
 const char log_tag_const_v_GPTIMER  = CONFIG_DEBUG_LIB(FALSE);
 const char log_tag_const_i_GPTIMER  = 1;//CONFIG_DEBUG_LIB(FALSE);

@@ -248,7 +248,6 @@ static int fm_mode_try_enter(int arg)
 
 static int fm_mode_try_exit()
 {
-    int ret = 0;
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -266,7 +265,7 @@ static int fm_mode_try_exit()
 #endif
 
 #if (!TCFG_KBOX_1T3_MODE_EN)
-    ret = btstack_exit_in_other_mode();
+    btstack_exit_in_other_mode();
 #endif
 #endif
 
@@ -274,11 +273,11 @@ static int fm_mode_try_exit()
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE)
     app_auracast_close_in_other_mode();
-    ret = btstack_exit_in_other_mode();
+    btstack_exit_in_other_mode();
 #endif
 #endif
 
-    return ret;
+    return 0;
 }
 
 static const struct app_mode_ops fm_mode_ops = {

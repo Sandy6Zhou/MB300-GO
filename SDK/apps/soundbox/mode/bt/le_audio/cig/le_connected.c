@@ -342,7 +342,7 @@ int connected_central_connect_deal(void *priv)
     connected_hdl->cis_hdl_info[index].acl_hdl = hdl->acl_hdl;
     connected_hdl->cis_hdl_info[index].cis_hdl = hdl->cis_hdl;
 
-#if (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
+#if (LEA_CIG_TRANS_MODE == 2)
 
     //TODO:打开播放器播放远端传来的音频
     if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_open) {
@@ -360,9 +360,9 @@ int connected_central_connect_deal(void *priv)
         connected_hdl->cig_sync_delay = hdl->cig_sync_delay;
     }
 
-#elif (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
+#elif (LEA_CIG_TRANS_MODE == 1)
 
-#if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
+#if (LEA_CIG_CONNECT_MODE == 2)
 
     //两发一收central做接收，使用接收解码声道配置
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
@@ -851,7 +851,7 @@ int connected_perip_connect_deal(void *priv)
     printf("le_audio  fmt: %d %d %d %d %d %d\n", params.fmt.coding_type, params.fmt.frame_dms, params.fmt.bit_rate,
            params.fmt.sample_rate, params.fmt.sdu_period, params.fmt.nch);
 
-#if (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
+#if (LEA_CIG_TRANS_MODE == 2)
 
     //TODO:开启播放器播放远端传来的音频
     if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_open) {
@@ -869,9 +869,9 @@ int connected_perip_connect_deal(void *priv)
         connected_hdl->cig_sync_delay = hdl->cig_sync_delay;
     }
 
-#elif (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
+#elif (LEA_CIG_TRANS_MODE == 1)
 
-#if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
+#if (LEA_CIG_CONNECT_MODE == 2)
 
     //两发一收perip做发送，使用发射解码声道配置
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
@@ -1217,7 +1217,7 @@ int connected_perip_open(cig_parameter_t *params)
         return -1;
     }
 
-#if ((LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX) || (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE))
+#if ((LEA_CIG_TRANS_MODE == 2) || (LEA_CIG_CONNECT_MODE == 2))
     if (transmit_buf) {
         free(transmit_buf);
     }
@@ -1453,7 +1453,7 @@ void cis_audio_recorder_reset(u16 cis_hdl)
                 params.fmt.sdu_period = get_cig_sdu_period_us();
                 params.fmt.isoIntervalUs = get_cig_sdu_period_us();
                 params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
-#if ((LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX) && (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE))
+#if ((LEA_CIG_TRANS_MODE == 1) && (LEA_CIG_CONNECT_MODE == 2))
                 //两发一收central做接收，使用接收解码声道配置
                 params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
 #else

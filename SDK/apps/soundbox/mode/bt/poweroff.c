@@ -57,9 +57,6 @@ void sys_auto_shut_down_enable(void)
 {
 #if TCFG_AUTO_SHUT_DOWN_TIME
 #if TCFG_BT_BACKGROUND_ENABLE
-    if (bt_get_total_connect_dev()) {
-        return;
-    }
     if (bt_background_active()) {
         log_info("sys_auto_shut_down_enable cannot in background\n");
         return;

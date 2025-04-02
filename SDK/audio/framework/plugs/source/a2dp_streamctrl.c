@@ -203,18 +203,6 @@ static void a2dp_stream_adaptive_detect_handler(struct a2dp_stream_control *ctrl
 #endif
 }
 
-//外部重定义u32 a2dp_stream_update_initial_latency()这个接口，在启动播放前改变返回的目标值，单位ms
-__attribute__((weak))u32 a2dp_stream_update_initial_latency()
-{
-    /* if (le_audio){ */
-    /* return 300; */
-    /* }else{ */
-    /* return 200; */
-    /* } */
-    /* latency_ms */
-    return 0;
-}
-
 
 void *a2dp_stream_control_plan_select(void *stream, int low_latency, u32 codec_type, u8 plan)
 {
@@ -265,12 +253,6 @@ void *a2dp_stream_control_plan_select(void *stream, int low_latency, u32 codec_t
             } else {
                 ctrl->initial_latency = CONFIG_A2DP_DELAY_TIME_SBC;
             }
-        }
-        u32 update_latency = a2dp_stream_update_initial_latency();
-
-        // cppcheck-suppress knownConditionTrueFalse
-        if (update_latency) {
-            ctrl->initial_latency = update_latency;
         }
         ctrl->adaptive_max_latency = low_latency ? (ctrl->initial_latency + MAX_DELAY_INCREMENT) : CONFIG_A2DP_ADAPTIVE_MAX_LATENCY;
         ctrl->adaptive_latency = ctrl->initial_latency;
@@ -552,10 +534,9 @@ void a2dp_stream_control_free_frame(void *_ctrl, struct a2dp_media_frame *frame)
 void a2dp_stream_control_set_underrun_callback(void *_ctrl, void *priv, void (*callback)(void *priv))
 {
     struct a2dp_stream_control *ctrl = (struct a2dp_stream_control *)_ctrl;
-    local_irq_disable();
+
     ctrl->underrun_signal = priv;
     ctrl->underrun_callback = callback;
-    local_irq_enable();
 }
 
 int a2dp_stream_control_delay_time(void *_ctrl)
@@ -584,6 +565,6 @@ void a2dp_stream_control_free(void *_ctrl)
         sys_hi_timeout_del(ctrl->timer);
         ctrl->timer = 0;
     }
-    free(ctrl);
     local_irq_enable();
+    free(ctrl);
 }

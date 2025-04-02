@@ -332,7 +332,7 @@ int le_audio_sync_tws_event_handler(int *msg)
     switch (evt->event) {
     case TWS_EVENT_CONNECTED:
 #if (TCFG_KBOX_1T3_MODE_EN)
-#if 1
+#if 0
         le_audio_tws_sync_mic_status();
 #else
         app_send_message(APP_MSG_WIRELESS_MIC_CLOSE, 0);
@@ -453,7 +453,7 @@ u8 get_le_audio_curr_role() //1:transmitter; 2:recevier
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-#if  (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
+#if  (LEA_CIG_TRANS_MODE == 2)
     return 1;
 #else
     return get_connected_role();

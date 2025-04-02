@@ -1011,15 +1011,8 @@ void rcsp_bt_ble_exit(void)
 
 }
 
-void ble_app_disconnect(void)
-{
-    uint32_t rets_addr;
-    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
-    printf("%s, rets=0x%x\n", __FUNCTION__, rets_addr);
-    ble_disconnect(NULL);
-}
 
-void rcsp_ble_app_disconnect(void)
+void ble_app_disconnect(void)
 {
     uint32_t rets_addr;
     __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));

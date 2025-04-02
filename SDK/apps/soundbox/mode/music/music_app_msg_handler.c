@@ -182,7 +182,7 @@ int music_app_msg_handler(int *msg)
 
     printf("music_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -214,7 +214,7 @@ int music_app_msg_handler(int *msg)
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 music_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_le_audio_curr_role() == 2) {
@@ -252,7 +252,7 @@ int music_app_msg_handler(int *msg)
                 }
             }
         }
-#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#elif (LEA_BIG_FIX_ROLE==1)
         if (file_player && file_player->stream) {
             if (file_player->status == FILE_PLAYER_START) {
                 music_hdl.music_local_audio_resume_onoff = 0;
@@ -494,9 +494,6 @@ int music_app_msg_handler(int *msg)
         log_i("APP_MSG_MUSIC_PLAY_START !!\n");
         /* app_status_handler(APP_STATUS_MUSIC_PLAY); */
         ///断点播放活动设备
-        if (music_player_runing()) {
-            music_player_stop(music_hdl.player_hd, 1);
-        }
         logo = dev_manager_get_logo(dev_manager_find_active(1));
         if (music_player_runing()) {
             if (dev_manager_get_logo(music_hdl.player_hd->dev) && logo) {///播放的设备跟当前活动的设备是同一个设备，不处理
@@ -620,7 +617,7 @@ int music_app_msg_handler(int *msg)
 //当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
 void music_set_broadcast_local_open_flag(u8 en)
 {
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#if (LEA_BIG_FIX_ROLE==2)
     music_hdl.close_broadcast_need_resume_local_music_flag = en;
 #endif
 }
@@ -633,7 +630,7 @@ static int get_music_play_status(void)
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE==1)
     if (music_hdl.music_local_audio_resume_onoff == 1) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
@@ -641,7 +638,7 @@ static int get_music_play_status(void)
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#if (LEA_BIG_FIX_ROLE==2)
     //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
     /* music_hdl.close_broadcast_need_resume_local_music_flag = 0; */
     if (music_hdl.close_broadcast_need_resume_local_music_flag == 1 || music_hdl.music_local_audio_resume_onoff == 1) {
@@ -668,7 +665,7 @@ static int music_local_audio_open(void)
 
     if (1) {//(get_music_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开本地播放
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#if (LEA_BIG_FIX_ROLE==2)
         if (music_hdl.close_broadcast_need_resume_local_music_flag) {
             music_hdl.close_broadcast_need_resume_local_music_flag = 0;
         }
@@ -698,7 +695,7 @@ static int music_local_audio_close(void)
 {
     /* if (get_music_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) { */
     struct file_player *file_player = get_music_file_player();
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE==1)
     if (music_file_get_player_status(file_player) == FILE_PLAYER_START) {
         music_hdl.music_local_audio_resume_onoff = 1;	//关闭广播需要恢复本地音频播放
     } else {
@@ -706,7 +703,7 @@ static int music_local_audio_close(void)
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#if (LEA_BIG_FIX_ROLE==2)
     if (music_file_get_player_status(file_player) == FILE_PLAYER_START) {
         music_hdl.music_local_audio_resume_onoff = 1;
     } else {
@@ -717,7 +714,7 @@ static int music_local_audio_close(void)
     if (music_player_runing()) {
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==2)
         /* if (music_player_runing()) {	//这句判断需要放在 music_player_stop之前 */
         music_hdl.close_broadcast_need_resume_local_music_flag = 1;
         /* } */
@@ -730,7 +727,7 @@ static int music_local_audio_close(void)
             music_player_stop(music_hdl.player_hd, 0);
         }
     } else {
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE==1)
         music_hdl.music_local_audio_resume_onoff = 0;
 #endif
     }

@@ -41,7 +41,6 @@
 #include "key/iokey.h"
 #include "trim.h"
 #include "iis.h"
-#include "mic.h"
 #include "dev_manager.h"
 #include "app_mode_update.h"
 #include "sdfile.h"
@@ -51,9 +50,6 @@
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
 #include "rcsp_device_status.h"
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
-#include "surround_sound.h"
-#endif
 
 #if TCFG_LP_TOUCH_KEY_ENABLE
 #include "asm/lp_touch_key_api.h"
@@ -90,11 +86,11 @@ const struct task_info task_info_table[] = {
     {"jlstream_a",          5,     0,  768,   0 },
     {"jlstream_b",          5,     0,  768,   0 },
 
-#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
     /*virtual surround pro*/
-    {"media0",          5,     0,  1024,   0 },
-    {"media1",          5,     0,  1024,   0 },
-    {"media2",          5,     0,  1024,   0 },
+    {"media0",          5,     0,  768,   0 },
+    {"media1",          5,     0,  768,   0 },
+    {"media2",          5,     0,  768,   0 },
 #endif
 
 #if (TCFG_BT_SUPPORT_LHDC)
@@ -219,7 +215,7 @@ int eSystemConfirmStopStatus(void)
     return 0;
 #else
     if (get_charge_full_flag()) {
-        /* power_set_soft_poweroff(); */
+        power_set_soft_poweroff();
         return 1;
     } else {
         return 0;
@@ -415,14 +411,6 @@ static struct app_mode *app_task_init()
     miovdd_adaptive_adjustment();
 #endif
 
-
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE && (SURROUND_SOUND_FIX_ROLE_EN == 0)
-    //环绕声项目
-    //如果是不固定角色，客户需要根据自己的需求在此设置角色
-    y_printf("Surround Sound no fix role, Need Set role in this!\n");
-    set_surround_sound_role(SURROUND_SOUND_ROLE_MAX);	//需要在这里设置角色
-#endif
-
     arch_trim();
 
     struct app_mode *mode;
@@ -481,7 +469,7 @@ struct app_mode *app_mode_switch_handler(int *msg)
     case APP_MSG_GOTO_NEXT_MODE:
         arg = msg[2];
         next_mode = app_get_next_mode();
-        if (next_mode == NULL || app_get_current_mode() == next_mode) {
+        if (app_get_current_mode() == next_mode) {
             return NULL;
         }
         break;
@@ -523,7 +511,7 @@ struct app_mode *app_mode_switch_handler(int *msg)
     } while (next_mode);
 
     //处理开了多个模式，但是除了当前模式其他模式都无法进入的情况，不要重复切换当前任务
-    if (app_get_current_mode() && app_get_current_mode()->name == next_mode->name && curr_mode_exiting == false) {
+    if (app_get_current_mode()->name == next_mode->name && curr_mode_exiting == false) {
         return NULL;
     }
 
@@ -711,31 +699,6 @@ static void app_task_loop(void *p)
             mode = app_enter_iis_mode(g_mode_switch_arg);
             break;
 #endif
-
-
-#if TCFG_APP_MIC_EN
-        case APP_MODE_MIC:
-            mode = app_enter_mic_mode(g_mode_switch_arg);
-            break;
-#endif
-
-#if TCFG_APP_SURROUND_SOUND_EN && LEA_DUAL_STREAM_MERGE_TRANS_MODE
-        case APP_MODE_SURROUND_SOUND:
-#if ((SURROUND_SOUND_FIX_ROLE_EN == 1 && SURROUND_SOUND_ROLE != 0))
-            //环绕声项目，固定角色并且是接收端，才能进入SURROUND_SOUND模式
-            y_printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter Surround Sound mode!\n");
-            mode = app_enter_surround_sound_mode(g_mode_switch_arg);
-#elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
-            //环绕声项目，非固定角色，要判断是不是接收端，才能进SURROUND_SOUND模式做接收
-            u8 role = get_surround_sound_role();
-            if (role > 0 && role < SURROUND_SOUND_ROLE_MAX) {
-                y_printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter Surround Sound mode!\n");
-                mode = app_enter_surround_sound_mode(g_mode_switch_arg);
-            }
-#endif
-#endif
-            break;
-
         case APP_MODE_SINK:
 #if TCFG_LOCAL_TWS_ENABLE
             mode = app_enter_sink_mode(g_mode_switch_arg);

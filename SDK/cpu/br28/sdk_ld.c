@@ -179,6 +179,7 @@ SECTIONS
         *(.movable.stub.1)
         *(.*.text.cache.L1)
         *(.*.text.const.cache.L2)
+		*(.jlstream.text.cache.L2)
         *(.ui_ram)
         *(.math_fast_funtion_code)
 

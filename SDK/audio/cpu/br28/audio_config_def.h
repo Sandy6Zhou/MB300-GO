@@ -16,23 +16,7 @@
 //**************************************
 // 			ASS通用配置
 //**************************************
-#define MEDIA_24BIT_ENABLE					TCFG_AUDIO_BIT_WIDTH
-#define AUD_DAC_TRIM_ENABLE					1
-#define TCFG_AUDIO_DAC_NOISEGATE_ENABLE     1
-#define AUDIO_DAC_MAX_SAMPLE_RATE           48000
-
-/*
- * Hi-Res Audio使能LHDC/LDAC要求：
- * <1>DAC最高采样率调整到96K
- * <2>同时全局采样率至少要96kHz，或者Disable（即自适应）
- */
-#ifdef TCFG_HI_RES_AUDIO_ENEBALE
-#undef AUDIO_DAC_MAX_SAMPLE_RATE
-#define AUDIO_DAC_MAX_SAMPLE_RATE           96000
-#if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE && (TCFG_AUDIO_GLOBAL_SAMPLE_RATE < 96000))
-#error "Hi-Res Audio：请将全局采样率TCFG_AUDIO_GLOBAL_SAMPLE_RATE设置到至少96000，或Disable！"
-#endif
-#endif
+#define MEDIA_24BIT_ENABLE		TCFG_AUDIO_BIT_WIDTH
 
 //**************************************
 // 		    场景参数更新使能
@@ -69,15 +53,6 @@
 #define AFX_SW_EQ_AT_RAM                    0   //软件EQ
 #define AFx_SPATIAL_EFFECT_AT_RAM           1   //空间音效
 #define AFx_DAC_IO_IRQ_HANDLER_AT_RAM       1   //dac io中断代码放ram
-#define AFx_MIXER_TEXT_AT_RAM               1   //mixer
-#define AFx_DAC_TEXT_AT_RAM                 1   //dac
-#define AFx_CONVERT_TEXT_AT_RAM             1   //convert,bitwidth convert
-#define AFx_VOCAL_REMOVER_TEXT_AT_RAM       1   //人声消除
-#define AFx_SPECTRUM_ADV_TEXT_AT_RAM        1   //频谱计算
-#define AUDIO_JLSTREAM_TEXT_AT_RAM          1   //数据流
-
-
-
 
 /*通话语音处理算法*/
 #define AUDIO_CVP_TEXT_AT_RAM	    	0	//COMMON TEXT
@@ -100,7 +75,6 @@
 #define AUDIO_CVSD_CODEC_AT_RAM		    0	//CVSD 编解码
 #define AUDIO_JLA_CODEC_AT_RAM			1	//JLA 编解码
 #define AUDIO_LC3_CODEC_AT_RAM			0	//LC3 编解码
-#define AUDIO_JLA_V2_CODEC_AT_RAM		0	//JLA_V2 编解码
 
 /*语音识别算法编译链接配置*/
 #define AUDIO_KWS_COMMON_AT_RAM             0   //kws公共部分 ，0:放flash，1:放ram
@@ -120,7 +94,6 @@
 // 			音效使能控制
 //**************************************
 #define AUDIO_VBASS_LINK_VOLUME     0 //虚拟低音与音量联动调节
-#define AUDIO_EQ_LINK_VOLUME        0 //EQ与音量联动调节
 //**************************************
 // 			麦克风音效配置
 //**************************************
@@ -147,6 +120,7 @@
 #define AUDIO_LINEIN_IRQ_POINTS 256
 #endif
 
+#define AUDIO_DAC_MAX_SAMPLE_RATE           48000
 //**************************************
 // 			IIS模块配置
 //**************************************
@@ -154,6 +128,27 @@
 #define AUDIO_IIS_IRQ_POINTS 128
 //***************End********************
 
+
+/*
+ *br36 支持24bit位宽输出
+ * */
+#define TCFG_AUDIO_DAC_24BIT_MODE           0
+#define AUDIO_DAC_MAX_SAMPLE_RATE           48000
+
+/*
+ * Hi-Res Audio使能LHDC/LDAC要求：
+ * <1>DAC最高采样率调整到96K
+ * <2>同时全局采样率至少要96kHz，或者Disable（即自适应）
+ */
+#ifdef TCFG_HI_RES_AUDIO_ENEBALE
+#undef AUDIO_DAC_MAX_SAMPLE_RATE
+#define AUDIO_DAC_MAX_SAMPLE_RATE           96000
+#if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE && (TCFG_AUDIO_GLOBAL_SAMPLE_RATE < 96000))
+#error "Hi-Res Audio：请将全局采样率TCFG_AUDIO_GLOBAL_SAMPLE_RATE设置到至少96000，或Disable！"
+#endif
+#endif
+
+#define TCFG_AUDIO_DAC_NOISEGATE_ENABLE     1
 
 /*
  *该配置适用于没有音量按键的产品，防止打开音量同步之后

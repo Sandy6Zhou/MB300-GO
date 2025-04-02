@@ -20,10 +20,6 @@
 #define LADC_MIC                0
 #define LADC_LINEIN             1
 
-/************************************************
-  				Audio ADC Features
-Notes:以下为芯片规格定义，不可修改，仅供引用
-************************************************/
 /* ADC 最大通道数 */
 #define AUDIO_ADC_MAX_NUM           (4)
 #define AUDIO_ADC_MIC_MAX_NUM       (4)

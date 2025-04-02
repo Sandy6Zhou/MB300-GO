@@ -19,9 +19,6 @@
 #include "bt_slience_detect.h"
 #include "poweroff.h"
 /* #include "audio_anc.h" */
-#include "app_le_broadcast.h"
-#include "le_broadcast.h"
-#include "app_le_connected.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 
@@ -56,26 +53,9 @@ void sys_auto_shut_down_disable(void)
 void sys_auto_shut_down_enable(void)
 {
 #if TCFG_AUTO_SHUT_DOWN_TIME
-    if (bt_get_total_connect_dev()) {
-        return;
-    }
     if (!app_in_mode(APP_MODE_BT)) {
         return;
     }
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-    if ((get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) || (get_receiver_connected_status())) {
-        log_error("sys_auto_shut_down_enable cannot in le audio open\n");
-        return;
-    }
-#endif
-
-    //cis连接时不能自动关机
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-    if (app_get_connected_role() && (!(app_get_connected_role() & BIT(7)))) {
-        log_error("sys_auto_shut_down_enable cannot in le audio open\n");
-        return;
-    }
-#endif
     log_info("sys_auto_shut_down_enable\n");
 
     /*ANC打开，不支持自动关机*/
@@ -255,7 +235,7 @@ static void tws_poweroff_tone_callback(int priv, enum stream_event event)
     if (event == STREAM_EVENT_STOP) {
         //bt_tws_detach(NULL);
         app_send_message2(APP_MSG_GOTO_MODE, APP_MODE_IDLE, IDLE_MODE_WAIT_POWEROFF);
-        sys_timeout_add(NULL, app_power_off, 2000);
+        sys_timeout_add(NULL, app_power_off, 1000);
     }
 }
 REGISTER_TWS_TONE_CALLBACK(tws_poweroff_stub) = {

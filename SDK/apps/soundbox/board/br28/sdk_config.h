@@ -137,7 +137,6 @@
 #define TCFG_APP_LINEIN_EN 1 // LINEIN模式
 #define TCFG_APP_FM_EN 0 // FM模式
 #define TCFG_APP_PC_EN 1 // PC模式
-#define TCFG_APP_SURROUND_SOUND_EN 0 // 环绕声接收模式
 #define TCFG_MIC_EFFECT_ENABLE 1 // 混响使能
 #define TCFG_DEC_ID3_V2_ENABLE 0 // ID3_V2
 #define TCFG_DEC_ID3_V1_ENABLE 0 // ID3_V1
@@ -274,7 +273,6 @@
 #define TCFG_BT_SUPPORT_SPP 1 // SPP
 #define TCFG_BT_SUPPORT_PNP 1 // PNP
 #define TCFG_BT_SUPPORT_PBAP 0 // PBAP
-#define TCFG_BT_SUPPORT_PAN 0 // PAN
 #define TCFG_BT_BACKGROUND_ENABLE 1 // 蓝牙后台
 #define TCFG_BT_BACKGROUND_GOBACK 1 // 蓝牙后台连接断开返回
 #define TCFG_BT_BACKGROUND_DETECT_TIME 1940 // 音乐检测时间
@@ -348,29 +346,10 @@
 #define LEA_CIG_CENTRAL_CLOSE_EDR_CONN 0 // 主机关闭EDR
 #define LEA_CIG_PERIPHERAL_CLOSE_EDR_CONN 1 // 从机关闭EDR
 #define LEA_CIG_KEY_EVENT_SYNC 0 // 按键同步
-#define LEA_CIG_FIX_ROLE LEA_ROLE_AS_CENTRAL // 连接角色
-#define LEA_CIG_CONNECT_MODE LEA_CIG_2T1R_MODE // 连接方式
-#define LEA_CIG_TRANS_MODE LEA_TRANS_SIMPLEX // 音频传输方式
+#define LEA_CIG_FIX_ROLE 1 // 连接角色
+#define LEA_CIG_CONNECT_MODE 2 // 连接方式
+#define LEA_CIG_TRANS_MODE 1 // 音频传输方式
 // ------------CIS配置.json------------
-
-// ------------无线环绕声配置.json------------
-#define LEA_DUAL_STREAM_MERGE_TRANS_MODE 0 // 无线环绕声功能
-#define SURROUND_SOUND_FIX_ROLE_EN 0 // 环绕声广播角色是否固定
-#define SURROUND_SOUND_ROLE 0 // 单箱角色(角色固定时生效)
-#define SURROUND_SOUND_DUAL_CODEC_TYPE 0xa000000 // 编解码格式
-#define SURROUND_SOUND_DUAL_CODEC_CHANNEL 2 // 编解码声道数
-#define SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL 37 // 发送端解码输出
-#define SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL 17 // 接收端解码输出
-#define SURROUND_SOUND_DUAL_BIT_RATE 128000 // 码率
-#define SURROUND_SOUND_DUAL_CODEC_SAMPLERATE 48000 // 采样率
-#define SURROUND_SOUND_DUAL_CODEC_FRAME_LEN 50 // 帧持续时间
-#define SURROUND_SOUND_MONO_CODEC_TYPE 0xa000000 // 编解码格式
-#define SURROUND_SOUND_MONO_CODEC_CHANNEL 1 // 编解码声道数
-#define SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL 37 // 发送端解码输出
-#define SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL 17 // 接收端解码输出
-#define SURROUND_SOUND_MONO_BIT_RATE 128000 // 码率
-#define SURROUND_SOUND_MONO_CODEC_SAMPLERATE 48000 // 采样率
-#define SURROUND_SOUND_MONO_CODEC_FRAME_LEN 50 // 帧持续时间
 
 // ------------升级配置.json------------
 #define TCFG_UPDATE_ENABLE 1 // 升级选择

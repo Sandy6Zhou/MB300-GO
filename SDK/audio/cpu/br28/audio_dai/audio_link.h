@@ -3,8 +3,9 @@
 
 #include "generic/typedef.h"
 
-#define ALINK_MODULE_NUM_MAX    1//iis模块数量
-#define ALINK_CH_NUM_MAX        4//iis通道数量
+
+
+
 
 #define ALINK_SEL(module, reg)             (((JL_ALNK_TypeDef    *)(((u8 *)JL_ALNK0) + module*0))->reg)
 
@@ -195,9 +196,4 @@ int alink_get_ch_ie(void *hw_channel);
 void alink_set_da2sync_ch(void *hw_alink);
 void audio_alink_lock(u8 module_idx);
 void audio_alink_unlock(u8 module_idx);
-
-#define IIS_CH_NUM  2
-#define ALINK_SR_NUM 11
-extern u32 alink_sr_tab[ALINK_SR_NUM];
-
 #endif

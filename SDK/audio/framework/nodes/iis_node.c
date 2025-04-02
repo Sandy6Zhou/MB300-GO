@@ -9,7 +9,7 @@
 #include "sync/audio_syncts.h"
 #include "circular_buf.h"
 #include "audio_splicing.h"
-#include "media/audio_iis.h"
+#include "audio_dai/audio_iis.h"
 #include "app_config.h"
 #include "gpio.h"
 #include "audio_cvp.h"
@@ -406,7 +406,7 @@ static void iis_handle_frame(struct stream_iport *iport, struct stream_note *not
     if (!hdl->iis_start) {
         return;
     }
-
+    audio_iis_channel_start((void *)&hdl->iis_ch);
 #if MASTER_IIS_DEBUG
     if (hdl->attr.ch_idx == 0) {
         iis_ch_test = hdl->iis_ch.iis;
@@ -426,9 +426,6 @@ static void iis_handle_frame(struct stream_iport *iport, struct stream_note *not
 // flag   0:time  1:points
 static int iis_ioc_get_delay(struct iis_node_hdl *hdl, struct audio_iis_channel *ch)
 {
-    if (!hdl->iis_start) {
-        return 0;
-    }
     int len = audio_iis_data_len(ch);
     if (len == 0) {
         return 0;
@@ -556,7 +553,7 @@ static void iis_ioc_start(struct iis_node_hdl *hdl)
         if (!iis_hdl[hdl->module_idx]) {
             struct alink_param params = {0};
             params.module_idx = hdl->module_idx;
-            params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch, AUDIO_DAC_MAX_SAMPLE_RATE);
+            params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->nch);
             params.sr         = hdl->sample_rate;
             params.bit_width  = hdl->bit_width;
             params.fixed_pns  = const_out_dev_pns_time_ms;
@@ -574,8 +571,6 @@ static void iis_ioc_start(struct iis_node_hdl *hdl)
         audio_iis_check_hw_cfg_status(hdl->module_idx, hdl->attr.ch_idx, ALINK_DIR_TX);
 
     }
-
-    audio_iis_channel_start((void *)&hdl->iis_ch);
 }
 
 static void iis_ioc_stop(struct iis_node_hdl *hdl)
@@ -672,7 +667,7 @@ static int iis_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
         iis_adapter_syncts_ioctl(hdl, (struct audio_syncts_ioc_params *)arg);
         break;
     case NODE_IOC_GET_ODEV_CACHE:
-        return hdl->iis_start ? audio_iis_data_len(&hdl->iis_ch) : 0;
+        return audio_iis_data_len(&hdl->iis_ch);
     case NODE_IOC_SET_PARAM:
         hdl->reference_network = arg;
         break;

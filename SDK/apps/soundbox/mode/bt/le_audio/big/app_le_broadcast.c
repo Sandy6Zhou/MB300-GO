@@ -29,7 +29,7 @@
 #include "spdif_file.h"
 #include "spdif.h"
 #include "soundbox.h"
-#include "mic.h"
+/* #include "mic.h" */
 #include "iis.h"
 #include "pc_spk_player.h"
 #include "bt_slience_detect.h"
@@ -38,11 +38,6 @@
 #include "ble_rcsp_server.h"
 #include "btstack_rcsp_user.h"
 #endif
-
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
-#include "surround_sound.h"
-#endif
-
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
@@ -169,39 +164,6 @@ void app_broadcast_reset_transmitter(void)
 
 /* --------------------------------------------------------------------------*/
 /**
- * @brief 用于外部打开发送端的数据流
- */
-/* ----------------------------------------------------------------------------*/
-bool app_broadcast_open_transmitter(void)
-{
-    u8 i;
-    for (i = 0; i < BIG_MAX_NUMS; i++) {
-        if (app_big_hdl_info[i].big_status == APP_BROADCAST_STATUS_START && get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
-            broadcast_audio_recorder_open(app_big_hdl_info[i].big_hdl);
-            return true;
-        }
-    }
-    return false;
-}
-
-/* --------------------------------------------------------------------------*/
-/**
- * @brief 用于外部关闭发送端的数据流
- */
-/* ----------------------------------------------------------------------------*/
-void app_broadcast_close_transmitter(void)
-{
-    int i = 0;
-    if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
-        for (i = 0; i < BIG_MAX_NUMS; i++) {
-            //固定收发角色关闭广播数据流
-            broadcast_audio_recorder_close(app_big_hdl_info[i].big_hdl);
-        }
-    }
-}
-
-/* --------------------------------------------------------------------------*/
-/**
  * @brief 释放互斥量，用于保护临界区代码，与app_broadcast_mutex_pend成对使用
  *
  * @param mutex:已创建的互斥量指针变量
@@ -295,11 +257,6 @@ static int app_broadcast_conn_status_event_handler(int *msg)
 
     switch (event[0]) {
     case BIG_EVENT_TRANSMITTER_CONNECT:
-        if (!app_broadcast_init_flag) {
-            //防止切模式概率性跑完app_broadcast_uninit后，该事件才响应,导致下面的代码获取不到互斥量
-            g_printf("%s ,broadcast uninit", __FUNCTION__);
-            break;
-        }
         g_printf("BIG_EVENT_TRANSMITTER_CONNECT");
         //由于是异步操作需要加互斥量保护，避免broadcast_close的代码与其同时运行,添加的流程请放在互斥量保护区里面
         app_broadcast_mutex_pend(&mutex, __LINE__);
@@ -559,14 +516,14 @@ static bool is_broadcast_as_transmitter()
 #if (TCFG_BT_BACKGROUND_ENABLE)
     //如果能量检测中则等待能量检测完成再触发做发送的流程，避免重复打开数据流
     u8 addr[6];
-    if (cur_mode->name == APP_MODE_BT && bt_slience_get_detect_addr(addr) && !a2dp_player_runing()) {       //有可能一拖二一台在播放一台在能量检测
+    if (cur_mode->name == APP_MODE_BT && bt_slience_get_detect_addr(addr)) {
         return false;
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE == 1)
     return true;
-#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#elif (LEA_BIG_FIX_ROLE == 2)
     return false;
 #endif
 
@@ -1029,22 +986,10 @@ int app_broadcast_switch(void)
     }
 
     mode = app_get_current_mode();
-
-
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
-    //5.1环绕声特殊广播条件判断
-    //无线环绕声目前只支持IIS、Surround Sound模式下的广播
-    if (mode) {
-        if (surround_sound_broadcast_limit(mode->name) != 0) {
-            ;
-            //不支持打开广播
-            return -EPERM;
-        }
-    }
-#endif
-
     if (mode && (mode->name == APP_MODE_BT) &&
         (bt_get_call_status() != BT_CALL_HANGUP)) {
+
+
         return -EPERM;
     }
 
@@ -1441,7 +1386,6 @@ static void broadcast_pair_rx_event_callback(const PAIR_EVENT event, void *priv)
 
     case PAIR_EVENT_RX_CLOSE_PAIR_MODE_SUCCESS:
         g_printf("PAIR_EVENT_RX_CLOSE_PAIR_MODE_SUCCESS");
-        app_broadcast_open();
         break;
 
     default:
@@ -1475,8 +1419,6 @@ static void broadcast_pair_tx_event_callback(const PAIR_EVENT event, void *priv)
 
     case PAIR_EVENT_TX_CLOSE_PAIR_MODE_SUCCESS:
         g_printf("PAIR_EVENT_TX_CLOSE_PAIR_MODE_SUCCESS");
-        app_broadcast_open();
-
         break;
 
     default:
@@ -1499,9 +1441,7 @@ void app_broadcast_enter_pair(u8 role, u8 mode)
 
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);
 
-    if (mode == 0) {
-        ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &private_connect_access_addr, sizeof(u32));
-    }
+    ret = syscfg_read(VM_WIRELESS_PAIR_CODE0, &private_connect_access_addr, sizeof(u32));
     if (role == BROADCAST_ROLE_UNKNOW) {
         if (is_broadcast_as_transmitter()) {
             broadcast_enter_pair(BROADCAST_ROLE_TRANSMITTER, mode, (void *)&pair_tx_cb, private_connect_access_addr);

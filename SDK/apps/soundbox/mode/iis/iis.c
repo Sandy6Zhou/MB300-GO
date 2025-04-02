@@ -8,15 +8,12 @@
 #include "audio_config.h"
 #include "media/includes.h"
 #include "iis_file.h"
-#include "media/audio_iis.h"
+#include "audio_iis.h"
 #include "iis_player.h"
 #include "iis.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "local_tws.h"
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
-#include "surround_sound.h"
-#endif
 
 #if TCFG_APP_IIS_EN
 
@@ -65,7 +62,6 @@ static int app_iis_init(void)
     ret = local_tws_enter_mode(get_tone_files()->iis_mode, NULL);
 #endif //TCFG_LOCAL_TWS_ENABLE
 
-    //cppcheck-suppress knownConditionTrueFalse
     if (ret != 0) {
         ret = play_tone_file_callback(get_tone_files()->iis_mode, NULL, iis_tone_play_end_callback);
         if (ret) {
@@ -78,9 +74,10 @@ static int app_iis_init(void)
     app_var.pitch_mode = PITCH_0;    //设置变调初始模式
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) ||
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     btstack_init_in_other_mode();
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#if (LEA_BIG_FIX_ROLE==2)
     iis_set_broadcast_local_open_flag(1);
 #endif
 #endif
@@ -126,32 +123,11 @@ struct app_mode *app_enter_iis_mode(int arg)
 
 static int iis_mode_try_enter(int arg)
 {
-#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
-    //如果是环绕声项目，只有发送端才能进入
-#if SURROUND_SOUND_FIX_ROLE_EN
-    //固定角色
-    if (SURROUND_SOUND_ROLE == 0) {
-        return 0;
-    } else {
-        r_printf("err, surround round role:%d, can't enter iis mode\n", SURROUND_SOUND_ROLE);
-        return -1;
-    }
-#else
-    //不固定角色
-    if (get_surround_sound_role() == SURROUND_SOUND_TX) {
-        return 0;
-    } else {
-        r_printf("err, surround round role:%d, can't enter iis mode\n", get_surround_sound_role());
-        return -1;
-    }
-#endif
-#endif
     return 0;
 }
 
 static int iis_mode_try_exit()
 {
-    int ret = 0;
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     app_broadcast_deal(LE_AUDIO_APP_MODE_EXIT);
 
@@ -159,7 +135,6 @@ static int iis_mode_try_exit()
     app_broadcast_close_in_other_mode();
 #endif
 
-    ret = btstack_exit_in_other_mode();
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
@@ -168,9 +143,10 @@ static int iis_mode_try_exit()
 #if (!TCFG_BT_BACKGROUND_ENABLE && !TCFG_KBOX_1T3_MODE_EN)
     app_connected_close_in_other_mode();
 #endif
-    ret = btstack_exit_in_other_mode();
+
 #endif
-    return ret;
+    btstack_exit_in_other_mode();
+    return 0;
 }
 
 static const struct app_mode_ops iis_mode_ops = {

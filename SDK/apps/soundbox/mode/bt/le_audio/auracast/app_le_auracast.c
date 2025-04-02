@@ -467,9 +467,9 @@ static bool is_auracast_as_source()
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE == 1)
     return true;
-#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#elif (LEA_BIG_FIX_ROLE == 2)
     return false;
 #endif
 
@@ -1310,9 +1310,6 @@ static void auracast_source_app_send_callback(uint8_t *buff, uint16_t length)
             putchar('^');
         }
     }
-    if (!rlen) {
-        memset(send_packet->buffer, 0, length);
-    }
 }
 
 static void auracast_source_create(uint8_t *packet, uint16_t length)
@@ -1882,45 +1879,29 @@ static int auracast_sink_media_close()
     return 0;
 }
 
-bool are_all_zeros(uint8_t *array, int length)
-{
-    for (int i = 0; i < length; i++) {
-        if (array[i] != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
 {
     //putchar('o');
     bool plc_flag = 0;
     hci_iso_hdr_t hdr = {0};
     ll_iso_unpack_hdr(packet, &hdr);
-
-    if (size) {
-        if (are_all_zeros(hdr.iso_sdu, hdr.iso_sdu_length)) {
-            /* log_error("SDU empty"); */
-            putchar('m');
-            plc_flag = 1;
-        }
-    }
-
     if ((hdr.pb_flag == 0b10) && (hdr.iso_sdu_length == 0)) {
         if (hdr.packet_status_flag == 0b00) {
             /* log_error("SDU empty"); */
             putchar('m');
+            return;
             plc_flag = 1;
         } else {
             /* log_error("SDU lost"); */
             putchar('s');
+            return;
             plc_flag = 1;
         }
     }
     if (((hdr.pb_flag == 0b10) || (hdr.pb_flag == 0b00)) && (hdr.packet_status_flag == 0b01)) {
         //log_error("SDU invalid, len=%d", hdr.iso_sdu_length);
         putchar('p');
+        return;
         plc_flag = 1;
     }
     for (u8 i = 0; i < app_auracast.bis_num; i++) {
