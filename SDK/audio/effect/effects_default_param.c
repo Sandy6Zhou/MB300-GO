@@ -198,7 +198,7 @@ int get_eff_default_param(int arg)
     }
 #endif
 
-#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
 // virtual surround pro/2to4/2to5 模块节点默认参数配置, virtual surround pro/2to4/2to5节点名需配置成：VSPro,此处默认配置才会生效
     char out[16];
 #if TCFG_EQ_ENABLE
@@ -375,8 +375,39 @@ int get_eff_default_param(int arg)
     }
 #endif
 
+#if TCFG_MULTI_BAND_LIMITER_NODE_ENABLE
+    if (!effect_strcmp(name->name, "MBLimiter*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
+#if TCFG_LIMITER_NODE_ENABLE
+    if (!effect_strcmp(name->name, "Limiter*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
+#if TCFG_VBASS_NODE_ENABLE
+    if (!effect_strcmp(name->name, "VBass*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     if (!effect_strcmp(name->name, "VocalRemovMedia")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
     }
 #endif
 

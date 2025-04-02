@@ -9,10 +9,13 @@
 #include "sdk_config.h"
 #include "app_config.h"
 #include "aec_ref_dac_ch_data.h"
+#include "audio_cvp.h"
 
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
 #include "icsd_adt_app.h"
 #endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+
+#if TCFG_BT_SUPPORT_HFP
 
 struct esco_player {
     u8 bt_addr[6];
@@ -76,6 +79,17 @@ int esco_player_open(u8 *bt_addr)
     jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, TCFG_ESCO_DL_CVSD_SR_USE_16K);
 #endif /*TCFG_ESCO_DL_CVSD_SR_USE_16K*/
 
+#if ((defined TCFG_MULTI_CH_IIS_NODE_ENABLE) && (TCFG_MULTI_CH_IIS_NODE_ENABLE == 1)) || ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))
+#if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE == 48000)
+    //如果涉及iis输出, 将通话的同步节点采样率改为48k, 前提是全局采样率已经设置为48000
+    jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, 3);
+#else
+    //报错，需要客户自己检查把关
+    r_printf("If esco failed, Please check if the call stream is IIS output? and global sample rate is 48000? \n");
+#endif
+#endif
+
+
     jlstream_set_callback(player->stream, player->stream, esco_player_callback);
     jlstream_set_scene(player->stream, STREAM_SCENE_ESCO);
     jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE, NODE_IOC_SET_BTADDR, (int)bt_addr);
@@ -96,6 +110,10 @@ int esco_player_open(u8 *bt_addr)
     memcpy(player->bt_addr, bt_addr, 6);
     g_esco_player = player;
 
+#if (TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && TCFG_IIS_NODE_ENABLE)
+    //获取用的哪个iis模块， 哪个通道
+    audio_cvp_ref_alink_cfg_get(uuid);
+#endif
 
     return 0;
 
@@ -181,5 +199,25 @@ void esco_player_close()
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"esco");
 }
+#else
+bool esco_player_runing()
+{
+    return 0;
+}
+int esco_player_get_btaddr(u8 *btaddr)
+{
+    return 0;
+}
+int esco_player_is_playing(u8 *btaddr)
+{
+    return false;
+}
+int esco_player_open(u8 *bt_addr)
+{
+    return -EFAULT;
+}
+void esco_player_close()
+{
+}
 
-
+#endif

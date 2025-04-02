@@ -9,7 +9,7 @@
 #include "circular_buf.h"
 #include "cvp_node.h"
 #include "app_config.h"
-#include "audio_iis.h"
+#include "media/audio_iis.h"
 
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
@@ -426,7 +426,7 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
     u8 mic_num; //算法需要使用的MIC个数
 
 #if TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (defined TCFG_IIS_NODE_ENABLE)
-    audio_cvp_ref_src_open(hdl->scene, audio_iis_get_sample_rate(iis_hdl[0]), fmt->sample_rate, 2);
+    audio_cvp_ref_src_open(hdl->scene, audio_iis_get_sample_rate(audio_cvp_ref_iis_hdl_get()), fmt->sample_rate, 2);
 #endif
 
     audio_aec_init(&init_param);

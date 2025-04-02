@@ -46,6 +46,7 @@ void spi_resume(hw_spi_dev spi);
 void spi_set_bit_mode(hw_spi_dev spi, enum spi_mode mode);
 int spi_set_baud(hw_spi_dev spi, u32 baud);
 u32 spi_get_baud(hw_spi_dev spi);
+void spi_close(hw_spi_dev spi);
 
 /*******************主机 阻塞接口*********************/
 u8 spi_recv_byte(hw_spi_dev spi, int *err);

@@ -453,7 +453,7 @@ u8 get_le_audio_curr_role() //1:transmitter; 2:recevier
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-#if  (LEA_CIG_TRANS_MODE == 2)
+#if  (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
     return 1;
 #else
     return get_connected_role();

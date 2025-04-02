@@ -22,6 +22,7 @@
 #include "battery_manager.h"
 #include "app_charge.h"
 #include "dual_bank_updata_api.h"
+#include "gpadc.h"
 
 #define LOG_TAG_CONST       APP_CHARGE
 #define LOG_TAG             "[APP_CHARGE]"
@@ -36,6 +37,33 @@
 
 static u8 charge_full_flag = 0;
 
+#if TCFG_RECHARGE_ENABLE
+static int recharge_timer = 0;
+
+static void recharge_check(void *priv)
+{
+    if ((adc_get_voltage(AD_CH_PMU_VBAT) * 4) < TCFG_RECHARGE_VOLTAGE) {
+        sys_timer_del(recharge_timer);
+        recharge_timer = 0;
+        charge_start();
+    }
+}
+
+static void recharge_detect_start(void)
+{
+    if (recharge_timer == 0) {
+        recharge_timer = sys_timer_add(NULL, recharge_check, 10000);
+    }
+}
+
+static void recharge_detect_close(void)
+{
+    if (recharge_timer) {
+        sys_timer_del(recharge_timer);
+        recharge_timer = 0;
+    }
+}
+#endif
 
 u8 get_charge_full_flag(void)
 {
@@ -59,6 +87,9 @@ static void charge_full_deal(void)
 
     charge_full_flag = 1;
     charge_close();
+#if TCFG_RECHARGE_ENABLE
+    recharge_detect_start();
+#endif
 
     for_each_app_charge_handler(handler) {
         handler->handler(CHARGE_EVENT_CHARGE_FULL, 0);
@@ -124,6 +155,9 @@ void ldo5v_keep_deal(void)
     const struct app_charge_handler *handler;
 
     log_info("%s\n", __func__);
+#if TCFG_RECHARGE_ENABLE
+    recharge_detect_close();
+#endif
 
     //插入交换
     batmgr_send_msg(POWER_EVENT_POWER_CHANGE, 0);
@@ -156,7 +190,9 @@ void charge_ldo5v_in_deal(void)
     const struct app_charge_handler *handler;
 
     log_info("%s\n", __FUNCTION__);
-
+#if TCFG_RECHARGE_ENABLE
+    recharge_detect_close();
+#endif
     //插入交换
     batmgr_send_msg(POWER_EVENT_POWER_CHANGE, 0);
 
@@ -214,6 +250,9 @@ void charge_ldo5v_off_deal(void)
     charge_full_flag = 0;
 
     charge_close();
+#if TCFG_RECHARGE_ENABLE
+    recharge_detect_close();
+#endif
 
     batmgr_send_msg(BAT_MSG_CHARGE_LDO5V_OFF, 0);
 

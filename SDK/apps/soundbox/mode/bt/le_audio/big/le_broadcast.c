@@ -25,6 +25,9 @@
 #include "bt_event_func.h"
 #include "audio_config.h"
 #include "le_audio_player.h"
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+#include "surround_sound.h"
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
@@ -83,7 +86,6 @@ struct broadcast_hdl {
     struct list_head entry; /*!< big链表项，用于多big管理 */
     u8 del;
     u8 big_hdl;
-    u16 latch_bis_hdl;
     bis_hdl_info_t bis_hdl_info[BIG_MAX_BIS_NUMS];
     u32 big_sync_delay;
     const char *role_name;
@@ -443,6 +445,30 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
         le_audio_switch_ops->local_audio_close();
     }
 
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    //环绕声项目的广播参数由工具上直接配
+    //1 - 立体声解码器
+    params.fmt.nch = get_dual_big_audio_coding_nch();
+    params.fmt.bit_rate = get_dual_big_audio_coding_bit_rate();
+    params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+    params.fmt.frame_dms = get_dual_big_audio_coding_frame_duration();
+    params.fmt.sdu_period = get_big_sdu_period_us();	//发包间隔
+    params.fmt.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+    params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+    params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
+    //1 - 单声道解码器
+    params.fmt2.nch = get_mono_big_audio_coding_nch();
+    params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+    params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+    params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+    params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+    params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+    params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+    params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
+    //播放延时
+    params.latency = get_big_tx_latency();
+
+#else
     params.fmt.nch = get_big_audio_coding_nch();
     params.fmt.bit_rate = get_big_audio_coding_bit_rate();
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
@@ -452,14 +478,14 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     params.latency = get_big_tx_latency();
+#endif
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     broadcast_hdl->role_name = "big_tx";
     broadcast_hdl->big_hdl = hdl->big_hdl;
     broadcast_hdl->big_sync_delay = hdl->big_sync_delay;
     for (i = 0; i < bis_num; i++) {
-        broadcast_hdl->latch_bis_hdl = hdl->bis_hdl[0];
-        params.conn = broadcast_hdl->latch_bis_hdl;
+        params.conn = hdl->bis_hdl[0];
         broadcast_hdl->bis_hdl_info[i].bis_hdl = hdl->bis_hdl[i];
         //打开广播音频播放
         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
@@ -614,6 +640,59 @@ int broadcast_receiver_connect_deal(void *priv)
         le_audio_switch_ops->local_audio_close();
     }
 
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+#if (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 1) || (SURROUND_SOUND_ROLE == 2))
+    //固定为接收端, 立体声
+    params.fmt.nch = SURROUND_SOUND_DUAL_CODEC_CHANNEL;
+    params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+    params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+    params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+    params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+    params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL;
+#elif (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 3))
+    //固定为接收端, 单声道
+    params.fmt.nch = SURROUND_SOUND_MONO_CODEC_CHANNEL;
+    params.fmt.bit_rate = SURROUND_SOUND_MONO_BIT_RATE;
+    params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+    params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+    params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+    params.fmt.dec_ch_mode = SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL;
+#elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
+    //不固定角色
+    u8 role = get_surround_sound_role();
+    if ((role == SURROUND_SOUND_RX1_DUAL_L) || (role == SURROUND_SOUND_RX2_DUAL_R)) {
+        params.fmt.nch = 2;
+        params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+        params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+        params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+        params.fmt.sdu_period = get_big_sdu_period_us();
+        params.fmt.isoIntervalUs = get_big_sdu_period_us();
+        params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+        if (role == SURROUND_SOUND_RX1_DUAL_L) {
+            params.fmt.dec_ch_mode = 17;
+        } else {
+            //role == SURROUND_SOUND_RX2_DUAL_R
+            params.fmt.dec_ch_mode = 18;
+        }
+    } else if (role == SURROUND_SOUND_RX3_MONO) {
+        params.fmt.nch = 1;
+        params.fmt.bit_rate = SURROUND_SOUND_MONO_BIT_RATE;
+        params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+        params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+        params.fmt.sdu_period = get_big_sdu_period_us();
+        params.fmt.isoIntervalUs = get_big_sdu_period_us();
+        params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+        params.fmt.dec_ch_mode = 37;
+    } else {
+        ASSERT(0, "err!! %s, %d, surround sound role is error:%d\n", __func__, __LINE__, role);
+    }
+
+#endif
+#else	//普通广播
     params.fmt.nch = get_big_audio_coding_nch();
     params.fmt.bit_rate = get_big_audio_coding_bit_rate();
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
@@ -622,6 +701,7 @@ int broadcast_receiver_connect_deal(void *priv)
     params.fmt.isoIntervalUs = get_big_sdu_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
+#endif
 
     for (i = 0; i < bis_num; i++) {
         if (!broadcast_hdl->bis_hdl_info[i].bis_hdl) {
@@ -635,11 +715,7 @@ int broadcast_receiver_connect_deal(void *priv)
     broadcast_hdl->big_hdl = hdl->big_hdl;
     broadcast_hdl->bis_hdl_info[index].bis_hdl = hdl->bis_hdl[0];
 
-    if (!broadcast_hdl->latch_bis_hdl) {
-        broadcast_hdl->latch_bis_hdl = hdl->bis_hdl[0];
-    }
-
-    params.conn = broadcast_hdl->latch_bis_hdl;
+    params.conn = hdl->bis_hdl[0];
     //打开广播音频播放
     if (le_audio_switch_ops && le_audio_switch_ops->rx_le_audio_open) {
         le_audio_switch_ops->rx_le_audio_open(&broadcast_hdl->bis_hdl_info[index].rx_player, &params);
@@ -710,13 +786,6 @@ int broadcast_receiver_disconnect_deal(void *priv)
                 p->bis_hdl_info[index].rx_player.rx_stream = NULL;
             }
 
-            for (i = 0; i < bis_num; i++) {
-                if (p->bis_hdl_info[i].bis_hdl) {
-                    p->latch_bis_hdl = p->bis_hdl_info[i].bis_hdl;
-                    break;
-                }
-            }
-
             spin_unlock(&broadcast_lock);
 
             if (player.le_audio && player.rx_stream) {
@@ -727,7 +796,6 @@ int broadcast_receiver_disconnect_deal(void *priv)
             spin_lock(&broadcast_lock);
 
             if (!bis_connected_num) {
-                p->latch_bis_hdl = 0;
 #if BIS_TIMSTAMP_CONVERT_TO_LOCOAL_TIME
                 memset(&p->ts_convert, 0, sizeof(struct bis_ts_convert_hdl));
 #endif
@@ -1273,7 +1341,7 @@ int broadcast_close(u8 big_hdl)
         clock_free("le_broadcast");
     }
 
-#if (LEA_BIG_FIX_ROLE==2)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
     //如果广播固定是接收端，则可能是mute的情况下关闭广播接收, 关闭广播需要解mute
     u8 mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
     if (mute_mark == 1) {
@@ -1388,6 +1456,7 @@ u8 get_broadcast_connect_status(void)
                     if (p->bis_hdl_info[i].init_ok) {
                         conn_status = 1;
                         spin_unlock(&broadcast_lock);
+                        broadcast_mutex_post(&broadcast_mutex, __LINE__);
                         return  conn_status;
                     }
 
@@ -1397,6 +1466,7 @@ u8 get_broadcast_connect_status(void)
                     if (p->bis_hdl_info[i].init_ok) {
                         conn_status = 1;
                         spin_unlock(&broadcast_lock);
+                        broadcast_mutex_post(&broadcast_mutex, __LINE__);
                         return  conn_status;
                     }
                 }
@@ -1462,6 +1532,62 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
                 }
             }
 
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+            //环绕声项目
+#if (SURROUND_SOUND_FIX_ROLE_EN && SURROUND_SOUND_ROLE == 0)
+            //固定为发送端
+            //双声道
+            params.fmt.nch = SURROUND_SOUND_DUAL_CODEC_CHANNEL;
+            params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+            params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+            params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
+
+            //单声道
+            params.fmt2.nch = get_mono_big_audio_coding_nch();
+            params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+            params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+            params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+            params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+            params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
+
+            params.latency = get_big_tx_latency();
+
+#elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
+            //不固定角色
+            u8 role = get_surround_sound_role();
+            if (role == SURROUND_SOUND_TX) {
+                //双声道
+                params.fmt.nch = 2;
+                params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+                params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+                params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+                params.fmt.sdu_period = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+                params.fmt.dec_ch_mode = 37;
+                //单声道
+                params.fmt2.nch = 1;
+                params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+                params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+                params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+                params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+                params.fmt2.dec_ch_mode = 37;
+                params.latency = get_big_tx_latency();
+            } else {
+                ASSERT(0, "err!! %s, %d, surround sound role is error:%d\n", __func__, __LINE__, role);
+            }
+
+#endif
+#else
+            //普通广播
             params.fmt.nch = get_big_audio_coding_nch();
             params.fmt.bit_rate = get_big_audio_coding_bit_rate();
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
@@ -1471,12 +1597,92 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
             params.latency = get_big_tx_latency();
-            params.conn = p->latch_bis_hdl;
+#endif
 
             //重新打开新的recorder
             for (i = 0; i < bis_num; i++) {
                 if (!p->bis_hdl_info[i].recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
+                        params.conn = p->bis_hdl_info[i].bis_hdl;
+                        recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+                        spin_lock(&broadcast_lock);
+                        p->bis_hdl_info[i].recorder = recorder;
+                        spin_unlock(&broadcast_lock);
+                    }
+                }
+            }
+        }
+    }
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+
+    return 0;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 供外部手动打开recorder模块
+ *
+ * @param big_hdl:recorder模块所对应的big_hdl
+ *
+ * @return 0:success
+ */
+/* ----------------------------------------------------------------------------*/
+int broadcast_audio_recorder_open(u16 big_hdl)
+{
+    u8 i;
+    u8 bis_num = get_bis_num(BROADCAST_ROLE_TRANSMITTER);
+    struct broadcast_hdl *p;
+    void *recorder = 0;
+    struct le_audio_stream_params params = {0};
+
+    if (broadcast_role != BROADCAST_ROLE_TRANSMITTER) {
+        return -EPERM;
+    }
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    list_for_each_entry(p, &broadcast_list_head, entry) {
+        if (p->big_hdl == big_hdl) {
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+            //环绕声项目
+            //1 - 立体声解码器
+            params.fmt.nch = get_dual_big_audio_coding_nch();
+            params.fmt.bit_rate = get_dual_big_audio_coding_bit_rate();
+            params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+            params.fmt.frame_dms = get_dual_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();	//发包间隔
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
+            //1 - 单声道解码器
+            params.fmt2.nch = get_mono_big_audio_coding_nch();
+            params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+            params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+            params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+            params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+            params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
+            //播放延时
+            params.latency = get_big_tx_latency();
+
+#else
+            //普通广播
+            params.fmt.nch = get_big_audio_coding_nch();
+            params.fmt.bit_rate = get_big_audio_coding_bit_rate();
+            params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
+            params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+            params.latency = get_big_tx_latency();
+#endif
+
+            //重新打开新的recorder
+            for (i = 0; i < bis_num; i++) {
+                if (!p->bis_hdl_info[i].recorder) {
+                    if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
+                        params.conn = p->bis_hdl_info[i].bis_hdl;
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
                         spin_lock(&broadcast_lock);
                         p->bis_hdl_info[i].recorder = recorder;
@@ -1657,6 +1863,8 @@ int broadcast_audio_all_open(u16 big_hdl)
         le_audio_switch_ops->local_audio_close();
     }
 
+#if !LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    //普通广播
     params.fmt.nch = get_big_audio_coding_nch();
     params.fmt.bit_rate = get_big_audio_coding_bit_rate();
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
@@ -1666,10 +1874,64 @@ int broadcast_audio_all_open(u16 big_hdl)
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     params.latency = get_big_tx_latency();
+#endif
 
     broadcast_mutex_pend(&broadcast_mutex, __LINE__);
     if (find) {
         if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+            //环绕声项目
+#if (SURROUND_SOUND_FIX_ROLE_EN && SURROUND_SOUND_ROLE == 0)
+            //固定为发送端
+            //双声道
+            params.fmt.nch = SURROUND_SOUND_DUAL_CODEC_CHANNEL;
+            params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+            params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+            params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
+            //单声道
+            params.fmt2.nch = get_mono_big_audio_coding_nch();
+            params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+            params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+            params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+            params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+            params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
+
+            params.latency = get_big_tx_latency();
+#elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
+            //不固定角色
+            u8 role = get_surround_sound_role();
+            if (role == SURROUND_SOUND_TX) {
+                //双声道
+                params.fmt.nch = 2;
+                params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+                params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+                params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+                params.fmt.sdu_period = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+                params.fmt.dec_ch_mode = 37;
+                //单声道
+                params.fmt2.nch = 1;
+                params.fmt2.bit_rate = get_mono_big_audio_coding_bit_rate();
+                params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+                params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
+                params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+                params.fmt2.dec_ch_mode = 37;
+
+                params.latency = get_big_tx_latency();
+            } else {
+                ASSERT(0, "err!! %s, %d, surround sound role is error:%d\n", __func__, __LINE__, role);
+            }
+#endif
+#endif
             for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
                 if (!broadcast_hdl->bis_hdl_info[i].recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
@@ -1682,6 +1944,59 @@ int broadcast_audio_all_open(u16 big_hdl)
                 }
             }
         } else if (broadcast_role == BROADCAST_ROLE_RECEIVER) {
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+            //环绕声项目
+#if (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 1) || (SURROUND_SOUND_ROLE == 2))
+            //固定为接收端, 立体声
+            params.fmt.nch = SURROUND_SOUND_DUAL_CODEC_CHANNEL;
+            params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+            params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+            params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL;
+#elif (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 3))
+            //固定为接收端, 单声道
+            params.fmt.nch = SURROUND_SOUND_MONO_CODEC_CHANNEL;
+            params.fmt.bit_rate = SURROUND_SOUND_MONO_BIT_RATE;
+            params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+            params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+            params.fmt.sdu_period = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+            params.fmt.dec_ch_mode = SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL;
+#elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
+            //不固定角色
+            u8 role = get_surround_sound_role();
+            if ((role == SURROUND_SOUND_RX1_DUAL_L) || (role == SURROUND_SOUND_RX2_DUAL_R)) {
+                params.fmt.nch = 2;
+                params.fmt.bit_rate = SURROUND_SOUND_DUAL_BIT_RATE;
+                params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
+                params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+                params.fmt.sdu_period = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
+                if (role == SURROUND_SOUND_RX1_DUAL_L) {
+                    params.fmt.dec_ch_mode = 17;
+                } else {
+                    params.fmt.dec_ch_mode = 18;
+                }
+            } else if (role == SURROUND_SOUND_RX3_MONO) {
+                params.fmt.nch = 1;
+                params.fmt.bit_rate = SURROUND_SOUND_MONO_BIT_RATE;
+                params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
+                params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+                params.fmt.sdu_period = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
+                params.fmt.dec_ch_mode = 37;
+            } else {
+                ASSERT(0, "err!! %s, %d, surround sound role is error:%d\n", __func__, __LINE__, role);
+            }
+#endif
+#endif
+
             for (i = 0; i < get_bis_num(BROADCAST_ROLE_RECEIVER); i++) {
                 if (!broadcast_hdl->bis_hdl_info[i].bis_hdl) {
                     continue;

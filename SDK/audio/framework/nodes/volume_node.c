@@ -215,6 +215,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     }
     hdl->bypass = vol_cfg->bypass;
     switch (hdl->scene) {
+#if TCFG_TONE_NODE_ENABLE
     case STREAM_SCENE_TONE:
         hdl->state = APP_AUDIO_STATE_WTONE;
 #if TONE_BGM_FADEOUT
@@ -225,6 +226,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         params.fade_step  = TONE_DVOL_FS;
         params.vol_limit  = -1;
         break;
+#endif
+#if TCFG_RING_TONE_NODE_ENABLE
     case STREAM_SCENE_RING:
         hdl->state = APP_AUDIO_STATE_RING;
 #if TONE_BGM_FADEOUT
@@ -235,6 +238,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         params.fade_step  = TONE_DVOL_FS;
         params.vol_limit  = -1;
         break;
+#endif
+#if TCFG_KEY_TONE_NODE_ENABLE
     case STREAM_SCENE_KEY_TONE:
         /*puts("set_tone_volume\n");*/
         hdl->state = APP_AUDIO_STATE_KTONE;
@@ -247,14 +252,17 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         params.fade_step  = TONE_DVOL_FS;
         params.vol_limit  = -1;
         break;
+#endif
     case STREAM_SCENE_A2DP:
     case STREAM_SCENE_LINEIN:
     case STREAM_SCENE_IIS:
+    case STREAM_SCENE_MUTI_CH_IIS:
     case STREAM_SCENE_SPDIF:
     case STREAM_SCENE_PC_SPK:
     case STREAM_SCENE_PC_MIC:
     case STREAM_SCENE_MUSIC:
     case STREAM_SCENE_FM:
+    case STREAM_SCENE_MIC:
     case STREAM_SCENE_MIC_EFFECT:
     case STREAM_SCENE_HEARING_AID:
     case STREAM_SCENE_WIRELESS_MIC:

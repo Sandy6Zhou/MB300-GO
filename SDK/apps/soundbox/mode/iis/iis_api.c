@@ -36,11 +36,11 @@ struct iis_opr {
     s16 volume ;
     u8 onoff;
     u8 audio_state; /*判断iis模式使用模拟音量还是数字音量*/
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==2)
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
     //如果固定为接收端，则会存在的问题：打开广播下从其它模式切进mic模式，关闭广播mic不会自动打开的问题
     u8 iis_broadcast_local_need_open_flag;	//当此flag置1时，需要打开mic
 #endif
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE==1)
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     //固定为发送端
     //暂停中开广播再关闭：暂停。暂停中开广播点击pp后关闭：播放。播歌开广播点击pp后关闭广播：暂停. 该变量为1时表示关闭广播时需要本地音频需要是播放状态
     u8 iis_local_audio_resume_onoff;
@@ -92,7 +92,7 @@ int iis_volume_pp(void)
     int ret = 0;
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-#if (LEA_BIG_FIX_ROLE==2)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
     //固定为接收端, pp按键mute操作
     u8 iis_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
     if (get_broadcast_role() == 2) {
@@ -216,13 +216,13 @@ void iis_key_vol_down(void)
     printf("vol-:%d\n", __this->volume);
 }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) ||
-(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+	(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 //当固定为接收端时，其它模式下开广播切进mic模式，关闭广播后music模式不会自动播放
 void iis_set_broadcast_local_open_flag(u8 en)
 {
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX))
     __this->iis_broadcast_local_need_open_flag = en;
 #endif
 }
@@ -234,7 +234,7 @@ static int get_iis_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX))
     if (get_broadcast_role()) {
         if (__this->iis_local_audio_resume_onoff) {
             return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -243,7 +243,7 @@ static int get_iis_play_status(void)
         }
     }
 #endif
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX))
     if (__this->onoff || __this->iis_broadcast_local_need_open_flag) {
 #else
     if (__this->onoff) {
@@ -271,7 +271,7 @@ static int iis_local_audio_open(void)
 {
     if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开本地播放
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX))
         if (__this->iis_broadcast_local_need_open_flag) {
             __this->iis_broadcast_local_need_open_flag = 0;
         }
@@ -288,16 +288,16 @@ static int iis_local_audio_close(void)
 {
     /* if (get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) { */
     if (iis_player_runing()) {
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX))
         __this->iis_broadcast_local_need_open_flag = 1;
 #endif
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX))
         __this->iis_local_audio_resume_onoff = 1;	//关闭广播需要恢复本地音频播放
 #endif
         //关闭本地播放
         iis_stop();
     } else {
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==1))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX))
         __this->iis_local_audio_resume_onoff = 0;	//关闭广播不用恢复本地音频播放
 #endif
     }
@@ -313,7 +313,13 @@ static void *iis_tx_le_audio_open(void *args)
         //打开广播音频播放
         struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
+
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+        y_printf(">>>>>>>>>>>> call le_audio_muti_ch_iis_recorder_open!\n");
+        err = le_audio_muti_ch_iis_recorder_open((void *)&params->fmt, (void *)&params->fmt2, le_audio, params->latency);
+#else
         err = le_audio_iis_recorder_open((void *)&params->fmt, le_audio, params->latency);
+#endif
         if (err != 0) {
             ASSERT(0, "recorder open fail");
         }
@@ -346,7 +352,12 @@ static int iis_tx_le_audio_close(void *le_audio)
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
 #endif
+
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    le_audio_muti_ch_iis_recorder_close();
+#else
     le_audio_iis_recorder_close();
+#endif
     le_audio_stream_free(le_audio);
 
     app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1);
@@ -400,7 +411,7 @@ static int le_audio_iis_volume_pp(void)
     if (__this->onoff == 0) {
         __this->onoff = 1;
         ret = app_broadcast_deal(LE_AUDIO_MUSIC_START);
-#if (LEA_BIG_FIX_ROLE == 1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         if (__this->iis_local_audio_resume_onoff == 0) {
             __this->iis_local_audio_resume_onoff = 1;
         }
@@ -408,7 +419,7 @@ static int le_audio_iis_volume_pp(void)
     } else {
         __this->onoff = 0;
         ret = app_broadcast_deal(LE_AUDIO_MUSIC_STOP);
-#if (LEA_BIG_FIX_ROLE == 1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         if (__this->iis_local_audio_resume_onoff == 1) {
             __this->iis_local_audio_resume_onoff = 0;
         }

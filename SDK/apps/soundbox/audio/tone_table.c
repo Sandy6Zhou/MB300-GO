@@ -51,6 +51,8 @@ static const struct tone_files chinese_tone_files = {
     .le_broadcast_open  = "tone_zh/big_mode.*",
     .le_broadcast_close = "tone_zh/big_close.*",
     .iis_mode        	= "tone_zh/iis.*",
+    .surround_sound_mode = "tone_zh/surround_sound.*",
+    .mic_mode    		= "tone_zh/mic.*",
 };
 
 static const struct tone_files english_tone_files = {
@@ -94,7 +96,8 @@ static const struct tone_files english_tone_files = {
     .rtc_mode        	= "tone_en/rtc.*",
     .spdif_mode        	= "tone_en/spdif.*",
     .iis_mode        	= "tone_en/iis.*",
-
+    .surround_sound_mode = "tone_en/surround_sound.*",
+    .mic_mode    		= "tone_en/mic.*",
 };
 
 #if TCFG_TONE_EN_ENABLE

@@ -33,7 +33,7 @@ int pc_app_msg_handler(int *msg)
     }
     printf("pc_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE==2) && !TCFG_KBOX_1T3_MODE_EN
+#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
     if (get_broadcast_connect_status() &&
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
@@ -64,7 +64,7 @@ int pc_app_msg_handler(int *msg)
 #if TCFG_USB_SLAVE_HID_ENABLE
     case APP_MSG_MUSIC_PP:
         printf("APP_MSG_MUSIC_PP\n");
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==2)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
         //在pc模式下作为接收端时，控制mute（即播放暂停响应）
         u8 pc_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_broadcast_role() == 0) {
@@ -74,7 +74,7 @@ int pc_app_msg_handler(int *msg)
             pc_volume_mute_mark ^= 1;
             audio_app_mute_en(pc_volume_mute_mark);
         }
-#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE==2)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
         //在pc模式下作为接收端时，控制mute（即播放暂停响应）
         u8 pc_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
         if (get_auracast_role() == 0) {

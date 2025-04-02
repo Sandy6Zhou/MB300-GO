@@ -200,7 +200,8 @@ static inline void cpu_reset(void)
 		(*(volatile int *)&(v)->counter); \
 	 })
 
-static inline void q32DSP_testset(u8 volatile *ptr)
+__attribute__((always_inline))
+static void q32DSP_testset(u8 volatile *ptr)
 {
     asm volatile(
         " 1:            \n\t "
@@ -212,7 +213,8 @@ static inline void q32DSP_testset(u8 volatile *ptr)
     );
 }
 
-static inline void q32DSP_testclr(u8 volatile *ptr)
+__attribute__((always_inline))
+static void q32DSP_testclr(u8 volatile *ptr)
 {
     asm volatile(
         " b[%0] = %1    \n\t "

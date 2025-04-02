@@ -85,24 +85,6 @@ wav_package
 pcm_encoder_plug
 #endif
 
-#if TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
-mulit_ch_iis0_file_plug
-mulit_ch_iis1_file_plug
-#endif
-
-#if TCFG_MULTI_CH_IIS_NODE_ENABLE
-multi_ch_iis0_node_adapter
-multi_ch_iis1_node_adapter
-#endif
-
-
-
-#if TCFG_IIS_NODE_ENABLE
-iis_node_adapter
-iis1_node_adapter
-iis_file_plug
-iis1_file_plug
-#endif
 
 #if TCFG_AUDIO_LINEIN_ENABLE
 linein_file_plug
@@ -331,6 +313,13 @@ jla_encoder_plug
 jla_dec_plug
 #endif
 
+#if TCFG_ENC_JLA_V2_ENABLE && (TCFG_KBOX_1T3_MODE_EN == 0)
+jla_v2_enc_plug
+#endif
+
+#if TCFG_ENC_JLA_V2_ENABLE
+jla_v2_dec_plug
+#endif
 
 #if CONFIG_FATFS_ENABLE
 fat_vfs_ops
@@ -352,21 +341,16 @@ wireless_custom_data_trans
 wireless_key_sync
 le_audio_source_adapter
 capture_sync_adapter
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW)
+#if ((LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW) || (SURROUND_SOUND_DUAL_CODEC_TYPE == AUDIO_CODING_JLA_LW) || (SURROUND_SOUND_MONO_CODEC_TYPE == AUDIO_CODING_JLA_LW))
 #if (TCFG_KBOX_1T3_MODE_EN == 0)
 jla_lw_encoder_plug
 #endif
 jla_lw_dec_plug
-#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
+#elif ((LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL) || (SURROUND_SOUND_DUAL_CODEC_TYPE == AUDIO_CODING_JLA_LL) || (SURROUND_SOUND_MONO_CODEC_TYPE == AUDIO_CODING_JLA_LL))
 #if (TCFG_KBOX_1T3_MODE_EN == 0)
 jla_ll_encoder_plug
 #endif
 jla_ll_dec_plug
-#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
-#if (TCFG_KBOX_1T3_MODE_EN == 0)
-jla_v2_enc_plug
-#endif
-jla_v2_dec_plug
 #endif
 le_audio_file_plug
 #endif
@@ -677,4 +661,6 @@ stereo_spatial_wider_node_adapter
 distortion_clipping_node_adapter
 #endif
 
-
+#if TCFG_FREQUENCY_COMPRESSOR_NODE_ENABLE
+frequency_compressor_node_adapter
+#endif

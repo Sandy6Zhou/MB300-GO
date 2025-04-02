@@ -7,6 +7,8 @@
 #include "le_broadcast.h"
 #include "app_le_broadcast.h"
 #include "app_le_auracast.h"
+#include "fm_api.h"
+#include "dual_conn.h"
 
 #if TCFG_USER_TWS_ENABLE
 void bt_tws_onoff(u8 onoff)
@@ -28,12 +30,29 @@ void bt_tws_onoff(u8 onoff)
 
 int bt_work_mode_select(u8 mode)
 {
+#if TCFG_LE_AUDIO_APP_CONFIG == 0
+    //le_audio不打开的情况下，不响应蓝牙工作模式切换
+    return 0;
+#endif
     //先释放当前模式资源
     r_printf("%s %d %d\n", __func__, mode, g_bt_hdl.work_mode);
     if (mode == g_bt_hdl.work_mode) {
         printf("same work mode  : %d", g_bt_hdl.work_mode);
         return 0;
     }
+
+    if ((mode == BT_MODE_BROADCAST || mode == BT_MODE_AURACAST) && (bt_get_call_status() != BT_CALL_HANGUP)) {
+        printf("le_audio cannot be turned on during the Bluetooth call");
+        return 0;
+    }
+
+#if TCFG_APP_FM_EN
+    if ((mode == BT_MODE_BROADCAST || mode == BT_MODE_AURACAST) && fm_get_scan_flag()) {
+        printf("le_audio cannot be turned on during the FM channel search process ");
+        return 0;
+    }
+#endif
+
     if (mode == 0) {
         mode = BT_MODE_SIGLE_BOX;
     }
@@ -74,16 +93,19 @@ int bt_work_mode_select(u8 mode)
     switch (mode) {
     case BT_MODE_SIGLE_BOX:
         if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            clr_page_mode_active();
             dual_conn_page_device();
         }
         break;
     case BT_MODE_TWS:
 #if TCFG_USER_TWS_ENABLE
+        clr_page_mode_active();
         bt_tws_onoff(1);
 #endif
         break;
     case BT_MODE_BROADCAST:
         if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            clr_page_mode_active();
             dual_conn_page_device();
         }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -94,6 +116,7 @@ int bt_work_mode_select(u8 mode)
         break;
     case BT_MODE_AURACAST:
         if (TCFG_BT_BACKGROUND_ENABLE || app_in_mode(APP_MODE_BT)) {
+            clr_page_mode_active();
             dual_conn_page_device();
         }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
@@ -115,7 +138,20 @@ int bt_work_mode_select(u8 mode)
 void bt_work_mode_switch_to_next(void)
 {
     static u8 work_mode = BT_MODE_SIGLE_BOX;
+
+#if TCFG_LE_AUDIO_APP_CONFIG == 0
+    //le_audio不打开的情况下，不响应蓝牙工作模式切换
+    return;
+#endif
     work_mode ++;
+
+#if (TCFG_BT_BACKGROUND_ENABLE == 0)
+    //非后台不在蓝牙模式不切换到TWS模式
+    if ((app_in_mode(APP_MODE_BT) == 0) && (work_mode == BT_MODE_TWS)) {
+        work_mode ++;
+    }
+#endif
+
 #if TCFG_USER_TWS_ENABLE == 0
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (work_mode == BT_MODE_TWS) {

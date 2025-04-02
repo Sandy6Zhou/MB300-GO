@@ -279,6 +279,12 @@ void fm_manage_mute(u8 mute)
         fm_hdl->mute((void *)fm_dev_info, mute);
     }
 }
+void fm_manage_set_scan_status(u8 status)
+{
+    if (fm_hdl) {
+        fm_hdl->set_scan_status(status);
+    }
+}
 
 #endif
 

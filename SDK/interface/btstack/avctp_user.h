@@ -865,4 +865,6 @@ bool is_have_dongle_dev_conn();
 extern u8 get_inband_ringtone_flag_for_addr(u8 *addr);
 u8 *get_other_dev_addr(u8 *addr);
 extern void make_rand_num(u8 *buf);
+//获取另一个设备的a2dp状态
+extern u8 bt_a2dp_get_status_for_other_addr(bd_addr_t addr);
 #endif

@@ -12,8 +12,9 @@
 #include "effects/audio_vocal_remove.h"
 #include "local_tws_player.h"
 #include "le_audio_player.h"
+#include "effect/scene_update.h"
 
-#define MEDIA_MODULE_NODE_UPDATE_EN  (TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE || TCFG_3D_PLUS_MODULE_NODE_ENABLE | TCFG_VIRTUAL_BASS_PRO_MODULE_NODE_ENABLE)// Media模式添加模块子节点更新
+#define MEDIA_MODULE_NODE_UPDATE_EN  (TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE || TCFG_3D_PLUS_MODULE_NODE_ENABLE | TCFG_VIRTUAL_BASS_PRO_MODULE_NODE_ENABLE)// Media模式添加模块子节点更新
 
 static u8 music_scene = 0; //记录音乐场景序号
 static u8 music_eq_preset_index = 0; //记录 Eq0Media EQ配置序号
@@ -203,6 +204,12 @@ void effect_scene_set(u8 scene)
 
     music_scene = scene;
     syscfg_write(CFG_SCENE_INDEX, &music_scene, 1);
+
+#if defined(TCFG_SCENE_UPDATE_ENABLE) && TCFG_SCENE_UPDATE_ENABLE
+    update_music_pipeline_node_list(scene, 0);
+#else
+
+
     char tar_name[16] = {0};
     int ret = 0;
     u8 cur_mode = get_current_mode_index();
@@ -544,6 +551,7 @@ void effect_scene_set(u8 scene)
     }
 #endif
 
+#endif
 
 }
 
@@ -580,6 +588,11 @@ void mic_effect_scene_set(u8 scene)
         return;
     }
     mic_scene = scene;
+
+#if defined(TCFG_SCENE_UPDATE_ENABLE) && TCFG_SCENE_UPDATE_ENABLE
+    update_mic_pipeline_node_list(scene, 0);
+#else
+
     char tar_name[16];
 
 #if TCFG_NOISEGATE_NODE_ENABLE
@@ -675,6 +688,8 @@ void mic_effect_scene_set(u8 scene)
         effects_name_sprintf(tar_name,  mic_bass_treble_name[i], mic_name);
         bass_treble_update_parm(scene, tar_name, 0);
     }
+#endif
+
 #endif
 }
 

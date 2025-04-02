@@ -75,7 +75,7 @@ extern const int CONFIG_BTCTLER_TWS_ENABLE;
 extern const int CONFIG_DONGLE_SPEAK_ENABLE;
 
 extern void bt_audio_reference_clock_select(void *addr, u8 network);
-extern u32 bt_audio_reference_clock_time(u8 network);
+extern u32 bt_audio_conn_clock_time(void *addr);
 extern int a2dp_get_packet_pcm_frames(struct a2dp_file_hdl *hdl, u8 *data, int len);
 static int a2dp_stream_ts_enable_detect(struct a2dp_file_hdl *hdl, u8 *packet, int *drop);
 static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_frame *frame, u8 *data, int pcm_frames);
@@ -604,6 +604,7 @@ static void a2dp_stream_control_open(struct a2dp_file_hdl *hdl)
 static void a2dp_stream_control_close(struct a2dp_file_hdl *hdl)
 {
     if (hdl->stream_ctrl) {
+        a2dp_stream_control_set_underrun_callback(hdl->stream_ctrl, NULL, NULL);
         a2dp_stream_control_free(hdl->stream_ctrl);
         hdl->stream_ctrl = NULL;
     }
@@ -617,12 +618,12 @@ static u32 a2dp_stream_update_base_time(struct a2dp_file_hdl *hdl)
     if (len > 0) {
         u32 base_clkn = frame.clkn;
         /* if (CONFIG_BTCTLER_TWS_ENABLE && a2dp_low_latency) { */
-        /* base_clkn = bt_audio_reference_clock_time(0); */
+        /* base_clkn = bt_audio_conn_clock_time(hdl->bt_addr); */
         /* } */
         a2dp_media_put_packet(hdl->file, frame.packet);
         u32 base_time =  base_clkn + msecs_to_bt_time((hdl->delay_time < 100 ? 100 : hdl->delay_time));
-        if ((int)(base_time - bt_audio_reference_clock_time(0)) < msecs_to_bt_time(150)) {//启动过程耗时很长，此处为避免时间戳超时，加上150ms
-            base_time = bt_audio_reference_clock_time(0) + msecs_to_bt_time(150);
+        if ((int)(base_time - bt_audio_conn_clock_time(hdl->bt_addr)) < msecs_to_bt_time(150)) {//启动过程耗时很长，此处为避免时间戳超时，加上150ms
+            base_time = bt_audio_conn_clock_time(hdl->bt_addr) + msecs_to_bt_time(150);
         }
         return base_time;
     }
@@ -633,7 +634,7 @@ static u32 a2dp_stream_update_base_time(struct a2dp_file_hdl *hdl)
         distance_time = 100;
     }
     /*printf("distance time : %d, %d, %d\n", hdl->delay_time, a2dp_media_get_remain_play_time(hdl->file, 1), distance_time);*/
-    return bt_audio_reference_clock_time(0) + msecs_to_bt_time(distance_time);
+    return bt_audio_conn_clock_time(hdl->bt_addr) + msecs_to_bt_time(distance_time);
 }
 
 
@@ -651,13 +652,13 @@ void a2dp_ts_handle_create(struct a2dp_file_hdl *hdl)
     }
 
     hdl->base_time = a2dp_stream_update_base_time(hdl);
-    int check_diff = hdl->base_time - bt_audio_reference_clock_time(0);
+    int check_diff = hdl->base_time - bt_audio_conn_clock_time(hdl->bt_addr);
     if (check_diff < 0) {
         printf("a2dp base_time is outdated: %d ms\n", (int)(check_diff * 0.625f));
     } else {
         printf("a2dp features play time: after %d ms\n", (int)(check_diff * 0.625f));
     }
-    printf("a2dp timestamp base time : %d, %d\n", hdl->base_time, bt_audio_reference_clock_time(0));
+    printf("a2dp timestamp base time : %d, %d\n", hdl->base_time, bt_audio_conn_clock_time(hdl->bt_addr));
     hdl->ts_handle = a2dp_audio_timestamp_create(hdl->sample_rate, hdl->base_time, TIMESTAMP_US_DENOMINATOR);
     if (hdl->edr_to_local_time) {
         bt_edr_conn_system_clock_init(hdl->bt_addr, TIMESTAMP_US_DENOMINATOR);
@@ -690,7 +691,7 @@ static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_f
             u32 ts = RB32(data);
             frame->timestamp    = ts + hdl->jl_dongle_latency * 1000 * 32;
             frame->flags        |= (FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_UPDATE_TIMESTAMP);
-            /* printf("ts : %u, %u,  %u\n",ts,frame->timestamp, bt_audio_reference_clock_time(0)); */
+            /* printf("ts : %u, %u,  %u\n",ts,frame->timestamp, bt_audio_conn_clock_time(hdl->bt_addr)); */
             return;
         }
     }
@@ -845,7 +846,7 @@ static void a2dp_release(void *_hdl)
     free(hdl);
 }
 
-
+#if TCFG_BT_SUPPORT_A2DP
 REGISTER_SOURCE_NODE_PLUG(a2dp_file_plug) = {
     .uuid       = NODE_UUID_A2DP_RX,
     .frame_size = 1024,
@@ -854,6 +855,7 @@ REGISTER_SOURCE_NODE_PLUG(a2dp_file_plug) = {
     .ioctl      = a2dp_ioctl,
     .release    = a2dp_release,
 };
+#endif
 
 
 

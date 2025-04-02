@@ -214,6 +214,17 @@ int broadcast_audio_recorder_reset(u16 big_hdl);
 
 /* --------------------------------------------------------------------------*/
 /**
+ * @brief 供外部手动打开recorder模块
+ *
+ * @param big_hdl:recorder模块所对应的big_hdl
+ *
+ * @return 0:success
+ */
+/* ----------------------------------------------------------------------------*/
+int broadcast_audio_recorder_open(u16 big_hdl);
+
+/* --------------------------------------------------------------------------*/
+/**
  * @brief 供外部手动关闭recorder模块
  *
  * @param big_hdl:recorder模块所对应的big_hdl

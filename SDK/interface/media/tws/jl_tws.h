@@ -83,6 +83,7 @@ static inline int jl_tws_coding_type(u8 codec_type)
     u32 coding_type_table[] = {
         AUDIO_CODING_JLA,
         AUDIO_CODING_SBC,
+        AUDIO_CODING_JLA_V2,
     };
 
     return coding_type_table[codec_type];
@@ -96,6 +97,7 @@ static inline int jl_tws_coding_type_id(u32 coding_type)
     u32 coding_type_table[] = {
         AUDIO_CODING_JLA,
         AUDIO_CODING_SBC,
+        AUDIO_CODING_JLA_V2,
     };
     int i = 0;
     for (i = 0; i < sizeof(coding_type_table) / 4; i++) {

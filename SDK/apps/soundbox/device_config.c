@@ -226,9 +226,9 @@ NANDFLASH_DEV_PLATFORM_DATA_BEGIN(nandflash_dev_data) = {
     .start_addr     = 0,
     .size           = 256 * 1024 * 1024,
 #if (TCFG_FLASH_DEV_SPI_HW_NUM == 1)
-    .spi_pdata      = &spi1_p_data,
+    .spi_pdata      = &spix_p_data[1],
 #elif (TCFG_FLASH_DEV_SPI_HW_NUM == 2)
-    .spi_pdata      = &spi2_p_data,
+    .spi_pdata      = &spix_p_data[2],
 #endif
 };
 

@@ -122,6 +122,9 @@
 #define TCFG_WRITE_FILE_NODE_ENABLE 1 // 写文件
 #define TCFG_ZERO_ACTIVE_NODE_ENABLE 0 // Zero Active
 #define EQ_SECTION_MAX 0xc // EQ_SECTION_MAX
+#define TCFG_TONE_NODE_ENABLE	1
+#define TCFG_RING_TONE_NODE_ENABLE	1
+#define TCFG_KEY_TONE_NODE_ENABLE	1
 // ------------流程图宏定义------------
 #endif
 

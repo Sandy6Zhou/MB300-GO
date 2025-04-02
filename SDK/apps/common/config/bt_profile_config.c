@@ -50,10 +50,12 @@ extern service_record_item_t  sdp_record_item_end[];
 const int config_stack_modules = BT_BTSTACK_LE;
 #else /* TCFG_BLE_AUDIO_TEST_EN */
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL==0)&&(TCFG_LE_AUDIO_APP_CONFIG==0)&&TCFG_USER_BLE_ENABLE)
-const int config_stack_modules = (BT_BTSTACK_CLASSIC | BT_BTSTACK_LE_ADV);
+#if ((THIRD_PARTY_PROTOCOLS_SEL && TCFG_USER_BLE_ENABLE) || (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN || TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN))
+const int config_stack_modules = (BT_BTSTACK_CLASSIC | BT_BTSTACK_LE);
+#elif TCFG_USER_BLE_ENABLE
+const int config_stack_modules = BT_BTSTACK_CLASSIC | BT_BTSTACK_LE_ADV;
 #else
-const int config_stack_modules = BT_BTSTACK_CLASSIC | BT_BTSTACK_LE;
+const int config_stack_modules = BT_BTSTACK_CLASSIC;
 #endif
 
 #endif /* TCFG_BLE_AUDIO_TEST_EN */
@@ -143,6 +145,18 @@ SDP_RECORD_HANDLER_REGISTER(map_sdp_record_item) = {
     .service_record_handle = 0x00010009,
 };
 #endif
+
+#if (defined TCFG_BT_SUPPORT_PAN && (TCFG_BT_SUPPORT_PAN==1))
+extern const u8 sdp_pan_service_data[200];
+u8 pan_profile_support = 1;
+const int IPV4_ADDR_CONFLICT_DETECT = 0;
+const int  ntp_get_time_init = 0;
+SDP_RECORD_HANDLER_REGISTER(pan_sdp_record_item) = {
+    .service_record = (u8 *)sdp_pan_service_data,
+    .service_record_handle =  0x0001000E,
+};
+#endif
+
 /*注意hid_conn_depend_on_dev_company置1之后，安卓手机会默认断开HID连接 */
 /*注意hid_conn_depend_on_dev_company置2之后，默认不断开HID连接 */
 const u8 hid_conn_depend_on_dev_company = 1;

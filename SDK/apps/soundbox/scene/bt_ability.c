@@ -1151,22 +1151,24 @@ static int btstack_a2dp_esco_preempted_msg_handler(int *msg)
         match_event = event->event;
     }
 
+    u8 *other_addr = btstack_get_device_mac_addr(device);
+
     switch (match_event) {
     case BT_STATUS_PHONE_INCOME:
     case BT_STATUS_PHONE_OUT:
     case BT_STATUS_PHONE_ACTIVE:
     case BT_STATUS_SIRI_OPEN:
         //设备A来电、去电、接通电话、SIRI打开且设备B播放媒体音频时断开设备B的A2DP链路并设置音频被抢占标志
-        if (is_state_a2dp_start(device, NULL)) {
-            bt_action_set_preempted_flag(device, btstack_get_device_mac_addr(device));
-            bt_action_a2dp_detach(device, btstack_get_device_mac_addr(device));
+        if (is_state_a2dp_start(device, NULL) || bt_a2dp_get_status_for_other_addr(event->args) == BT_MUSIC_STATUS_STARTING) {
+            bt_action_set_preempted_flag(device, other_addr);
+            bt_action_a2dp_detach(device, other_addr);
         }
         break;
     case BT_STATUS_PHONE_HANGUP:
     case BT_STATUS_SIRI_CLOSE:
         //设备A挂断电话、关闭SIRI，设备B回连A2DP链路
         if (is_state_a2dp_disconnected(device, NULL)) {
-            bt_action_a2dp_reconn(device, btstack_get_device_mac_addr(device));
+            bt_action_a2dp_reconn(device, other_addr);
         }
         //设备A挂断电话且设备B非通话状态，设备A回连A2DP
         if (is_not_state_phone(device, NULL)) {

@@ -13,6 +13,7 @@
 #include "app_config.h"
 #include "app_tone.h"
 
+#if TCFG_TONE_NODE_ENABLE
 
 extern const struct decoder_plug_ops decoder_plug_begin[];
 extern const struct decoder_plug_ops decoder_plug_end[];
@@ -175,7 +176,7 @@ static int tone_file_read(void *p_file, u8 *buf, int len)
         if ((len -= rlen) == 0) {
             break;
         }
-        if (player->scene == STREAM_SCENE_RING) {
+        if (player->scene == STREAM_SCENE_RING && player->coding_type != AUDIO_CODING_MTY) {
             if (player->coding_type == AUDIO_CODING_WTGV2) {
                 //WTS拼接提示音时，去掉头1byte
                 resfile_seek(player->file, 1, RESFILE_SEEK_SET);
@@ -755,5 +756,18 @@ void multifile_play_demo(void)
 }
 
 __initcall(__tone_player_init);
+#else
+int play_tone_file_callback(const char *file_name, void *priv, tone_player_cb_t callback)
+{
+    return 0;
+}
+int play_tone_file(const char *file_name)
+{
+    return 0;
+}
+void tone_player_stop()
+{
 
+}
+#endif
 

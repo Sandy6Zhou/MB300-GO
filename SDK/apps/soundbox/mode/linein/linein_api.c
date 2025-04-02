@@ -69,7 +69,7 @@ struct linein_opr {
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     u8 onoff_as_broadcast_receive;	//在接收模式下记录的linein状态
     u8 last_run_local_audio_close;	//上一次是否有跑 local_audio_close 函数
-#if (LEA_BIG_FIX_ROLE==1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     //固定为发送端
     //暂停中开广播再关闭：暂停。暂停中开广播点击pp后关闭：播放。播歌开广播点击pp后关闭广播：暂停. 该变量为1时表示关闭广播时需要本地音频需要是播放状态
     u8 linein_local_audio_resume_onoff;
@@ -155,6 +155,7 @@ void linein_stop(void)
 
 int linein_volume_pp(void)
 {
+    //cppcheck-suppress knownConditionTrueFalse
     int ret = 0;
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -194,6 +195,7 @@ int linein_volume_pp(void)
     }
 #endif
 
+    //cppcheck-suppress knownConditionTrueFalse
     if (ret <= 0) {
         if (__this->onoff) {
             linein_stop();
@@ -244,7 +246,12 @@ void linein_tone_play(u8 index, u8 preemption)
 void linein_key_vol_up()
 {
     s16 vol;
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+    //27环绕声
+    if (__this->volume < app_audio_volume_max_query(Vol_VIRTUAL_SURROUND)) {
+#else
     if (__this->volume < app_audio_volume_max_query(AppVol_LINEIN)) {
+#endif
         __this->volume ++;
         linein_volume_set(__this->volume);
     } else {
@@ -319,7 +326,7 @@ static int get_linein_play_status(void)
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
-#if (LEA_BIG_FIX_ROLE == 1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     if (get_le_audio_curr_role()) {
         if (__this->last_run_local_audio_close) {
             __this->last_run_local_audio_close = 0;
@@ -331,7 +338,7 @@ static int get_linein_play_status(void)
             }
         }
     }
-#elif (LEA_BIG_FIX_ROLE == 2)
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
     //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
     if (get_le_audio_curr_role()) {
         if (__this->last_run_local_audio_close) {
@@ -388,7 +395,7 @@ static int linein_local_audio_close(void)
         __this->last_run_local_audio_close = 1;
         return 0;
     }
-#if (LEA_BIG_FIX_ROLE==1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     //固定为发送端
     if (get_broadcast_role()) {
         if (linein_player_runing()) {
@@ -415,7 +422,7 @@ static int linein_local_audio_close(void)
         __this->last_run_local_audio_close = 1;
         return 0;
     }
-#if (LEA_BIG_FIX_ROLE==1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     //固定为发送端
     if (get_auracast_role()) {
         if (linein_player_runing()) {
@@ -543,7 +550,7 @@ static int le_audio_linein_volume_pp(void)
     if (__this->onoff == 0) {
         __this->onoff = 1;
         ret = le_audio_scene_deal(LE_AUDIO_MUSIC_START);
-#if (LEA_BIG_FIX_ROLE==1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         //固定为发送端，播歌中开广播点击pp键关广播(广播下最终的状态为暂停状态)，本地音频为暂停状态
         if (__this->linein_local_audio_resume_onoff == 0) {
             __this->linein_local_audio_resume_onoff = 1;
@@ -552,7 +559,7 @@ static int le_audio_linein_volume_pp(void)
     } else {
         __this->onoff = 0;
         ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
-#if (LEA_BIG_FIX_ROLE==1)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         //固定为发送端，播歌中开广播点击pp键关广播(广播下最终的状态为暂停状态)，本地音频为暂停状态
         if (__this->linein_local_audio_resume_onoff) {
             __this->linein_local_audio_resume_onoff = 0;

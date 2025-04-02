@@ -160,6 +160,14 @@ void audio_cvp_ref_src_close();
 /*对齐iis的数据延时，在第一次mic数据来时调用对齐*/
 void audio_cvp_ref_data_align();
 int audio_cvp_ref_data_align_reset(void);
+/*设置是用哪个iis 模块*/
+void audio_cvp_ref_alink_module_idx_set(u8 idx);
+/*设置是用iis的哪个ch*/
+void audio_cvp_ref_alink_ch_idx_set(u8 idx);
+/*获取iis_hdl*/
+void *audio_cvp_ref_iis_hdl_get();
+/*获取是用iis的哪个模块，哪个ch*/
+int audio_cvp_ref_alink_cfg_get(u16 pipeline);
 
 void audio_cvp_ref_start(u8 en);
 void audio_cvp_set_output_way(u8 en);

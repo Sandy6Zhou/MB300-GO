@@ -85,7 +85,11 @@ struct pc_spk_fmt_t pc_spk_fmt = {
     .bit = SPK_AUDIO_RES,
     .sample_rate = SPK_AUDIO_RATE,
 };
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#define SPK_PUSH_FRAME_NUM 8 //SPK一次push的帧数，单位：uac rx中断间隔
+#else
 #define SPK_PUSH_FRAME_NUM 5 //SPK一次push的帧数，单位：uac rx中断间隔
+#endif
 
 static DEFINE_SPINLOCK(pc_spk_lock);
 

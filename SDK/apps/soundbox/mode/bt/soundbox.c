@@ -75,7 +75,13 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+#if TCFG_LE_AUDIO_APP_CONFIG
 struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
+#elif TCFG_USER_BLE_ENABLE      //不开广播且打开TWS的情况下开机默认为TWS模式
+struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_TWS};
+#else
+struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
+#endif
 
 #if TCFG_APP_BT_EN
 
@@ -887,6 +893,11 @@ int bt_mode_try_exit()
 {
     putchar('k');
 
+    if (g_bt_hdl.init_ok == 0 && g_bt_hdl.wait_exit == 0) {
+        //如果没有确保蓝牙协议栈初始化完就退出,会导致状态混乱
+        return -EBUSY;
+    }
+
     if (g_bt_hdl.wait_exit) {
         //等待蓝牙断开或者音频资源释放或者电话资源释放
         if (!g_bt_hdl.exiting) {
@@ -1070,7 +1081,7 @@ void btstack_init_for_app(void)
     }
 }
 
-void btstack_exit_for_app(void)
+int btstack_exit_for_app(void)
 {
     if (g_bt_hdl.init_ok) {
 #if TCFG_USER_TWS_ENABLE
@@ -1086,7 +1097,10 @@ void btstack_exit_for_app(void)
         bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
         btstack_exit();
         g_bt_hdl.init_ok = 0;
+    } else if (g_bt_hdl.initializing) {
+        return -EBUSY;
     }
+    return 0;
 }
 
 void btstack_init_in_other_mode(void)
@@ -1096,11 +1110,13 @@ void btstack_init_in_other_mode(void)
 #endif
 }
 
-void btstack_exit_in_other_mode(void)
+int btstack_exit_in_other_mode(void)
 {
 #if (TCFG_BT_BACKGROUND_ENABLE == 0)
-    btstack_exit_for_app();
+    return btstack_exit_for_app();
 #endif
+    return 0;
 }
+
 
 

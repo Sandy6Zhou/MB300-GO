@@ -27,6 +27,7 @@ const int config_ch_adapter_32bit_enable = 1;
 const int config_mixer_32bit_enable = 1;
 const int config_jlstream_fade_32bit_enable = 1;
 const int config_audio_eq_xfade_enable = 1;
+const int config_audio_vocal_track_synthesis_32bit_enable = 1;
 
 #if (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_MONO_L)
 const int config_audio_dac_channel_left_enable = 1;
@@ -55,6 +56,11 @@ const int config_audio_dac_dma_buf_realloc_enable = 1;
 const int config_audio_gain_enable = TCFG_GAIN_NODE_ENABLE;
 const int config_audio_split_gain_enable = TCFG_SPLIT_GAIN_NODE_ENABLE;
 const int config_audio_stereomix_enable = TCFG_STEROMIX_NODE_ENABLE;
+#ifdef TCFG_AUDIO_SIDETONE_ENABLE
+const int config_audio_cvp_ref_ch_recognize_enable = TCFG_AUDIO_SIDETONE_ENABLE;
+#else
+const int config_audio_cvp_ref_ch_recognize_enable = 0;
+#endif
 /*
  *******************************************************************
  *						Audio Codec Config
@@ -73,6 +79,8 @@ const int const_audio_codec_wma_dec_supoort_POS_play = 1; //是否支持指定�
 /////////////////////wav codec/////////////////
 const int const_audio_codec_wav_dec_bitDepth_set_en = 0;
 
+/////////////////////mty codec/////////////////
+const int config_mty_repeat_enable = 1; //mty 支持循环播放
 /*
  *******************************************************************
  *						Audio SYNCTS Config
@@ -90,7 +98,7 @@ const float FRAME_DURATION_THREAD = 1.5f;	//范围1.5f~2,采样率和时间戳�
 const int config_out_dev_limiter_enable = 0;
 
 const float config_bandmerge_node_fade_step = 0.0f;//淡入步进 0:默认不淡入 非0：淡入步进，范围：0.01f~10.0f，建议值0.1f,步进越大，更新越快
-const int config_bandmerge_node_processing_method = 0;//0：bandmerge 拿到所有iport的数据后，一次性叠加完成。 1：逐个叠加到目标地址，不做等待
+const int config_bandmerge_node_processing_method = 1;//0：bandmerge 拿到所有iport的数据后，一次性叠加完成。 1：逐个叠加到目标地址，不做等待
 
 
 /*控制 eq_design.c中的butterworth 函数 设计的系数是定点还是浮点 */
@@ -278,6 +286,12 @@ const int iir_filter_run_mode = 0  //不支持32进16出
 #endif
                                 ;
 
+#ifdef TCFG_AUDIO_EFX_BFE4_RUN_MODE
+const int frequency_compressor_run_mode  = TCFG_AUDIO_EFX_BFE4_RUN_MODE; //只支持16进16出与32进32出
+#else
+const int frequency_compressor_run_mode  = EFx_BW_16t32 | EFx_BW_32t32;
+#endif
+
 /*变声模式使能*/
 const int voicechanger_effect_v_config = (0
         | BIT(EFFECT_VOICECHANGE_PITCHSHIFT)
@@ -314,6 +328,11 @@ const u8 const_mic_capless_open_delay_debug = 0;
 const u8 const_mic_capless_trim_delay_debug = 0;
 
 
+const char log_tag_const_v_ALINK  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_c_ALINK  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_ALINK  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_d_ALINK  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_e_ALINK  = CONFIG_DEBUG_LIB(TRUE);
 
 __attribute__((weak))
 int get_system_stream_bit_width(void *par)

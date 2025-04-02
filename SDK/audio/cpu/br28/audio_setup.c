@@ -132,24 +132,23 @@ void audio_dac_initcall(void)
     audio_dac_init(&dac_hdl, &dac_data);
     /* dac_hdl.ng_threshold = 4; //dac底噪优化阈值 */
 
-#if defined(TCFG_AUDIO_DAC_24BIT_MODE) && TCFG_AUDIO_DAC_24BIT_MODE
-    audio_dac_set_bit_mode(&dac_hdl, 1);
-#endif
-
     audio_dac_set_analog_vol(&dac_hdl, 0);
 
     request_irq(IRQ_AUDIO_IDX, 2, audio_irq_handler, 0);
+#if AUD_DAC_TRIM_ENABLE
     struct audio_dac_trim dac_trim = {0};
     int len = syscfg_read(CFG_DAC_TRIM_INFO, (void *)&dac_trim, sizeof(dac_trim));
     if (len != sizeof(dac_trim)) {
         audio_dac_do_trim(&dac_hdl, &dac_trim, 0);
         syscfg_write(CFG_DAC_TRIM_INFO, (void *)&dac_trim, sizeof(dac_trim));
     }
+    audio_dac_set_trim_value(&dac_hdl, &dac_trim);
+#endif
+
 #if TCFG_SUPPORT_MIC_CAPLESS
     audio_dac_set_capless_DTB(&dac_hdl, read_capless_DTB());
     mic_capless_trim_run();
 #endif
-    audio_dac_set_trim_value(&dac_hdl, &dac_trim);
     audio_dac_set_fade_handler(&dac_hdl, NULL, audio_fade_in_fade_out);
 
     /*硬件SRC模块滤波器buffer设置，可根据最大使用数量设置整体buffer*/
@@ -490,20 +489,22 @@ void dac_power_off(void)
 #define abs(x) ((x)>0?(x):-(x))
 int audio_dac_trim_value_check(struct audio_dac_trim *dac_trim)
 {
-    printf("audio_dac_trim_value_check %d %d\n", dac_trim->left, dac_trim->right);
     s16 reference = 0;
-    if (TCFG_AUDIO_DAC_CONNECT_MODE != DAC_OUTPUT_MONO_R) {
-        if (abs(dac_trim->left - reference) > TRIM_VALUE_LR_ERR_MAX) {
-            printf("dac trim channel l err\n");
-            return -1;
-        }
+
+    printf("audio_dac_trim_value_check %d %d\n", dac_trim->left, dac_trim->right);
+#if TCFG_AUDIO_DAC_CONNECT_MODE != DAC_OUTPUT_MONO_R
+    if (abs(dac_trim->left - reference) > TRIM_VALUE_LR_ERR_MAX) {
+        printf("dac trim channel l err\n");
+        return -1;
     }
-    if (TCFG_AUDIO_DAC_CONNECT_MODE != DAC_OUTPUT_MONO_L) {
-        if (abs(dac_trim->right - reference) > TRIM_VALUE_LR_ERR_MAX) {
-            printf("dac trim channel r err\n");
-            return -1;
-        }
+#endif
+
+#if TCFG_AUDIO_DAC_CONNECT_MODE != DAC_OUTPUT_MONO_L
+    if (abs(dac_trim->right - reference) > TRIM_VALUE_LR_ERR_MAX) {
+        printf("dac trim channel r err\n");
+        return -1;
     }
+#endif
 
     return 0;
 }

@@ -3,7 +3,8 @@
 
 #include "printf.h"
 #include "cpu.h"
-#if defined CONFIG_CPU_BR50 || defined CONFIG_CPU_BR29
+#if defined CONFIG_CPU_BR50 || defined CONFIG_CPU_BR29 || defined CONFIG_CPU_BR56 || defined CONFIG_CPU_BR52
+
 #include "iic_hw_v2.h"
 #else
 #include "iic_hw_v1.h"
@@ -41,6 +42,7 @@ typedef struct {
     u8(*set_fre)(void *priv, u16 fre);
     u8(*mute)(void *priv, u8 flag);
     u8(*read_id)(void *priv);
+    u8(*set_scan_status)(u8 status);
     u8 logo[20];
 } FM_INTERFACE;
 
@@ -83,6 +85,7 @@ bool fm_manage_set_fre(u16 fre);
 u16  fm_manage_get_fre();
 void fm_manage_close(void);
 void fm_manage_mute(u8 mute);
+void fm_manage_set_scan_status(u8 status);
 int fm_dev_init(void *_data);
 
 void fm_mutex_init(void *priv);

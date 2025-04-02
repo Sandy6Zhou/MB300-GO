@@ -13,7 +13,11 @@
 // } __attribute__((packed));
 
 #define FM_ADC_BUF_NUM        2		//linein_adc采样buf个数
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#define FM_ADC_IRQ_POINTS     354	//linein adc 中断点数
+#else
 #define FM_ADC_IRQ_POINTS     256	//linein adc 中断点数
+#endif
 #define FM_ADC_SAMPLE_RATE    44100	//linein adc 采样率
 
 struct fm_outside_file_cfg {

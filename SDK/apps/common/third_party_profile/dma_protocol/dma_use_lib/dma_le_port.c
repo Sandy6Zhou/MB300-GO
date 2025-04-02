@@ -766,7 +766,7 @@ static void dma_bt_ble_adv_enable(u8 enable)
     set_adv_enable(0, enable);
 }
 
-static void dma_ble_module_enable(u8 en)
+void dma_ble_module_enable(u8 en)
 {
     log_info("mode_en:%d\n", en);
     u16 con_handle = app_ble_get_hdl_con_handle(dma_app_ble_hdl);
