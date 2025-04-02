@@ -332,7 +332,7 @@ int le_audio_sync_tws_event_handler(int *msg)
     switch (evt->event) {
     case TWS_EVENT_CONNECTED:
 #if (TCFG_KBOX_1T3_MODE_EN)
-#if 0
+#if 1
         le_audio_tws_sync_mic_status();
 #else
         app_send_message(APP_MSG_WIRELESS_MIC_CLOSE, 0);
