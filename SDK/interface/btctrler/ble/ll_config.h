@@ -238,15 +238,16 @@ extern const int config_bb_optimized_ctrl;
 #define LE_BB_OPT_FEAT_PKT_V3_PLUS_EN   BIT(23)
 #define LE_BB_OPT_FEAT_RX_HMPR_EN   	BIT(24)
 #define LE_BB_OPT_FEAT_DUAL_BD_SWITCH   BIT(25)
+#define LE_BB_OPT_FEAT_SC_ULL           BIT(26)
 
-#define LE_ADV_RSSI_AFH_EN()	(config_bb_optimized_ctrl & BIT(6))
-#define LE_ADV_PER_AFH_EN()		(config_bb_optimized_ctrl & BIT(10))
-#define LE_ADV_PWR_CTRL_EN()	(config_bb_optimized_ctrl & BIT(7))
-#define LE_BIS_RX_PRE_CLOSE()	(config_bb_optimized_ctrl & BIT(8))
-#define LE_VENDOR_API_EN()      (config_bb_optimized_ctrl & BIT(31))
+#define LE_ADV_RSSI_AFH_EN()	        (config_bb_optimized_ctrl & BIT(6))
+#define LE_ADV_PER_AFH_EN()		        (config_bb_optimized_ctrl & BIT(10))
+#define LE_ADV_PWR_CTRL_EN()	        (config_bb_optimized_ctrl & BIT(7))
+#define LE_BIS_RX_PRE_CLOSE()	        (config_bb_optimized_ctrl & BIT(8))
+#define LE_VENDOR_API_EN()              (config_bb_optimized_ctrl & BIT(31))
 #define LE_SUPPORT_V3_PLUS_EN()			(config_bb_optimized_ctrl & BIT(23))
 #define LE_SUPPORT_RX_HMPR_EN()			(config_bb_optimized_ctrl & BIT(24))
-
+#define LE_IS_SUPPORT_SC_ULL()			(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_SC_ULL)
 
 struct le_adv_link_param_cfg {
     u8 param1;

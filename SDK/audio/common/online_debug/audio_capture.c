@@ -920,8 +920,10 @@ static int audio_ns_open(u16 sr)
 {
     printf("audio_ns_open:%d\n", sr);
 
+#ifndef CONFIG_CODE_MOVABLE_ENABLE
     extern u32 aec_addr[], aec_begin[], aec_size[];
     memcpy(aec_addr, aec_begin, (u32)aec_size) ;
+#endif
 
     audio_ns = zalloc(sizeof(audio_ns_t));
     //audio_ns->bypass = 1;

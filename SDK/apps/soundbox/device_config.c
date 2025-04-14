@@ -16,6 +16,8 @@
 #include "ui_manage.h"
 #include "iic_api.h"
 #include "hdmi_cec_api.h"
+#include "norflash.h"
+
 
 #if TCFG_SD0_ENABLE
 SD0_PLATFORM_DATA_BEGIN(sd0_data) = {
@@ -235,6 +237,20 @@ NANDFLASH_DEV_PLATFORM_DATA_BEGIN(nandflash_dev_data) = {
 
 #endif
 
+#if defined(TCFG_NORFLASH_DEV_ENABLE) && TCFG_NORFLASH_DEV_ENABLE
+NORFLASH_DEV_PLATFORM_DATA_BEGIN(norflash_fat_dev_data)
+.spi_hw_num     = TCFG_FLASH_DEV_SPI_HW_NUM,
+ .spi_cs_port    = TCFG_FLASH_DEV_SPI_CS_PORT,
+  .spi_read_width = TCFG_FLASH_DEV_FLASH_READ_WIDTH,//flash读数据的线宽
+#if (TCFG_FLASH_DEV_SPI_HW_NUM == 1)
+   .spi_pdata      = &spix_p_data[1],
+#elif (TCFG_FLASH_DEV_SPI_HW_NUM == 2)
+   .spi_pdata      = &spix_p_data[2],
+#endif
+    .start_addr     = 0,
+     .size           = 1 * 1024 * 1024,
+      NORFLASH_DEV_PLATFORM_DATA_END()
+#endif
 
 
 REGISTER_DEVICES(device_table) = {
@@ -260,6 +276,9 @@ REGISTER_DEVICES(device_table) = {
 #if TCFG_NANDFLASH_DEV_ENABLE
     {"nand_flash",   &nandflash_dev_ops, (void *) &nandflash_dev_data},
     {"nandflash_ftl",   &ftl_dev_ops, NULL },
+#endif
+#if defined(TCFG_NORFLASH_DEV_ENABLE) && TCFG_NORFLASH_DEV_ENABLE
+    {"fat_nor", &norflash_dev_ops, (void *) &norflash_fat_dev_data},
 #endif
 
 };

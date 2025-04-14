@@ -28,6 +28,7 @@
 #include "update_loader_download.h"
 #include "app_version.h"
 #include "fs/sdfile.h"
+#include "bt_event_func.h"
 
 #define LOG_TAG_CONST       APP_TESTBOX
 #define LOG_TAG             "[APP_TESTBOX]"
@@ -94,6 +95,7 @@ static struct testbox_info info = {
 extern const int config_btctler_eir_version_info_len;
 extern u8 get_jl_chip_id(void);
 extern u8 get_jl_chip_id2(void);
+extern void set_temp_link_key(u8 *linkkey);
 static u8 ex_enter_dut_flag = 0;
 static u8 ex_enter_storage_mode_flag = 0;//1 仓储模式, 0 普通模式
 static u8 local_packet[36];
@@ -186,6 +188,7 @@ void testbox_event_to_user(u8 *packet, u8 event, u8 size)
 static void app_testbox_sub_event_handle(u8 *data, u16 size)
 {
     u8 mac = 0;
+#if TCFG_APP_BT_EN
     switch (data[0]) {
     case CMD_BOX_FAST_CONN:
     case CMD_BOX_ENTER_DUT:
@@ -211,6 +214,7 @@ static void app_testbox_sub_event_handle(u8 *data, u16 size)
         }
         break;
     }
+#endif
 }
 
 extern u8 app_testbox_enter_loader_update(void);
@@ -221,9 +225,11 @@ static void app_testbox_update_event_handle(void)
     if (get_vm_ram_storage_enable() || get_vm_ram_storage_in_irq_enable()) {
         vm_flush2flash(1);
     }
+#if 0
     if (app_testbox_enter_loader_update()) {
         return;
     }
+#endif
     /* 打一个uartkey给maskrom识别 */
     chargestore_set_update_ram();
     /* reset之后在maskrom收loader，然后执行 */

@@ -292,19 +292,31 @@ int spdif_app_msg_handler(int *msg)
 
     return 0;
 }
+
+void spdif_local_start(void *priv)
+{
+    app_send_message(APP_MSG_SPDIF_START, 0);
+}
+
 static int app_spdif_init()
 {
+    int ret = -1;
     puts("\nspdif start\n");
     app_spdif_hd.mute_mark = 0;
     app_spdif_hd.spdif_hdl = NULL;
     spdif_idle_flag = 0;
+#if TCFG_LOCAL_TWS_ENABLE
+    ret = local_tws_enter_mode(get_tone_files()->spdif_mode, NULL);
+#endif //TCFG_LOCAL_TWS_ENABLE
     //开启ui
     /* UI_SHOW_WINDOW(ID_WINDOW_TV);//打开ui主页 */
     /* UI_SHOW_MENU(MENU_TV, 0, 0, NULL); */
-    tone_player_stop();
-    int ret = play_tone_file_callback(get_tone_files()->spdif_mode, NULL, spdif_tone_play_end_callback);
-    if (ret) {
-        spdif_tone_play_end_callback(NULL, STREAM_EVENT_NONE); // 提示音播放失败就直接调用 linein start
+    if (ret != 0) {
+        tone_player_stop();
+        ret = play_tone_file_callback(get_tone_files()->spdif_mode, NULL, spdif_tone_play_end_callback);
+        if (ret) {
+            spdif_tone_play_end_callback(NULL, STREAM_EVENT_NONE); // 提示音播放失败就直接调用 linein start
+        }
     }
 #if TCFG_PITCH_SPEED_NODE_ENABLE
     app_var.pitch_mode = PITCH_0;
@@ -326,6 +338,9 @@ static int app_spdif_init()
 
 void app_spdif_exit()
 {
+#if TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
     if (app_spdif_hd.spdif_hdl && app_spdif_hd.p_spdif_cfg->hdmi_det_mode == HDMI_DET_UNUSED \
         && (uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff)) {
         hdmi_cec_close();
@@ -433,6 +448,11 @@ REGISTER_APP_MODE(spdif_mode) = {
     .ops 	= &spdif_mode_ops,
 };
 
+REGISTER_LOCAL_TWS_OPS(spdif) = {
+    .name 	= APP_MODE_SPDIF,
+    .local_audio_open = spdif_local_start,
+    .get_play_status = spdif_player_runing,
+};
 
 static u8 spdif_idle_query(void)
 {

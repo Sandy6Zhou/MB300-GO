@@ -507,7 +507,7 @@ big_parameter_t *set_big_params(u8 app_task, u8 role, u8 big_hdl)
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
         //环绕声项目
         enc_dual_output_frame_len = calcul_big_enc_output_frame_len(data->dual_frame_len, data->dual_bit_rate, data->dual_coding_type);
-        enc_mono_output_frame_len += calcul_big_enc_output_frame_len(data->mono_frame_len, data->mono_bit_rate, data->mono_coding_type);
+        enc_mono_output_frame_len = calcul_big_enc_output_frame_len(data->mono_frame_len, data->mono_bit_rate, data->mono_coding_type);
         enc_output_frame_len = enc_dual_output_frame_len + enc_mono_output_frame_len;
 #else
         enc_output_frame_len = calcul_big_enc_output_frame_len(data->frame_len, data->args[platform_data_index].bitrate, 0);

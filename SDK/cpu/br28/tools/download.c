@@ -107,7 +107,7 @@ set UI_RESOURCE_EN=1
 set	UI_RESOURCE_EN=0
 #endif
 
-#ifdef CONFIG_EARPHONE_CASE
+#ifdef CONFIG_EARPHONE_CASE_ENABLE
 #if TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN
 copy anc_ext.bin download\earphone\ALIGN_DIR\.
 #else
@@ -116,7 +116,7 @@ del download\earphone\ALIGN_DIR\anc_ext.bin
 call download/earphone/download.bat
 #endif
 
-#ifdef CONFIG_SOUNDBOX_CASE
+#ifdef CONFIG_SOUNDBOX_CASE_ENABLE
 call download/soundbox/download.bat
 #endif
 #endif

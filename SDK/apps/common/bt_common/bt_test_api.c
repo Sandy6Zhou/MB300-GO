@@ -197,7 +197,7 @@ void h4_uart_init_override(struct uart_config *cfg)
     cfg->tx_pin = TCFG_H4_UART_TX_PIN;
 #endif
 #ifndef TCFG_H4_UART_RX_PIN
-    cfg->tx_pin = IO_PORT_DM;
+    cfg->rx_pin = IO_PORT_DM;
 #else
     cfg->rx_pin = TCFG_H4_UART_RX_PIN;
 #endif

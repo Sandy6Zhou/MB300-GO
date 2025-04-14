@@ -20,6 +20,15 @@ struct local_tws_player_param {
     u8 bit_rate;		 //码率
 };
 
+struct local_tws_stream_params {
+    u8 nch;
+    u8 bit_width;
+    s16 frame_dms;
+    int sample_rate;
+    int bit_rate;
+    u32 coding_type;
+};
+
 int local_tws_player_open(struct local_tws_player_param *param);
 
 void local_tws_player_close(void);

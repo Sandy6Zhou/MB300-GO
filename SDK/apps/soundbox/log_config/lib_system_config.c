@@ -202,6 +202,17 @@ const int config_dlog_enable = 0;
 const int config_dlog_reset_erase_enable = 0;
 #endif
 
+//================================================//
+// 默认由宏来控制,请勿修改
+// 0x00000000:表示使能压缩data、data_code功能
+// 0xFFFFFFFF:表示关闭压缩data、data_code功能
+//================================================//
+#ifdef CONFIG_LZ4_DATA_CODE_ENABLE
+const int LZ4_DATA_CODE_ENABLE = 0x00000000;
+#else
+const int LZ4_DATA_CODE_ENABLE = 0xFFFFFFFF;
+#endif
+
 /**
  * @brief Log (Verbose/Info/Debug/Warn/Error)
  */

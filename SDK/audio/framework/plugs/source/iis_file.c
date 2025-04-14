@@ -73,11 +73,6 @@ struct iis_file_hdl {
 
 };
 
-__attribute__((weak))
-u32 audio_iis_get_timestamp(u32 module_idx, u8 ch_idx)
-{
-    return audio_jiffies_usec();
-}
 /*
  * 24bit转32bit，处理符号位
  * bit23如果是1，高8位补1;如果是0，高8位补0*/
@@ -156,7 +151,7 @@ static void iis_rx_handle(void *priv, void *buf, int len)
     }
     frame->len          = len;
     frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
-    frame->timestamp    = audio_iis_get_timestamp(hdl->module_idx, hdl->ch_idx) * TIMESTAMP_US_DENOMINATOR;
+    frame->timestamp    = audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR;
     memcpy(frame->data, buf, frame->len);
 
     iis_file_fade_in(hdl, frame->data, frame->len);//淡入处理

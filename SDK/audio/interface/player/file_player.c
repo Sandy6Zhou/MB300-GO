@@ -63,7 +63,6 @@ void music_player_free(struct file_player *player)
 extern FILE *music_player_get_file_hdl(void);
 extern void music_player_remove_file_hdl(void);
 
-extern int music_player_play_auto_next(void);
 static void music_player_callback(void *_player_id, int event)
 {
     struct file_player *player;
@@ -674,6 +673,18 @@ static int music_file_player_start(struct file_player *player)
 {
     int err = -EINVAL;
 
+#if TCFG_LOCAL_TWS_ENABLE
+    struct local_tws_stream_params *local_tws_fmt = {0};
+
+    struct stream_enc_fmt fmt = {
+        .channel = LOCAL_TWS_CODEC_CHANNEL,
+        .bit_width = LOCAL_TWS_CODEC_BIT_WIDTH,
+        .frame_dms = LOCAL_TWS_CODEC_FRAME_LEN,
+        .sample_rate = LOCAL_TWS_CODEC_SAMPLERATE,
+        .bit_rate = LOCAL_TWS_CODEC_BIT_RATE,
+        .coding_type = LOCAL_TWS_CODEC_TYPE,
+    };
+#endif
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music");
 
     player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_MUSIC);
@@ -726,7 +737,14 @@ static int music_file_player_start(struct file_player *player)
 #endif
     }
 #endif
+#if TCFG_LOCAL_TWS_ENABLE
+    err = jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
+    if (err == 0) {
+        err = jlstream_start(player->stream);
+    }
+#else
     err = jlstream_start(player->stream);
+#endif
 
     if (err) {
         goto __exit1;

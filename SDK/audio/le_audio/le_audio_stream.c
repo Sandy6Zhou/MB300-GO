@@ -452,7 +452,7 @@ void *le_audio_stream_rx_open(void *le_audio, int coding_type)
     if (!rx_stream) {
         return NULL;
     }
-
+    int scale = 1;
     INIT_LIST_HEAD(&rx_stream->frames);
     if (coding_type == AUDIO_CODING_LC3) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 ;
@@ -466,11 +466,12 @@ void *le_audio_stream_rx_open(void *le_audio, int coding_type)
 #endif
     } else if (coding_type == AUDIO_CODING_PCM) {
         frame_size = ctx->fmt.frame_dms * ctx->fmt.sample_rate * ctx->fmt.nch * (ctx->fmt.bit_width ? 4 : 2) / 10000;
+        scale = 2; //为了节省ram ,pcm数据的时候少申请一些buf,
     }
 
     int iso_interval_len = (ctx->fmt.isoIntervalUs / 100 / ctx->fmt.frame_dms) * frame_size;
     /*如果存在flush timeout，那么缓冲需要大于flush timeout的数量*/
-    rx_stream->frames_max_size = iso_interval_len * (ctx->fmt.flush_timeout ? (ctx->fmt.flush_timeout + 5) : 10);
+    rx_stream->frames_max_size = iso_interval_len * (ctx->fmt.flush_timeout ? (ctx->fmt.flush_timeout + 5) : (10 / scale));
     rx_stream->buf.size = rx_stream->frames_max_size;
     rx_stream->buf.addr = malloc(rx_stream->frames_max_size);
     rx_stream->sdu_period_len = iso_interval_len;

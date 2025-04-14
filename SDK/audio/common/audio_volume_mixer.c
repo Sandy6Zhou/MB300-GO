@@ -511,7 +511,11 @@ void audio_sw_digital_vol_init(u8 cfg_en)
 #endif/*TCFG_AUDIO_ANC_ENABLE*/
     __this->sys_hw_dvol_max = 16384.0f * dB_Convert_Mag(dB_value);
 
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    int vol = app_audio_volume_max_query(AppVol_WMic);
+#else
     int vol = app_audio_volume_max_query(AppVol_BT_MUSIC);
+#endif
     float temp = 0;
     //printf("sw digital volume list:\n");
     while (vol) {
@@ -523,8 +527,11 @@ void audio_sw_digital_vol_init(u8 cfg_en)
     }
     sw_dig_vol_table[0] = 0;
 
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    audio_digital_vol_init(sw_dig_vol_table, app_audio_volume_max_query(AppVol_WMic));
+#else
     audio_digital_vol_init(sw_dig_vol_table, app_audio_volume_max_query(AppVol_BT_MUSIC));
-
+#endif
     app_var.aec_dac_gain = (app_var.aec_dac_gain > BT_CALL_VOL_LEAVE_MAX) ? BT_CALL_VOL_LEAVE_MAX : app_var.aec_dac_gain;
     __this->call_hw_dvol_max = (u16)(__this->sys_hw_dvol_max * dB_Convert_Mag((BT_CALL_VOL_LEAVE_MAX - app_var.aec_dac_gain) * BT_CALL_VOL_STEP));
     printf("sys_hw_dvol_max:%d,call_hw_dvol_max:%d\n", __this->sys_hw_dvol_max, __this->call_hw_dvol_max);
@@ -1417,7 +1424,11 @@ u8 app_audio_get_state(void)
 s16 app_audio_get_max_volume(void)
 {
     if (__this->state == APP_AUDIO_STATE_IDLE) {
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+        return  app_audio_volume_max_query(AppVol_WMic);
+#else
         return  app_audio_volume_max_query(AppVol_BT_MUSIC);
+#endif
     }
     return __this->max_volume[__this->state];
 }

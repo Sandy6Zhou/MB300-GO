@@ -42,7 +42,7 @@ static int recharge_timer = 0;
 
 static void recharge_check(void *priv)
 {
-    if ((adc_get_voltage(AD_CH_PMU_VBAT) * 4) < TCFG_RECHARGE_VOLTAGE) {
+    if (gpadc_battery_get_voltage() < TCFG_RECHARGE_VOLTAGE) {
         sys_timer_del(recharge_timer);
         recharge_timer = 0;
         charge_start();

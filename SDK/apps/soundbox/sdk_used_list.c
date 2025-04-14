@@ -317,7 +317,7 @@ jla_dec_plug
 jla_v2_enc_plug
 #endif
 
-#if TCFG_ENC_JLA_V2_ENABLE
+#if TCFG_DEC_JLA_V2_ENABLE
 jla_v2_dec_plug
 #endif
 

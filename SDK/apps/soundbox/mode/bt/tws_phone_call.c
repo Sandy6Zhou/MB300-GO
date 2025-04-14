@@ -98,7 +98,14 @@ u8 phone_ring_play_start(void)
         return 0;
     }
     if (!g_bt_hdl.inband_ringtone) {
+        /*tws通话，仅主机出声*/
+#if ((defined TCFG_TWS_ESCO_MODE) && (TCFG_TWS_ESCO_MODE == TWS_ESCO_ONLY_MASTER))
+        if (tws_api_get_role() == TWS_ROLE_MASTER) {
+            play_ring_file_alone(get_tone_files()->phone_in);
+        }
+#else
         tws_play_ring_file_alone(get_tone_files()->phone_in, SYNC_TONE_PHONE_RING_TIME);
+#endif
         return 1;
     }
     return 0;

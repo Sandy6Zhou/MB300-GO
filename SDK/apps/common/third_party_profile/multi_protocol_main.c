@@ -458,7 +458,7 @@ void multi_protocol_bt_ble_disconnect(void)
     fmy_test_disconnect();
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
-    extern custom_demo_ble_disconnect(void);
+    extern void custom_demo_ble_disconnect(void);
     custom_demo_ble_disconnect();
 #endif
 }

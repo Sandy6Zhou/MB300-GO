@@ -46,7 +46,9 @@
 #endif
 
 //partial platform check this config to select the uart IO for wired update
-#define CONFIG_UART_UPDATE_PIN                  PB05
+#ifndef CONFIG_UART_UPDATE_PIN
+#define CONFIG_UART_UPDATE_PIN                  PP00
+#endif
 
 //isd_download loader/uboot/update_loader debug io config
 //#define CONFIG_UBOOT_DEBUG_PIN                  PA05

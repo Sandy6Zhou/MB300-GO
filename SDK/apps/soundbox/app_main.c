@@ -219,7 +219,9 @@ int eSystemConfirmStopStatus(void)
     return 0;
 #else
     if (get_charge_full_flag()) {
-        /* power_set_soft_poweroff(); */
+#if (!TCFG_RECHARGE_ENABLE)
+        power_set_soft_poweroff();
+#endif
         return 1;
     } else {
         return 0;

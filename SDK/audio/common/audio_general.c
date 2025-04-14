@@ -305,8 +305,11 @@ const int voicechanger_effect_v_config = (0
         /* | BIT(EFFECT_VOICECHANGE_FEEDBACK) */
                                          );
 
-/*mb limiter 3带使能(1.2k) */
-const int mb_limiter_3band_run_en       = 1;
+/*mb drc/limiter 3带使能(1.2k) */
+const int audio_crossover_3band_enable       = 1;
+
+
+
 /*
  *******************************************************************
  *						Audio Mic Capless Config

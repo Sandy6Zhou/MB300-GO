@@ -40,8 +40,16 @@ int surround_sound_app_msg_handler(int *msg)
         break;
 
     case APP_MSG_VOL_UP:
+        //需要关闭音量同步才生效
+#if (LEA_BIG_VOL_SYNC_EN==0)
+        app_audio_volume_up(1);
+#endif
         break;
     case APP_MSG_VOL_DOWN:
+        //需要关闭音量同步才生效
+#if (LEA_BIG_VOL_SYNC_EN==0)
+        app_audio_volume_down(1);
+#endif
         break;
     case APP_MSG_PITCH_UP:
         break;

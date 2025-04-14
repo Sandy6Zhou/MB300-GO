@@ -365,7 +365,10 @@
     *(.audio_codec_code)
 
 	/********************CODEC LD Ends*************************/
-	
+#if !AUDIO_LLNS_DNS_CODEC_AT_RAM
+    *(.llns_dns.const)
+    *(.llns_dns.code)
+#endif
     *(.media_device_code)
     *(.media_device_const)
     *(.audio_encoder_code)

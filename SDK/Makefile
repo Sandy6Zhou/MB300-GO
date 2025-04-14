@@ -98,7 +98,7 @@ CXXFLAGS :=
 DEFINES := \
 	-DSUPPORT_MS_EXTENSIONS \
 	-DCONFIG_RELEASE_ENABLE \
-	-DCONFIG_SOUNDBOX_CASE \
+	-DCONFIG_SOUNDBOX_CASE_ENABLE \
 	-DCONFIG_CPU_BR28 \
 	-DCONFIG_USB_SUPPORT_MRX_TX \
 	-DCONFIG_PRINT_IN_MASK \
@@ -283,22 +283,6 @@ INCLUDES := \
 	-Iinterface/media/cvp \
 	-Iinterface/system/math/cpu/br28 \
 	-Iinterface/media/effects \
-	-Iinterface/net \
-	-Iinterface/net/lwip_2_2_0/lwip/src/include \
-	-Iinterface/net/lwip_2_2_0/lwip/port \
-	-Iinterface/net/lwip_2_2_0/lwip/src/include/netif \
-	-Iinterface/net/lwip_2_2_0/lwip/port/arch \
-	-Iinterface/net/lwip_2_2_0/lwip/app/ctp \
-	-Iinterface/net/lwip_2_2_0/lwip/app/cdp \
-	-Iinterface/net/lwip_2_2_0/lwip/app/dhcp_srv \
-	-Iinterface/net/lwip_2_2_0/lwip/app/dtp \
-	-Iinterface/net/lwip_2_2_0/lwip/app/sock_api \
-	-Iinterface/net/lwip_2_2_0/lwip/app/udtp \
-	-Iinterface/net/lwip_2_2_0/lwip/src/include/lwip \
-	-Iinterface/net/lwip_2_2_0/lwip/app \
-	-Iinterface/net/lwip_2_2_0/lwip/app/mssdp \
-	-Iinterface/net/lwip_2_2_0/lwip/app/ddns \
-	-Iinterface/net/lte_module \
 	-I$(SYS_INC_DIR) \
 
 
@@ -340,6 +324,7 @@ c_SRC_FILES := \
 	apps/common/device/sensor/ntc/ntc_det.c \
 	apps/common/device/storage_device/nandflash/ftl_device.c \
 	apps/common/device/storage_device/nandflash/nandflash.c \
+	apps/common/device/storage_device/norflash/norflash.c \
 	apps/common/device/storage_device/norflash/norflash_sfc.c \
 	apps/common/device/usb/demo/host/udisk_block_test.c \
 	apps/common/device/usb/device/cdc.c \
@@ -856,6 +841,7 @@ c_SRC_FILES := \
 	audio/interface/recoder/dev_flow_recoder.c \
 	audio/interface/recoder/esco_recoder.c \
 	audio/interface/recoder/file_recorder.c \
+	audio/interface/recoder/le_audio_mix_mic_recorder.c \
 	audio/interface/recoder/le_audio_recorder.c \
 	audio/interface/recoder/pc_mic_recoder.c \
 	audio/jl_kws/jl_kws_algo.c \
@@ -1094,7 +1080,6 @@ LFLAGS := \
 	cpu/br28/liba/ui_draw_new.a \
 	cpu/br28/liba/font_new.a \
 	cpu/br28/liba/ui_new.a \
-	cpu/br28/liba/lwip_2_2_0.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \
@@ -1106,6 +1091,7 @@ LFLAGS := \
 	cpu/br28/liba/ftl.a \
 	cpu/br28/liba/debug_record.a \
 	cpu/br28/liba/apple_dock.a \
+	cpu/br28/liba/chargestore.a \
 	--end-group \
 	-Tcpu/br28/sdk.ld \
 	-M=cpu/br28/tools/sdk.map \

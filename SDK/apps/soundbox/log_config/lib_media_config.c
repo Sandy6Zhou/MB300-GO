@@ -637,15 +637,28 @@ const int LPC_JUST_FADE = TCFG_MUSIC_PLC_TYPE;
 
 //影响plc申请的buf大小跟速度，这个值越大，申请的buf越多，速度也越快。
 //增加的buf大小是  APLC_MOV_STAKLEN *类型(16bit是 sizeof(short), 32bit 是sizeof(int))
-const int APLC_MOV_STAKLEN = 1024;
-
+const int APLC_MOV_STAKLEN = 0;
+//是否使能24bit数据丢包时按照16bit修复，影响ram的使用
+const int lfaudio_plc_mode24bit_16bit_en = 1;
 /*
- * 通话PLC延时配置,支持 0【延时最大】，1，2【延时最小】配置
- * 16k:0:28.5ms, 1:17ms, 2:12.5ms
- *  8k:0:24.5ms, 1:22ms, 2:18ms
+   不同配置的ram使用情况
+-----------------------------------------------------------------------
+  APLC_MOV_STAKLEN                |        0        |       1024      |
+-----------------------------------------------------------------------
+  lfaudio_plc_mode24bit_16bit_en  |   0    |   1    |    0    |   1   |
+-----------------------------------------------------------------------
+	ram(byte) ch=1                |  7580  |  5632  |  11676  |  7680 |
+-----------------------------------------------------------------------
+	ram(byte) ch=2                |  14828 |  9256  |  18924  | 11304 |
+-----------------------------------------------------------------------
  */
-const  int  ESCO_PLC_DELAY_CONTROL = 0;
+
+
 const  int  ESCO_PLC_SUPPORT_24BIT_EN = MEDIA_24BIT_ENABLE;  //24bit开关
+const  int  ESCO_PLC_FADE_OUT_START_POINT = 500;	//丢包后修复过程中，维持音量的点数.即修复这么多点后，开始淡出
+const  int  ESCO_PLC_FADE_OUT_POINTS = 2048; 		//丢包维持指定点数后,淡出的速度,音量从满幅到0需要的点数. 即淡出完需要的点数
+const  int  ESCO_PLC_FADE_IN_POINTS = 32; 			//丢包后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.即淡入完需要的点数
+
 //***********************
 //*   Howling Suppress  *
 //***********************

@@ -68,7 +68,7 @@ static struct le_audio_fm_recorder *g_fm_recorder = NULL;
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && TCFG_APP_IIS_EN
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE)
 struct le_audio_iis_recorder {
     void *stream;
 };
@@ -366,7 +366,7 @@ void le_audio_linein_recorder_close(void)
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && TCFG_APP_IIS_EN
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE)
 
 static void muti_ch_iis_recorder_callback(void *private_data, int event)
 {
@@ -473,7 +473,11 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
     }
     int err = 0;
     struct le_audio_stream_format *le_audio_fmt = (struct le_audio_stream_format *)params;
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
+#else
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"iis_le_audio");
+#endif
     struct stream_enc_fmt fmt = {
         .coding_type = le_audio_fmt->coding_type,
         .channel = le_audio_fmt->nch,
@@ -488,7 +492,11 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
             return -ENOMEM;
         }
     }
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    g_iis_recorder->stream = jlstream_pipeline_parse_by_node_name(uuid, "WL_IIS0_RX");
+#else
     g_iis_recorder->stream = jlstream_pipeline_parse_by_node_name(uuid, "IIS0_RX2");
+#endif
     jlstream_set_callback(g_iis_recorder->stream, NULL, iis_recorder_callback);
     jlstream_set_scene(g_iis_recorder->stream, STREAM_SCENE_IIS);
 
@@ -530,7 +538,11 @@ void le_audio_iis_recorder_close(void)
 
     free(iis_recorder);
     g_iis_recorder = NULL;
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
+#else
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"iis_le_audio");
+#endif
 }
 #endif
 
@@ -767,7 +779,7 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
     struct le_audio_stream_params *lea_params = params;
     struct le_audio_stream_format *le_audio_fmt = &lea_params->fmt;
     u16 source_uuid;
-#if WIRELESS_MIC_PRODUCT_MODE
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
 #else
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_le_audio");
@@ -802,10 +814,14 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
         //printf("LEA Recoder:WL_MIC\n");
         jlstream_set_scene(g_mic_recorder->stream, STREAM_SCENE_WIRELESS_MIC);
         u16 irq_point = 0;
-#if (defined(TCFG_ADC_IRQ_POINT) &&  TCFG_ADC_IRQ_POINT) //根据配置设置中断点数
-        irq_point =  TCFG_ADC_IRQ_POINT;
+#if (defined(TCFG_ADC_IRQ_INTERVAL) &&  TCFG_ADC_IRQ_INTERVAL) //根据配置设置中断点数
+#if (defined(TCFG_AUDIO_ADC_SAMPLE_RATE) &&  TCFG_AUDIO_ADC_SAMPLE_RATE)
+        irq_point =  TCFG_AUDIO_ADC_SAMPLE_RATE * TCFG_ADC_IRQ_INTERVAL / 1000000;  //sr * interval(us) / 1000000
 #else
-        irq_point =  fmt.sample_rate / 1000; //默认1ms 的中断
+        irq_point =  fmt.sample_rate * TCFG_ADC_IRQ_INTERVAL / 1000000; //sr * interval(us) / 1000000
+#endif
+#else
+        irq_point =  fmt.sample_rate * 1000 / 1000000; //默认1ms 的中断,//sr * interval(us) / 1000000
 #endif
         jlstream_node_ioctl(g_mic_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, irq_point);
     } else {
@@ -869,7 +885,7 @@ void le_audio_mic_recorder_close(void)
     }
     free(mic_recorder);
     g_mic_recorder = NULL;
-#if WIRELESS_MIC_PRODUCT_MODE
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
 #else
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_le_audio");

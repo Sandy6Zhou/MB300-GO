@@ -127,6 +127,9 @@ void local_tws_disconnect_deal(void)
     } else if (__this->role == LOCAL_TWS_ROLE_SOURCE) {
 
     }
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+    tws_api_auto_role_switch_enable();
+#endif
     __this->role = LOCAL_TWS_ROLE_NULL;
 }
 
@@ -280,6 +283,7 @@ int local_tws_enter_mode(const char *file_name, void *priv)
                 if (!match) {
                     data = CMD_TWS_ENTER_NO_SOURCE_MODE_REPORT;
                     local_tws_cmd_send(&data, 1);
+                    return -1;
                 }
             }
         }
@@ -390,6 +394,14 @@ static int local_tws_msg_handler(int *msg)
     case CMD_TWS_PLAYER_STATUS_REPORT:
         log_info("CMD_TWS_PLAYER_STATUS_REPORT:%d\n", cmd[1]);
         __this->remote_dec_status = cmd[1];
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+        //本地传输打开时不自动主从切换
+        if (__this->remote_dec_status) {
+            tws_api_auto_role_switch_disable();
+        } else {
+            tws_api_auto_role_switch_enable();
+        }
+#endif
         break;
 
     case CMD_TWS_CONNECT_MODE_REPORT:
@@ -502,6 +514,10 @@ static int local_tws_event_handler(int *_event)
     case TWS_EVENT_DATA_TRANS_START:
         /*Source端打开本地传输Sink端会收到该event并收到参数，在此处打开本地解码*/
         log_info("TWS_EVENT_DATA_TRANS_START");
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+        //本地传输打开时不自动主从切换
+        tws_api_auto_role_switch_disable();
+#endif
         local_tws_dec_status_report(1);
         struct local_tws_player_param tws_player_param;
         tws_player_param.tws_channel = event->args[0];
@@ -517,6 +533,9 @@ static int local_tws_event_handler(int *_event)
         log_info("TWS_EVENT_DATA_TRANS_CLOSE");
         local_tws_player_close();
         local_tws_dec_status_report(0);
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+        tws_api_auto_role_switch_enable();
+#endif
         break;
     default:
         break;

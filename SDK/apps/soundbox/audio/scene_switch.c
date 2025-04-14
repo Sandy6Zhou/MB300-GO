@@ -716,6 +716,21 @@ void music_vocal_remover_switch(void)
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     vocal_remover_param_tool_set cfg = {0};
     char *vocal_node_name = "VocalRemovMedia";
+#if AUD_VOCAL_REMOVE_SUB_PATH_ENABLE
+    if (app_in_mode(APP_MODE_BT)) {
+        vocal_node_name = "VocalRemovBt";
+    } else if (app_in_mode(APP_MODE_LINEIN)) {
+        vocal_node_name = "VocalRemovLine";
+    } else if (app_in_mode(APP_MODE_MUSIC)) {
+        vocal_node_name = "VocalRemovMusic";
+    } else if (app_in_mode(APP_MODE_FM)) {
+        vocal_node_name = "VocalRemovFm";
+    } else if (app_in_mode(APP_MODE_PC)) {
+        vocal_node_name = "VocalRemovPc";
+    } else if (app_in_mode(APP_MODE_SPDIF)) {
+        vocal_node_name = "VocalRemovSpdif";
+    }
+#endif
     int ret = jlstream_read_form_data(0, vocal_node_name, 0, &cfg);
     if (!ret) {
         printf("read parm err, %s, %s\n", __func__, vocal_node_name);
@@ -735,6 +750,21 @@ void musci_vocal_remover_update_parm()
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     vocal_remover_param_tool_set cfg = {0};
     char *vocal_node_name = "VocalRemovMedia";
+#if AUD_VOCAL_REMOVE_SUB_PATH_ENABLE
+    if (app_in_mode(APP_MODE_BT)) {
+        vocal_node_name = "VocalRemovBt";
+    } else if (app_in_mode(APP_MODE_LINEIN)) {
+        vocal_node_name = "VocalRemovLine";
+    } else if (app_in_mode(APP_MODE_MUSIC)) {
+        vocal_node_name = "VocalRemovMusic";
+    } else if (app_in_mode(APP_MODE_FM)) {
+        vocal_node_name = "VocalRemovFm";
+    } else if (app_in_mode(APP_MODE_PC)) {
+        vocal_node_name = "VocalRemovPc";
+    } else if (app_in_mode(APP_MODE_SPDIF)) {
+        vocal_node_name = "VocalRemovSpdif";
+    }
+#endif
     int ret = jlstream_read_form_data(0, vocal_node_name, 0, &cfg);
     if (!ret) {
         printf("read parm err, %s, %s\n", __func__, vocal_node_name);

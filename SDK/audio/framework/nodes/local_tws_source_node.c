@@ -191,7 +191,12 @@ static int local_tws_param_data_init(struct stream_node *node, u16 uuid, struct 
 
 static int jla_v2_look_ahead_pcm_frames(int sample_rate, int frame_dms)
 {
-    int input_point = frame_dms * sample_rate / 10 / 1000;
+    int input_point = 0;
+    if (sample_rate == 44100) {
+        input_point = frame_dms * 48000 / 10 / 1000;
+    } else {
+        input_point = frame_dms * sample_rate / 10 / 1000;
+    }
 
     if (!(JLA_V2_FRAMELEN_MASK & 0x8000) || input_point >= 160) { //最高位是0或者点数大于160,jla_v2的延时是1/4帧
         return input_point / 4;
@@ -199,6 +204,26 @@ static int jla_v2_look_ahead_pcm_frames(int sample_rate, int frame_dms)
         return input_point;
     }
 
+}
+
+static u32 jla_v2_frame_latency(int sample_rate, int frame_dms)
+{
+    if (sample_rate == 44100) {
+        return (u32)frame_dms * 100 * 48000 / 44100;
+    }
+    return (u32)frame_dms * 100;
+}
+
+static int jla_v2_enc_out_len(int sample_rate, int frame_dms, int bit_rate)
+{
+    int input_point = 0;
+    if (sample_rate == 44100) {
+        input_point = frame_dms * 48000 / 10 / 1000;
+    } else {
+        input_point = frame_dms * sample_rate / 10 / 1000;
+    }
+
+    return bit_rate * input_point / (8 * sample_rate) + 2; //采用编码器内部计算帧长的公式,兼容44.1K采样率
 }
 
 static int jla_look_ahead_pcm_frames(int sample_rate, int frame_dms)
@@ -316,7 +341,7 @@ static int local_tws_source_ioc_start(struct stream_iport *iport)
         }
         printf("sbc_len = %d\n", frame_len);
     } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
-        frame_len = ctx->fmt.bit_rate / 8 * ctx->fmt.frame_dms / 1000 / 10 + 2;
+        frame_len = jla_v2_enc_out_len(ctx->fmt.sample_rate, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
     } else {
         printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
     }
@@ -396,7 +421,7 @@ static int local_tws_source_ioc_fmt_nego(struct stream_iport *iport)
             ctx->frame_latency = 128 * 1000000 / in_fmt->sample_rate;
         } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
             ctx->look_ahead_latency = (int)((u64)jla_v2_look_ahead_pcm_frames(in_fmt->sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
-            ctx->frame_latency = ctx->fmt.frame_dms * 100; //us
+            ctx->frame_latency = jla_v2_frame_latency(in_fmt->sample_rate, ctx->fmt.frame_dms);
         } else {
             printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
         }
