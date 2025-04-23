@@ -28,20 +28,16 @@
 #include "le_audio_player.h"
 #include "bt_key_func.h"
 #include "bt_tws.h"
+#include "tws_a2dp_play.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 
-enum {
-    CMD_A2DP_PLAY = 1,
-    CMD_A2DP_SLIENCE_DETECT,
-    CMD_A2DP_CLOSE,
-    CMD_SET_A2DP_VOL,
-};
 
 static u8 g_play_addr[6];
 static u8 g_slience_addr[6];
 static u8 a2dp_play_status = 0;
-
+static u16 wait_enter_bt_timer = 0;
+static u8 SEND_A2DP_PLAY_REQ_FLAG = 0;
 void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 {
     if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0)) {
@@ -60,7 +56,6 @@ u8 *get_g_play_addr(void)
     return g_play_addr;
 }
 
-void tws_a2dp_play_send_cmd(u8 cmd, u8 *data, u8 len, u8 tx_do_action);
 
 void tws_a2dp_player_close(u8 *bt_addr)
 {
@@ -72,6 +67,18 @@ void tws_a2dp_player_close(u8 *bt_addr)
     if (memcmp(bt_addr, g_play_addr, 6) == 0) {
         memset(g_play_addr, 0xff, 6);
         app_set_a2dp_play_status(bt_addr, 0);
+    }
+}
+
+static void a2dp_wait_enter_bt(void *addr)
+{
+    if (app_in_mode(APP_MODE_BT) == 0) {
+        wait_enter_bt_timer =  sys_timeout_add(addr, a2dp_wait_enter_bt, 100);
+    } else {
+        u8 buf[7];
+        wait_enter_bt_timer = 0;
+        memcpy(buf, (u8 *)addr, 6);
+        tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_RSP, buf, 6, 0);
     }
 }
 
@@ -150,6 +157,38 @@ static void tws_a2dp_play_in_task(u8 *data)
         dev_vol = data[8];
         set_music_device_volume(dev_vol);
         break;
+
+#if TCFG_LOCAL_TWS_ENABLE
+    case CMD_A2DP_PLAY_REQ:
+        r_printf("CMD_A2DP_PLAY_REQ tws_api_get_role() = %d", tws_api_get_role());
+        if (app_in_mode(APP_MODE_BT)) {
+            //如果已经在蓝牙模式了直接回复
+            memcpy(g_play_addr, bt_addr, 6);
+            tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_RSP, g_play_addr, 6, 0);
+
+        } else {
+            //保存a2dp_addr, 后面进入蓝牙模式之后需要发回去
+            memcpy(g_play_addr, bt_addr, 6);
+            app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
+            wait_enter_bt_timer = sys_timeout_add(g_play_addr, a2dp_wait_enter_bt, 100);
+        }
+        break;
+
+    case CMD_A2DP_PLAY_RSP:
+        r_printf("CMD_A2DP_PLAY_RSP");
+        if (!app_get_a2dp_play_status() && app_in_mode(APP_MODE_BT)) {
+            break;
+        }
+
+        u8 buf[7];
+
+        SEND_A2DP_PLAY_REQ_FLAG = 0;
+        memcpy(buf, bt_addr, 6);
+
+        buf[6] = bt_get_music_volume(bt_addr);
+        tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, buf, 7, 1);
+        break;
+#endif
     }
     if (data[1] != 2) {
         free(data);
@@ -197,7 +236,7 @@ void tws_a2dp_play_send_cmd(u8 cmd, u8 *_data, u8 len, u8 tx_do_action)
         data[1] = 2;
         tws_a2dp_play_in_task(data);
     } else {
-        if (cmd == CMD_A2DP_PLAY) {
+        if ((cmd == CMD_A2DP_PLAY) || (cmd == CMD_A2DP_PLAY_REQ)) {
             memcpy(g_play_addr, _data, 6);
         } else if (cmd == CMD_A2DP_SLIENCE_DETECT) {
             memcpy(g_slience_addr, _data, 6);
@@ -213,7 +252,12 @@ void tws_a2dp_sync_play(u8 *bt_addr, bool tx_do_action)
     /* if (data[6] > 127) { */
     /*     data[6] = app_audio_bt_volume_update(bt_addr, APP_AUDIO_STATE_MUSIC); */
     /* } */
+#if TCFG_LOCAL_TWS_ENABLE
+    SEND_A2DP_PLAY_REQ_FLAG = 1;
+    tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_REQ, data, 7, 0);
+#else
     tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, data, 7, tx_do_action);
+#endif
 }
 
 void tws_a2dp_slience_detect(u8 *bt_addr, bool tx_do_action)
@@ -340,6 +384,14 @@ static int a2dp_app_msg_handler(int *msg)
         tws_a2dp_sync_play(bt_addr, 1);
 #endif
         break;
+    case APP_MSG_EXIT_MODE:
+#if TCFG_LOCAL_TWS_ENABLE
+        if (wait_enter_bt_timer && (msg[1] == APP_MODE_BT)) {
+            sys_timeout_del(wait_enter_bt_timer);
+            wait_enter_bt_timer = 0;
+        }
+#endif
+        break;
     }
     return 0;
 }
@@ -385,6 +437,24 @@ static int a2dp_tws_msg_handler(int *msg)
             bt_stop_a2dp_slience_detect(addr);
             a2dp_media_close(addr);
         }
+        break;
+    case TWS_EVENT_CONNECTION_DETACH:
+        r_printf("__func__ = %s   TWS_EVT_CONNECT_DETACH   SEND_A2DP_PLAY_REQ_FLAG = %d    wait_enter_bt_timer = %d", __func__, SEND_A2DP_PLAY_REQ_FLAG, wait_enter_bt_timer);
+#if TCFG_LOCAL_TWS_ENABLE
+        if (SEND_A2DP_PLAY_REQ_FLAG) {
+            //发了A2DP_PLAY_REQ从机无响应,且断开tws连接，那么主机自己播
+            u8 buf[7];
+            memcpy(buf, g_play_addr, 6);
+            put_buf(g_play_addr, 6);
+            buf[6] = bt_get_music_volume(g_play_addr);
+            tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, g_play_addr, 7, 1);
+            SEND_A2DP_PLAY_REQ_FLAG = 0;
+        }
+        if (wait_enter_bt_timer) {
+            sys_timeout_del(wait_enter_bt_timer);
+            wait_enter_bt_timer = 0;
+        }
+#endif
         break;
     }
     return 0;

@@ -20,9 +20,15 @@ bt_audio_sync_node_adapter
 adc_file_plug
 #endif
 
+#if TCFG_TONE_NODE_ENABLE
 tone_file_plug
+#endif
+#if TCFG_RING_TONE_NODE_ENABLE
 ring_file_plug
+#endif
+#if TCFG_KEY_TONE_NODE_ENABLE
 key_tone_file_plug
+#endif
 #if TCFG_FILEPLAY_NODE_ENABLE
 file_play_plug
 #endif
@@ -663,4 +669,16 @@ distortion_clipping_node_adapter
 
 #if TCFG_FREQUENCY_COMPRESSOR_NODE_ENABLE
 frequency_compressor_node_adapter
+#endif
+
+#if MIDI_FILE_DEC_ENABLE
+midi_dec_plug
+#endif
+
+#if MIDI_CTRL_DEC_ENABLE
+midi_ctrl_dec_plug
+#endif
+
+#if TCFG_ENC_AAC_ENABLE
+aac_enc_plug
 #endif

@@ -101,6 +101,9 @@ typedef struct {
     /* event callback */
     void (*event_cb)(const BIG_EVENT event, void *priv);
 
+    /* bst_adv_data callback */
+    bool (*receive_badv_data_cb)(const void *const buf, size_t length, uint8_t big_hdl);
+
 } big_callback_t;
 
 typedef struct {

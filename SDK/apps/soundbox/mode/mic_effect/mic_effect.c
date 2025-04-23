@@ -16,9 +16,10 @@
 #include "mic_effect.h"
 #include "audio_config_def.h"
 #include "fm_api.h"
+#include "le_audio_mix_mic_recorder.h"
 
-static void mic_effect_ram_code_load();
-static void mic_effect_ram_code_unload();
+void mic_effect_ram_code_load();
+void mic_effect_ram_code_unload();
 
 #define MIC_EFFECT_CHANNEL_MAX	AUDIO_ADC_MAX_NUM
 struct mic_effect_player {
@@ -125,6 +126,19 @@ int mic_effect_player_open()
                 jlstream_set_callback(player->stream[i], player->stream[i], mic_effect_player_callback_ext);
             }
             jlstream_set_scene(player->stream[i], STREAM_SCENE_MIC_EFFECT);
+
+#if LE_AUDIO_MIX_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN
+            //混合mic广播需要广播混响，添加LE Audio的编码器配置防止协商不过
+            struct stream_enc_fmt fmt = {
+                .coding_type = 0xa000000,
+                .channel = 2,
+                .bit_rate = 96000,
+                .sample_rate = 48000,
+                .frame_dms = 100,
+            };
+            jlstream_ioctl(player->stream[i], NODE_IOC_SET_ENC_FMT, (int)&fmt);
+#endif
+
             sprintf(mic_effect_thread_name, "mic_effect%d", mic_effect_thread_name_idx);
             mic_effect_thread_name_idx++;
             printf("mic_effect stream[%d] thread_name:%s\n", i, mic_effect_thread_name);
@@ -161,6 +175,10 @@ int mic_effect_player_open()
     }
     printf("\n mic dvol %d \n", player->dvol);
     g_mic_effect_player = player;
+
+#if LE_AUDIO_MIX_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN
+    set_need_resume_le_audio_mix_mic(1);
+#endif
     return 0;
 
 __exit1:
@@ -177,6 +195,18 @@ __exit0:
 bool mic_effect_player_runing()
 {
     return g_mic_effect_player != NULL;
+}
+
+int get_micEff2DAC_switch_status(void)
+{
+#if LE_AUDIO_MIX_MIC_EFFECT_EN
+    if (is_le_audio_mix_mic_recorder_running()) {
+        return 0;
+    }
+    return 1;
+#else
+    return 1;
+#endif
 }
 
 int mic_effect_player_is_playing()
@@ -200,6 +230,10 @@ void mic_effect_player_close()
     mic_effect_ram_code_unload();
     free(player);
     g_mic_effect_player = NULL;
+
+#if LE_AUDIO_MIX_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN
+    set_need_resume_le_audio_mix_mic(0);
+#endif
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
 }
@@ -230,7 +264,7 @@ extern u32 __mic_eff_movable_slot_end[];
 extern u8  __mic_eff_movable_region_start[];
 extern u8  __mic_eff_movable_region_end[];
 //代码动态加载
-static void mic_effect_ram_code_load()
+void mic_effect_ram_code_load()
 {
     int code_size = __mic_eff_movable_region_end - __mic_eff_movable_region_start;
     //printf("mic_eff code size %d\n", code_size);
@@ -247,7 +281,7 @@ static void mic_effect_ram_code_load()
 }
 
 
-static void mic_effect_ram_code_unload()
+void mic_effect_ram_code_unload()
 {
     if (mic_eff_code_run_addr) {
         //mem_stats();
@@ -262,11 +296,11 @@ static void mic_effect_ram_code_unload()
     }
 }
 #else
-static void mic_effect_ram_code_load()
+void mic_effect_ram_code_load()
 {
 }
 
-static void mic_effect_ram_code_unload()
+void mic_effect_ram_code_unload()
 {
 }
 #endif

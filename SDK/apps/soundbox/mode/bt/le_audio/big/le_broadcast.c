@@ -25,8 +25,12 @@
 #include "bt_event_func.h"
 #include "audio_config.h"
 #include "le_audio_player.h"
+#include "app_main.h"
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
+#endif
+#if LE_AUDIO_MIX_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
@@ -490,8 +494,17 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
         //打开广播音频播放
         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
             broadcast_hdl->bis_hdl_info[i].recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+#if LE_AUDIO_MIX_MIC_EN
+            if (get_is_need_resume_le_audio_mix_mic() && is_le_audio_mix_mic_recorder_running() == 0) {
+                if (app_get_current_mode()->name != APP_MODE_MIC) {
+                    set_need_resume_le_audio_mix_mic(0);
+                    le_audio_mix_mic_open();
+                }
+            }
+#endif
         }
     }
+
 
     spin_lock(&broadcast_lock);
     list_add_tail(&broadcast_hdl->entry, &broadcast_list_head);
@@ -1117,12 +1130,12 @@ static int broadcast_rx_padv_data_callback(const void *const buf, size_t length,
     int ret = 0;
 
     if (!length) {
-        return -EINVAL;
+        return -EPERM;
     }
 
     u8 need_deal_flag = 0;
     if (length < sizeof(struct broadcast_sync_info)) {
-        return -EINVAL;
+        return -EPERM;
     }
 
     const u8 *const temp_buf = buf;
@@ -1287,6 +1300,12 @@ int broadcast_close(u8 big_hdl)
                 }
                 spin_unlock(&broadcast_lock);
 
+#if LE_AUDIO_MIX_MIC_EN
+                if (is_le_audio_mix_mic_recorder_running()) {
+                    set_need_resume_le_audio_mix_mic(1);
+                    le_audio_mix_mic_close();
+                }
+#endif
                 if (recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                         le_audio_switch_ops->tx_le_audio_close(recorder);
@@ -1793,7 +1812,12 @@ int broadcast_audio_all_close(u16 big_hdl)
                         p->bis_hdl_info[i].init_ok = 0;
                     }
                     spin_unlock(&broadcast_lock);
-
+#if LE_AUDIO_MIX_MIC_EN
+                    if (is_le_audio_mix_mic_recorder_running()) {
+                        set_need_resume_le_audio_mix_mic(1);
+                        le_audio_mix_mic_close();
+                    }
+#endif
                     if (recorder) {
                         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                             le_audio_switch_ops->tx_le_audio_close(recorder);
@@ -1936,6 +1960,14 @@ int broadcast_audio_all_open(u16 big_hdl)
                 if (!broadcast_hdl->bis_hdl_info[i].recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+#if LE_AUDIO_MIX_MIC_EN
+                        if (get_is_need_resume_le_audio_mix_mic() && is_le_audio_mix_mic_recorder_running() == 0) {
+                            if (app_get_current_mode()->name != APP_MODE_MIC) {
+                                set_need_resume_le_audio_mix_mic(0);
+                                le_audio_mix_mic_open();
+                            }
+                        }
+#endif
                         spin_lock(&broadcast_lock);
                         broadcast_hdl->bis_hdl_info[i].recorder = recorder;
                         broadcast_hdl->bis_hdl_info[i].init_ok = 1;

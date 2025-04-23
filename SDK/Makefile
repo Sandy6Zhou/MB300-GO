@@ -849,6 +849,8 @@ c_SRC_FILES := \
 	audio/jl_kws/jl_kws_event.c \
 	audio/jl_kws/jl_kws_main.c \
 	audio/le_audio/le_audio_stream.c \
+	audio/midi/audio_dec_midi_ctrl.c \
+	audio/midi/audio_dec_midi_file.c \
 	audio/smart_voice/jl_kws_platform.c \
 	audio/smart_voice/kws_event.c \
 	audio/smart_voice/nn_vad.c \
@@ -992,6 +994,7 @@ LFLAGS := \
 	cpu/br28/liba/noisegate.a \
 	cpu/br28/liba/sbc_eng_lib.a \
 	cpu/br28/liba/lib_mp3_dec.a \
+	cpu/br28/liba/lib_midi_dec.a \
 	cpu/br28/liba/lib_speex_codec.a \
 	cpu/br28/liba/lib_m4a_dec.a \
 	cpu/br28/liba/mp3_decstream_lib.a \
@@ -1000,6 +1003,7 @@ LFLAGS := \
 	cpu/br28/liba/lib_f2a_dec.a \
 	cpu/br28/liba/agreement.a \
 	cpu/br28/liba/opus_enc_lib.a \
+	cpu/br28/liba/aac_enc_lib.a \
 	cpu/br28/liba/libLHDCv4DecodeLib.a \
 	cpu/br28/liba/libLHDCv5DecodeLib.a \
 	cpu/br28/liba/lib_ldac_dec.a \

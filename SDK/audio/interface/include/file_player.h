@@ -33,6 +33,10 @@
 
 typedef int (*music_player_cb_t)(void *, int parm, enum stream_event);
 
+struct midi_player {
+    struct jlstream *stream;
+};
+
 enum play_status {
     FILE_PLAYER_STOP = 0x0, //播放结束
     FILE_PLAYER_START, //播放中

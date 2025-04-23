@@ -67,6 +67,9 @@ static const char scan_parm[] = "-t"
 #if (TCFG_DEC_AIFF_ENABLE)
                                 "AIFAIFFAIFC"
 #endif
+#if (MIDI_CTRL_DEC_ENABLE || MIDI_FILE_DEC_ENABLE)
+                                "MFAMDB"
+#endif
                                 " -sn -r"
 #if (TCFG_RECORD_FOLDER_DEV_ENABLE)
                                 " -m"
@@ -717,6 +720,9 @@ int music_player_play_prev_cycle_single_dev(struct music_player *player_hd)
 int music_player_play_prev(struct music_player *player_hd)
 {
     int err;
+    if (!player_hd || !player_hd->fsn) {
+        return MUSIC_PLAYER_ERR_FILE_NOFOUND;
+    }
 #if (MUSIC_PLAYER_CYCLE_ALL_DEV_EN)
     u32 cur_file = player_hd->fsn->file_counter;
     if ((music_player_get_record_play_status(player_hd) == false)
@@ -769,6 +775,9 @@ int music_player_play_next_cycle_single_dev(struct music_player *player_hd)
 int music_player_play_next(struct music_player *player_hd)
 {
     int err;
+    if (!player_hd || !player_hd->fsn) {
+        return MUSIC_PLAYER_ERR_FILE_NOFOUND;
+    }
 #if (MUSIC_PLAYER_CYCLE_ALL_DEV_EN)
     u32 cur_file = player_hd->fsn->file_counter;
     if ((music_player_get_record_play_status(player_hd) == false)

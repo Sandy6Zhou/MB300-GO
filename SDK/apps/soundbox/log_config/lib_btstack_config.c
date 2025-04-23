@@ -99,11 +99,6 @@ const int CONFIG_BTSTACK_TWS_AUDIO_SHARE_ENABLE  = 0;
    #endif
 #endif
 
-const int config_product_test_mode = 0;
-const char config_product_test_rssi = 50;
-const char config_product_adv_pair_rssi = 0;
-const char config_product_con_pair_rssi = 0;
-
 #if RCSP_MODE
 int app_info_debug_enable = 0;//BIT(4);
 /* #define RCSP_API_LOG		0 */
@@ -146,6 +141,13 @@ const int const_btstack_fm_overlay = 1;
 const int const_btstack_fm_overlay = 0;
 #endif
 #endif
+
+//产测信号强度控制，值越小可配对范围越小
+const char config_product_test_rssi = 0;
+//正常使用信号强度控制，值越大可搜索范围越小
+const char config_product_scan_rssi = 0;    //该rssi作用于正常搜索流程，设0不做限制, 取值范围要<0
+const char config_product_bind_rssi = 0;    //该rssi作用于绑定过程，设0不做限制,暂无作用
+const int config_product_test_mode = 0;
 
 // *INDENT-ON*
 

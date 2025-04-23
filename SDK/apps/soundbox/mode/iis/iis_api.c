@@ -217,7 +217,8 @@ void iis_key_vol_down(void)
 }
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-	(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+	(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)) || \
+	(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
 
 //当固定为接收端时，其它模式下开广播切进mic模式，关闭广播后music模式不会自动播放
 void iis_set_broadcast_local_open_flag(u8 en)
@@ -258,13 +259,13 @@ static int get_iis_play_status(void)
     if (get_connected_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#endif
 
     if (__this->onoff) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
 }
 
 static int iis_local_audio_open(void)

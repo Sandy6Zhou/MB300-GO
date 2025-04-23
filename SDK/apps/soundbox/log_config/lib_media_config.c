@@ -531,8 +531,17 @@ const int MIDI_TONE_MODE = 0;//0是地址访问(仅支持在内置flash,读数�
 #else
 const int MIDI_TONE_MODE = 1;
 #endif/*CONFIG_MIDI_DEC_ADDR*/
-const int MAINTRACK_USE_CHN = 0;	//MAINTRACK_USE_CHN控制主通道区分方式；   0用track号区分主通道 1用chn号区分主通道
+
 const int MAX_PLAYER_CNT = 18;     //控制可配置的最大同时发声的key数的BUF[1,32]
+const int MIDI_OUT_CHANNEL = 2;      //输出通道 配置(不需要修改)
+const int MAINTRACK_USE_CHN = 0;	//配置主通道是轨道还是通道配置  0是轨道 1是通道  默认0
+const int MAX_CTR_PLAYER_CNT = 8;   // 配置 midi 琴最大同时播放的key值   默认8
+const int MAX_DEC_PLAYER_CNT = 8;   //配置 midi 解码最大同时播放的key 值 ，默认8
+const int NOTE_OFF_TRIGGER = 0;     //配置为1 时 midi 琴 note_off time为0时 音符停止不回调
+const int MIDI_TONE_CURVE = 1;      //文件访问时，是否使用了包络，若使用了需配置成1 默认为0
+const int MIDI_MAX_MARK_CNT = 0;    //配置mark 播放支持的最大mark 数  默认为0 (需要配合midi文件使用)
+const int MIDI_SAVE_DIV_ENBALE = 0;     //配置小节回退功能(最大回退8个小节)，若使用小节回退功能需配置成1 默认为0
+const int MIDI_DEC_SR = 44100;     //输出采样率配置
 
 //***********************
 //* 	 SBC Codec      *
@@ -582,6 +591,22 @@ const int config_decoder_ff_fr_end_return_event_end = 0;
 //***********************
 //* 	 EQ             *
 //***********************
+#define AUDIO_EQ_FADE_ENABLE		1	//EQ系数更新淡入淡出
+//EQ配置relase使能：使能后根据工具EQ节点用到的滤波器类型仅使能对应的滤波器，优化代码体积，无法在线修改滤波器类型
+#define AUDIO_EQ_CONFIG_RELEASE		0
+
+#if AUDIO_EQ_CONFIG_RELEASE
+const int config_audio_eq_hp_enable = EQ_CFG_TYPE_HIGH_PASS;		//High Pass
+const int config_audio_eq_lp_enable = EQ_CFG_TYPE_LOW_PASS;			//Low Pass
+const int config_audio_eq_bp_enable = EQ_CFG_TYPE_PEAKING;			//Band Pass(Peaking)
+const int config_audio_eq_hs_enable = EQ_CFG_TYPE_HIGH_SHELF;		//High Shelf
+const int config_audio_eq_ls_enable = EQ_CFG_TYPE_LOW_SHELF;		//Low Shelf
+const int config_audio_eq_hs_q_enable = EQ_CFG_TYPE_HIGH_SHELF_Q;	//High Shelf Q
+const int config_audio_eq_ls_q_enable = EQ_CFG_TYPE_LOW_SHELF_Q;	//Low Shelf Q
+const int config_audio_eq_hp_adv_enable = EQ_CFG_TYPE_HP;			//High Pass Advance：对应工具上阶数可选的Hp
+const int config_audio_eq_lp_adv_enable = EQ_CFG_TYPE_LP;			//Low Pass Advance：对应工具上阶数可选的Lp
+#else //Debug
+
 const int config_audio_eq_hp_enable = 1;		//High Pass
 const int config_audio_eq_lp_enable = 1;		//Low Pass
 const int config_audio_eq_bp_enable = 1;		//Band Pass(Peaking)
@@ -599,6 +624,8 @@ const int config_audio_eq_hp_adv_enable = 1;	//High Pass Advance：对应工具�
 const int config_audio_eq_lp_adv_enable = 1;	//Low Pass Advance：对应工具上阶数可选的Lp
 #endif
 
+#endif
+
 #if TCFG_SPEAKER_EQ_NODE_ENABLE
 #if EQ_SECTION_MAX < 10
 #undef EQ_SECTION_MAX
@@ -614,7 +641,9 @@ const int config_audio_eq_en = EQ_EN
 #if TCFG_CROSSOVER_NODE_ENABLE
                                | EQ_HW_CROSSOVER_TYPE0_EN
 #endif/*TCFG_CROSSOVER_NODE_ENABLE*/
-                               /* | EQ_FADE_DISABLE */ //关闭 eq fade
+#if (AUDIO_EQ_FADE_ENABLE == 0)
+                               | EQ_FADE_DISABLE //关闭 eq fade
+#endif
                                ;
 #else
 const int config_audio_eq_en = 0;

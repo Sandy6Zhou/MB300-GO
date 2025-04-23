@@ -182,3 +182,18 @@ void bt_work_mode_switch_to_next(void)
     bt_work_mode_select(work_mode);
 }
 
+/*LE_AUDIO暂未支持低功耗*/
+#if TCFG_LE_AUDIO_APP_CONFIG
+static u8 mode_idle_query(void)
+{
+    if (g_bt_hdl.work_mode == BT_MODE_SIGLE_BOX || g_bt_hdl.work_mode == BT_MODE_TWS) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+REGISTER_LP_TARGET(mode_target) = {
+    .name = "mode",
+    .is_idle = mode_idle_query,
+};
+#endif

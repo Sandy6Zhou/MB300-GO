@@ -280,13 +280,13 @@ static int get_mic_play_status(void)
     if (get_connected_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#endif
 
     if (__this->onoff) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
 }
 
 static int mic_local_audio_open(void)

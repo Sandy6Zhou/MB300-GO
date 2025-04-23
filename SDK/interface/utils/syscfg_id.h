@@ -268,6 +268,11 @@ int syscfg_tools_init(void);
 #define		VM_ALARM_EX3				160
 #define		VM_ALARM_EX4				161
 
+#define     CFG_BT_FRE_OFFSET1			162
+#define     CFG_BT_FRE_OFFSET2			163
+#define     CFG_BT_FRE_OFFSET3			164
+#define     CFG_BT_FRE_OFFSET4			165
+
 #define     CFG_ONLINE_EQ_DRC_DATA_ID   254//在线调试保存参数的id
 #define     CFG_ONLINE_SAVE_ID          255//在线保存文件大小的id
 

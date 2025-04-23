@@ -32,8 +32,12 @@ typedef struct {
 } auracast_user_config_t;
 
 typedef struct {
-    uint32_t iso_interval;  // ISO interval(uints:us).
+    uint32_t tx_delay;
+    uint32_t big_offset;
+    uint8_t  adv_cnt;
+    uint8_t  bn;
     uint8_t  rtn;
+    uint8_t  reserve;
 } auracast_advanced_config_t;
 
 typedef struct {
@@ -62,5 +66,7 @@ extern u32 auracast_source_read_iso_tx_sync(uint8_t bis_index);
 extern u32 auracast_source_get_sync_delay(void);
 
 #endif
+
+
 
 

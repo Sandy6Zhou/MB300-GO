@@ -12,7 +12,6 @@
     *   Copyright:(c)JIELI  2011-2022  @ , All Rights Reserved.
 *********************************************************************************************/
 #include "system/includes.h"
-#include "le_broadcast.h"
 #include "app_le_broadcast.h"
 #include "app_config.h"
 #include "btstack/avctp_user.h"
@@ -33,6 +32,8 @@
 #include "iis.h"
 #include "pc_spk_player.h"
 #include "bt_slience_detect.h"
+#include "multi_protocol_main.h"
+#include "le_broadcast.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #include "ble_rcsp_server.h"
@@ -122,8 +123,8 @@ static u8 save_sync_status_table[5][2] = {0};
 
 static u8 bis_switch_onoff = 0;
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-static int rcsp_connect_dev_detect_timer = 0;
+#if THIRD_PARTY_PROTOCOLS_SEL
+static int ble_connect_dev_detect_timer = 0;
 #endif
 /**************************************************************************************************
   Function Declarations
@@ -346,6 +347,13 @@ static int app_broadcast_conn_status_event_handler(int *msg)
 #endif
         app_broadcast_data_sync.coding_type = LE_AUDIO_CODEC_TYPE;
         app_broadcast_data_sync.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
+#if LEA_COMPATIBLE_WITH_OLD_VERSION
+        app_broadcast_data_sync.nch = LE_AUDIO_CODEC_CHANNEL;
+        app_broadcast_data_sync.frame_size = LE_AUDIO_CODEC_FRAME_LEN;
+#if  LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA
+        app_broadcast_data_sync.coding_type = 0x02000000;
+#endif
+#endif
         broadcast_set_sync_data(hdl->big_hdl, &app_broadcast_data_sync, sizeof(struct broadcast_sync_info));
 
         mode = app_get_current_mode();
@@ -787,13 +795,19 @@ int app_broadcast_open()
 
 
     bis_switch_onoff = 1;
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-    ble_module_enable(0);
-    if (bt_rcsp_ble_conn_num() > 0) {
-        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)0, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+
+#if THIRD_PARTY_PROTOCOLS_SEL
+    multi_protocol_bt_ble_enable(0);
+#if THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN
+    u8 conn_num = bt_rcsp_ble_conn_num();
+#else
+    u8 conn_num = multi_protocol_bt_ble_connect_num();
+#endif
+    if (conn_num > 0) {
+        ble_connect_dev_detect_timer = sys_timeout_add((void *)0, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
         return -EPERM;
     } else {
-        rcsp_connect_dev_detect_timer = 0;
+        ble_connect_dev_detect_timer = 0;
     }
 #endif
     log_info("broadcast_open");
@@ -883,14 +897,19 @@ int app_broadcast_open_with_role(u8 role)
     }
 
     bis_switch_onoff = 1;
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-    ble_module_enable(0);
-    if (bt_rcsp_ble_conn_num() > 0) {
-        u32 temp_role = role + 1;
-        rcsp_connect_dev_detect_timer = sys_timeout_add((void *)temp_role, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
+#if THIRD_PARTY_PROTOCOLS_SEL
+    multi_protocol_bt_ble_enable(0);
+    u32 temp_role = role + 1;
+#if THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN
+    u8 conn_num = bt_rcsp_ble_conn_num();
+#else
+    u8 conn_num = multi_protocol_bt_ble_connect_num();
+#endif
+    if (conn_num > 0) {
+        ble_connect_dev_detect_timer = sys_timeout_add((void *)temp_role, app_broadcast_retry_open, 250); //由于非标准广播使用私有hci事件回调所以需要等RCSP断连事件处理完后才能开广播
         return -EPERM;
     } else {
-        rcsp_connect_dev_detect_timer = 0;
+        ble_connect_dev_detect_timer = 0;
     }
 #endif
 
@@ -964,9 +983,9 @@ int app_broadcast_close(u8 status)
 
     log_info("broadcast_close");
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-    if (rcsp_connect_dev_detect_timer) {
-        sys_timeout_del(rcsp_connect_dev_detect_timer);
+#if THIRD_PARTY_PROTOCOLS_SEL
+    if (ble_connect_dev_detect_timer) {
+        sys_timeout_del(ble_connect_dev_detect_timer);
     }
 #endif
     //由于是异步操作需要加互斥量保护，避免和开启开广播的流程同时运行,添加的流程请放在互斥量保护区里面
@@ -1000,10 +1019,10 @@ int app_broadcast_close(u8 status)
 
     bis_switch_onoff = 0;
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if THIRD_PARTY_PROTOCOLS_SEL
     if (status != APP_BROADCAST_STATUS_SUSPEND) {
         ll_set_private_access_addr_pair_channel(0);
-        ble_module_enable(1);
+        multi_protocol_bt_ble_enable(1);
     }
 #endif
 

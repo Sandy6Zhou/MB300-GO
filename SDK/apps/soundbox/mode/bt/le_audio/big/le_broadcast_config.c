@@ -328,7 +328,6 @@ void update_receiver_big_codec_params(void *sync_data)
 
     platform_data.args[platform_data_index].bitrate = data_sync->bit_rate;
     platform_data.sample_rate = data_sync->sample_rate;
-    platform_data.coding_type = data_sync->coding_type;
     enc_output_frame_len = calcul_big_enc_output_frame_len(platform_data.frame_len, platform_data.args[platform_data_index].bitrate, 0);
     big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, platform_data.args[platform_data_index].sdu_interval, platform_data.frame_len);
     dec_input_buf_len = calcul_big_dec_input_buf_len(big_transmit_data_len);

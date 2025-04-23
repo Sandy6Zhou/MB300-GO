@@ -921,6 +921,42 @@ struct file_player *get_music_file_player(void) //返回第一个打开的音乐
 }
 
 
+struct midi_player *midi_ctrl_player_open()
+{
+    struct midi_player   *player = zalloc(sizeof(struct midi_player));
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music");
+    int err = 0;
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_ZERO_ACTIVE);
+    if (!player->stream) {
+        goto __exit0;
+    }
+    jlstream_set_callback(player->stream, NULL, NULL);
+    jlstream_set_scene(player->stream, STREAM_SCENE_MIDI);
+    jlstream_set_coexist(player->stream, 0);
+    err = jlstream_start(player->stream);
+
+    if (err) {
+        goto __exit1;
+    }
+    return player;
+__exit1:
+    jlstream_release(player->stream);
+__exit0:
+    free(player);
+    return NULL;
+}
+
+void midi_ctrl_player_close(struct midi_player *player)
+{
+    if (!player) {
+        return;
+    }
+    jlstream_stop(player->stream, 50);
+    jlstream_release(player->stream);
+    free(player);
+    jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"music");
+}
+
 static int __music_player_init()
 {
     INIT_LIST_HEAD(&g_file_player.head);

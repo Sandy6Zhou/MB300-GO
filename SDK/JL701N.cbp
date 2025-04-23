@@ -267,6 +267,7 @@
 <Add option="cpu/br28/liba/noisegate.a" />
 <Add option="cpu/br28/liba/sbc_eng_lib.a" />
 <Add option="cpu/br28/liba/lib_mp3_dec.a" />
+<Add option="cpu/br28/liba/lib_midi_dec.a" />
 <Add option="cpu/br28/liba/lib_speex_codec.a" />
 <Add option="cpu/br28/liba/lib_m4a_dec.a" />
 <Add option="cpu/br28/liba/mp3_decstream_lib.a" />
@@ -275,6 +276,7 @@
 <Add option="cpu/br28/liba/lib_f2a_dec.a" />
 <Add option="cpu/br28/liba/agreement.a" />
 <Add option="cpu/br28/liba/opus_enc_lib.a" />
+<Add option="cpu/br28/liba/aac_enc_lib.a" />
 <Add option="cpu/br28/liba/libLHDCv4DecodeLib.a" />
 <Add option="cpu/br28/liba/libLHDCv5DecodeLib.a" />
 <Add option="cpu/br28/liba/lib_ldac_dec.a" />
@@ -875,6 +877,7 @@
 <Unit filename="apps/soundbox/include/spdif.h" />
 <Unit filename="apps/soundbox/include/spdif_player.h" />
 <Unit filename="apps/soundbox/include/surround_sound.h" />
+<Unit filename="apps/soundbox/include/tws_a2dp_play.h" />
 <Unit filename="apps/soundbox/include/ui/lcd_seg/lcd_seg3x9_driver.h" />
 <Unit filename="apps/soundbox/include/ui/lcd_spi/lcd_drive.h" />
 <Unit filename="apps/soundbox/include/ui/led7/led7_driver.h" />
@@ -1301,6 +1304,8 @@
 <Unit filename="audio/jl_kws/jlsp_simple_dvad.h" />
 <Unit filename="audio/le_audio/le_audio_stream.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/le_audio/le_audio_stream.h" />
+<Unit filename="audio/midi/audio_dec_midi_ctrl.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/midi/audio_dec_midi_file.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/smart_voice/jl_kws_platform.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/smart_voice/kws_event.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/smart_voice/kws_event.h" />
@@ -1537,11 +1542,15 @@
 <Unit filename="interface/media/audio_stream.h" />
 <Unit filename="interface/media/automute.h" />
 <Unit filename="interface/media/bt_audio_timestamp.h" />
+<Unit filename="interface/media/codec/MIDI_CTRL_API.h" />
+<Unit filename="interface/media/codec/MIDI_DEC_API.h" />
 <Unit filename="interface/media/codec/audio_decode_common_api.h" />
 <Unit filename="interface/media/codec/audio_encode_common_api.h" />
+<Unit filename="interface/media/codec/if_decoder_ctrl.h" />
 <Unit filename="interface/media/codec/lc3_codec_api.h" />
 <Unit filename="interface/media/codec/sbc_codec.h" />
 <Unit filename="interface/media/codec/sbc_enc.h" />
+<Unit filename="interface/media/codec/typedef.h" />
 <Unit filename="interface/media/cpu/br28/asm/anc.h" />
 <Unit filename="interface/media/cpu/br28/asm/audio_adc.h" />
 <Unit filename="interface/media/cpu/br28/asm/audio_common.h" />

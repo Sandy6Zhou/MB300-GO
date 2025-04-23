@@ -130,17 +130,15 @@ static int tone_tws_event_handler(int *_event)
             break;
         }
         tone_player_stop();
+#if TCFG_TWS_TONE_PLAY
         if (role == TWS_ROLE_MASTER) {
-            int state = tws_api_get_tws_state();
-            if (state & (TWS_STA_SBC_OPEN | TWS_STA_ESCO_OPEN)) {
-                break;
-            }
 #if TCFG_USER_TWS_ENABLE
             tws_play_tone_file(get_tone_files()->tws_connect, 400);
 #else
             play_tone_file(get_tone_files()->tws_connect);
 #endif
         }
+#endif
         break;
     case TWS_EVENT_CONNECTION_DETACH:
         if (app_var.goto_poweroff_flag) {
@@ -164,10 +162,12 @@ static int tone_tws_event_handler(int *_event)
 #endif
         if (!g_bt_hdl.ignore_discon_tone) {
             tone_player_stop();
+#if TCFG_TWS_TONE_PLAY
 #if TCFG_KBOX_1T3_MODE_EN
             play_tone_file_alone(get_tone_files()->tws_disconnect);
 #else
             play_tone_file(get_tone_files()->tws_disconnect);
+#endif
 #endif
         } else {
             g_bt_hdl.ignore_discon_tone --;

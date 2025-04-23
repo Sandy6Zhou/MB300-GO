@@ -225,6 +225,12 @@ static void __set_fm_station()
     fm_manage_set_fre(REAL_FREQ(__this->fm_freq_cur));
     fm_last_ch_save(__this->fm_freq_channel_cur);
     fm_app_mute(0);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
+    if ((get_broadcast_role() != BROADCAST_ROLE_TRANSMITTER))
+#endif
+    {
+        fm_player_open();
+    }
 }
 
 static void __set_fm_frq()
@@ -233,6 +239,13 @@ static void __set_fm_frq()
     fm_manage_set_fre(REAL_FREQ(__this->fm_freq_cur));
     fm_last_freq_save(REAL_FREQ(__this->fm_freq_cur));
     fm_app_mute(0);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
+    if ((get_broadcast_role() != BROADCAST_ROLE_TRANSMITTER))
+#endif
+    {
+        fm_player_open();
+    }
+
 }
 
 static void __fm_scan_all(void *priv)

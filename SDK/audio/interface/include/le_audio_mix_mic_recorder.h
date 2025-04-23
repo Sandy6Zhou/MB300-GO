@@ -20,5 +20,8 @@ void le_audio_mix_mic_open(void);
 void le_audio_mix_mic_close(void);
 
 
+int get_micEff2LeAudio_switch_status(void);
+
+
 #endif
 

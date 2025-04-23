@@ -187,7 +187,7 @@ void testbox_event_to_user(u8 *packet, u8 event, u8 size)
 
 static void app_testbox_sub_event_handle(u8 *data, u16 size)
 {
-    u8 mac = 0;
+    /* u8 mac = 0; */
 #if TCFG_APP_BT_EN
     switch (data[0]) {
     case CMD_BOX_FAST_CONN:
@@ -218,18 +218,18 @@ static void app_testbox_sub_event_handle(u8 *data, u16 size)
 }
 
 extern u8 app_testbox_enter_loader_update(void);
-static void app_testbox_update_event_handle(void)
+static void app_testbox_update_event_handle(u8 *data, u16 size)
 {
     //如果开启了VM配置项暂存RAM功能则在每次触发升级前保存数据到vm_flash,避免丢失数据
     //vm_flush2flash();时间处理较长，不能够在串口中断处做处理，需要发送到线程进行处理
     if (get_vm_ram_storage_enable() || get_vm_ram_storage_in_irq_enable()) {
         vm_flush2flash(1);
     }
-#if 0
-    if (app_testbox_enter_loader_update()) {
-        return;
+    if ((size >= 1) && (data[0])) {
+        if (app_testbox_enter_loader_update()) {
+            return;
+        }
     }
-#endif
     /* 打一个uartkey给maskrom识别 */
     chargestore_set_update_ram();
     /* reset之后在maskrom收loader，然后执行 */
@@ -247,7 +247,7 @@ static int app_testbox_event_handler(int *msg)
         break;
 
     case CMD_BOX_UPDATE:
-        app_testbox_update_event_handle();
+        app_testbox_update_event_handle(testbox_dev->packet, testbox_dev->size);
         break;
 
     case CMD_BOX_TWS_CHANNEL_SEL:
@@ -435,10 +435,15 @@ static int app_testbox_data_handler(u8 *buf, u8 len)
             break;
         }
         __this->testbox_status = 1;
-        if (buf[13] == get_jl_chip_id() || buf[13] == get_jl_chip_id2()) {
+        printf(">>>[test]:buf[13], get_jl_chip_id() = 0x%x, 0x%x\n", buf[13], get_jl_chip_id());
+        if (buf[13] == 0xff || buf[13] == get_jl_chip_id() || buf[13] == get_jl_chip_id2()) {
             //进行串口升级流程
             //vm_flush2flash();时间处理较长，不能够在串口中断处做处理，需要发送到线程进行处理
-            testbox_event_to_user(NULL, CMD_BOX_UPDATE, 0);
+            if (buf[15]) { // 存在新的升级流程
+                send_buf[1] = 0xAA;//回复0xAA表示使用新的串口升级流程 uart_ota2.bin
+                chargestore_api_write(send_buf, 2);
+            }
+            testbox_event_to_user(&buf[15], CMD_BOX_UPDATE, 1);
         } else if (buf[13] == 0xff) {
             //进行电量更新流程,需要及时回复
             send_buf[1] = 0xff;

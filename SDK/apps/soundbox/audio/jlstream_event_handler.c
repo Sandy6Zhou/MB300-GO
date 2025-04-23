@@ -26,6 +26,8 @@
 #include "local_tws.h"
 #include "bt_tws.h"
 #include "audio_dut_control.h"
+#include "mic_effect.h"
+#include "le_audio_mix_mic_recorder.h"
 
 #define PIPELINE_UUID_TONE_NORMAL   0x7674
 #define PIPELINE_UUID_A2DP          0xD96F
@@ -464,6 +466,19 @@ static int tws_get_output_channel()
 static int get_switch_node_callback(const char *arg)
 {
     printf("get_switch_node_callback, node name:%s, need add yourself switch_node's callback!\n", arg);
+
+
+#if TCFG_MIC_EFFECT_ENABLE
+    if (!strncmp(arg, "Sw_MicEff2DAC", strlen("Sw_MicEff2DAC"))) {
+        return (int)get_micEff2DAC_switch_status;
+    }
+#if LE_AUDIO_MIX_MIC_EFFECT_EN
+    if (!strncmp(arg, "Sw_MicEff2LeAud", strlen("Sw_MicEff2LeAud"))) {
+        return (int)get_micEff2LeAudio_switch_status;
+    }
+#endif
+#endif
+
 
 #if TCFG_MIX_RECORD_ENABLE
     if (!strncmp(arg, "SW_Rec", strlen("SW_Rec"))) {

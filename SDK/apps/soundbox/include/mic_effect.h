@@ -14,4 +14,5 @@ void mic_effect_set_echo_delay(u32 delay);
 u32 mic_effect_get_echo_delay(void);
 void mic_effect_set_echo_decay(u32 decay);
 u32 mic_effect_get_echo_decay(void);
+int get_micEff2DAC_switch_status(void);
 #endif

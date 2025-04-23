@@ -43,6 +43,13 @@ enum {
 struct broadcast_sync_info {
     // 状态同步
     u8 volume;
+#if LEA_COMPATIBLE_WITH_OLD_VERSION
+    u16 softoff;
+    // 解码参数同步
+    u8 sound_input;
+    u8 nch;
+    u16 frame_size;
+#endif
     // 解码参数同步
     int coding_type;
     int sample_rate;

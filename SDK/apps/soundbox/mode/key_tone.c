@@ -9,6 +9,8 @@
 #include "app_tone.h"
 #include "key_driver.h"
 
+#if TCFG_KEY_TONE_NODE_ENABLE
+
 static u8 g_have_key_tone_file = 0;
 
 static int key_tone_msg_handler(int *msg)
@@ -53,3 +55,4 @@ APP_MSG_HANDLER(key_tone_msg_entry) = {
     .from       = MSG_FROM_KEY,
     .handler    = key_tone_msg_handler,
 };
+#endif

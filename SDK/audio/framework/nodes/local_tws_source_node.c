@@ -98,7 +98,7 @@ static int local_tws_send_frame(struct local_tws_source_context *ctx, struct str
     if (!ctx->packet) {
         ctx->packet = tws_api_data_trans_buf_alloc(ctx->tws_channel, ctx->packet_len);
         if (!ctx->packet) {
-            printf("SEND PACKET ERROR\n");
+            printf("SEND PACKET ERROR:%d\n", ctx->packet_len);
             goto __exit;
         }
         ctx->offset = local_tws_pack_header(ctx, ctx->packet, frame);

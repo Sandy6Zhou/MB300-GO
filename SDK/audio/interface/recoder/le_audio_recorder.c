@@ -19,6 +19,8 @@
 #include "media/sync/audio_syncts.h"
 #include "asm/dac.h"
 #include "audio_cvp.h"
+#include "app_main.h"
+#include "volume_node.h"
 #if TCFG_APP_SPDIF_EN
 #include "spdif.h"
 #endif
@@ -95,6 +97,15 @@ struct le_audio_mic_recorder {
 };
 static struct le_audio_mic_recorder *g_mic_recorder = NULL;
 #endif
+
+struct le_audio_tx_vol {
+    s16 dvol_step;
+    s16 dvol;
+    s16 max_dvol;
+    u8 save_vol_cnt;
+    u16 save_vol_timer;
+};
+static struct le_audio_tx_vol g_le_audio_tx_vol = {0};
 
 //a2dp流创建但未start的情况下，数据流被打断suspend，a2dp_file.c suspend流程是不走的，需启动HH丢数据处理，避免蓝牙buf满打印ffffff问题
 //丢数据策略选配, 0:使用a2dp_file.c内自带流程 1:播放器内使用timer丢数.因测试覆盖场景有限，默认使用播放器自带timer丢数据
@@ -522,6 +533,28 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
         g_iis_recorder = NULL;
         return err;
     }
+
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    char *vol_name = "Vol_WMicTX";
+    struct volume_cfg cfg = {0};
+    int ret = jlstream_get_node_param(NODE_UUID_VOLUME_CTRLER, vol_name, (void *)&cfg, sizeof(struct volume_cfg));
+    if (ret > 0) {
+        g_le_audio_tx_vol.max_dvol = (cfg.cfg_level_max >= cfg.cur_vol) ? cfg.cfg_level_max : cfg.cur_vol;
+        g_le_audio_tx_vol.dvol_step = (cfg.cur_vol * g_le_audio_tx_vol.max_dvol) / cfg.cfg_level_max;
+        ret = syscfg_read(CFG_WIRELESS_MIC0_VOLUME, &g_le_audio_tx_vol.dvol, 2);
+        if (ret > 0) {
+            /* g_le_audio_tx_vol.dvol = app_var.mic_eff_volume; //先使用mic_effect的音量配置 */
+            if (g_le_audio_tx_vol.dvol != cfg.cur_vol) {
+                le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol); //有记录的音量先用记录的音量
+            }
+        } else {
+            g_le_audio_tx_vol.dvol = cfg.cur_vol;
+            le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol);
+        }
+        printf(" %s dvol:%d\n", __FUNCTION__, g_le_audio_tx_vol.dvol);
+    }
+#endif
+
     return 0;
 }
 
@@ -859,6 +892,26 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
         goto __exit1;
     }
 
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    char *vol_name = "Vol_WMicTX";
+    struct volume_cfg cfg = {0};
+    int ret = jlstream_get_node_param(NODE_UUID_VOLUME_CTRLER, vol_name, (void *)&cfg, sizeof(struct volume_cfg));
+    if (ret > 0) {
+        g_le_audio_tx_vol.max_dvol = (cfg.cfg_level_max >= cfg.cur_vol) ? cfg.cfg_level_max : cfg.cur_vol;
+        g_le_audio_tx_vol.dvol_step = (cfg.cur_vol * g_le_audio_tx_vol.max_dvol) / cfg.cfg_level_max;
+        ret = syscfg_read(CFG_WIRELESS_MIC0_VOLUME, &g_le_audio_tx_vol.dvol, 2);
+        if (ret > 0) {
+            /* g_le_audio_tx_vol.dvol = app_var.mic_eff_volume; //先使用mic_effect的音量配置 */
+            if (g_le_audio_tx_vol.dvol != cfg.cur_vol) {
+                le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol); //有记录的音量先用记录的音量
+            }
+        } else {
+            g_le_audio_tx_vol.dvol = cfg.cur_vol;
+            le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol);
+        }
+        printf(" %s dvol:%d\n", __FUNCTION__, g_le_audio_tx_vol.dvol);
+    }
+#endif
     printf("le_audio mic recorder open success  \n");
     return 0;
 
@@ -893,3 +946,64 @@ void le_audio_mic_recorder_close(void)
 }
 #endif
 
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+
+static void le_audio_tx_volume_save_do(void *priv)
+{
+    if (++g_le_audio_tx_vol.save_vol_cnt >= 5) {
+        sys_timer_del(g_le_audio_tx_vol.save_vol_timer);
+        g_le_audio_tx_vol.save_vol_timer = 0;
+        g_le_audio_tx_vol.save_vol_cnt = 0;
+        printf("save le audio vol:%d\n", g_le_audio_tx_vol.dvol);
+        syscfg_write(CFG_WIRELESS_MIC0_VOLUME, &g_le_audio_tx_vol.dvol, 2);
+        return;
+    }
+}
+
+static void le_audio_tx_volume_change(void)
+{
+    g_le_audio_tx_vol.save_vol_cnt = 0;
+    if (g_le_audio_tx_vol.save_vol_timer == 0) {
+        g_le_audio_tx_vol.save_vol_timer = sys_timer_add(NULL, le_audio_tx_volume_save_do, 1000);//中断里不能操作vm 关中断不能操作vm
+    }
+}
+
+int le_audio_wireless_mic_tx_set_dvol(u8 vol)
+{
+    char *vol_name = "Vol_WMicTX";
+    struct volume_cfg cfg = {0};
+    cfg.bypass = VOLUME_NODE_CMD_SET_VOL;
+    cfg.cur_vol = vol;
+    int err = jlstream_set_node_param(NODE_UUID_VOLUME_CTRLER, vol_name, (void *)&cfg, sizeof(struct volume_cfg)) ;
+    if (err < 0) {
+        return -1;
+    }
+    printf("le audo tx dvol name: %s, le audo tx dvol:%d\n", vol_name, vol);
+    if (vol != g_le_audio_tx_vol.dvol) {
+        g_le_audio_tx_vol.dvol = vol;
+        le_audio_tx_volume_change();
+    }
+    return 0;
+}
+
+void le_audio_wireless_mic_tx_dvol_up(void)
+{
+    if (g_le_audio_tx_vol.dvol < g_le_audio_tx_vol.max_dvol) {
+        g_le_audio_tx_vol.dvol += g_le_audio_tx_vol.dvol_step;
+        le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol);
+    } else {
+        printf("[WARING]le audio tx volum is max\n");
+    }
+
+}
+
+void le_audio_wireless_mic_tx_dvol_down(void)
+{
+    if (g_le_audio_tx_vol.dvol) {
+        g_le_audio_tx_vol.dvol -= g_le_audio_tx_vol.dvol_step;
+        le_audio_wireless_mic_tx_set_dvol(g_le_audio_tx_vol.dvol);
+    } else {
+        printf("[WARING]le audio tx volum is min\n");
+    }
+}
+#endif

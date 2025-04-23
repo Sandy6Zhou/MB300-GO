@@ -89,6 +89,12 @@ struct jlstream;
 #define NODE_IOC_TWS_TX_SWITCH      0x00020030
 #define NODE_IOC_GET_ID3      		0x00020031
 #define NODE_IOC_GET_ENC_TIME       0x00020032		//获取编码时间
+#define NODE_IOC_MIDI_CTRL_NOTE_ON 	0x00020035      //MIDI按键按下
+#define NODE_IOC_MIDI_CTRL_NOTE_OFF 0x00020036      //MIDI按键松开
+#define NODE_IOC_MIDI_CTRL_SET_PROG 0x00020037      //MIDI更改乐器
+#define NODE_IOC_MIDI_CTRL_PIT_BEND 0x00020038      //MIDI弯音轮
+#define NODE_IOC_MIDI_CTRL_VEL_VIBR 0x00020039      //MIDI抖动幅度
+#define NODE_IOC_MIDI_CTRL_QUE_KEY  0x0002003a      //MIDI查询指定通道的key播放
 
 #define NODE_IOC_START              (0x00040000 | NODE_STA_RUN)
 #define NODE_IOC_PAUSE              (0x00040000 | NODE_STA_PAUSE)
@@ -155,6 +161,7 @@ enum stream_scene : u8 {
     STREAM_SCENE_ADDA_LOOP,
     STREAM_SCENE_WIRELESS_MIC,  //16 wireless mic
     STREAM_SCENE_LOCAL_TWS,
+    STREAM_SCENE_MIDI,      //MIDI 琴解码
 
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪

@@ -53,8 +53,8 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
-#if TCFG_LOCAL_TWS_ENABLE
-#define    CONFIG_BT_TWS_SNIFF                  0       //[WIP]
+#if TCFG_BT_SNIFF_ENABLE
+#define    CONFIG_BT_TWS_SNIFF                  1       //[WIP]
 #else
 #define    CONFIG_BT_TWS_SNIFF                  0       //[WIP]
 #endif
@@ -711,10 +711,12 @@ int bt_tws_start_pair(void)
 static void bt_tws_vol_sync(void *_data, u16 len, bool rx)
 {
     if (rx) {
+        u8 *data = (u8 *)_data;
         if (app_in_mode(APP_MODE_BT) == 0) {
+            app_audio_set_volume(APP_AUDIO_STATE_CALL, data[1], 1);
+            r_printf("vol_sync: %d\n", data[1]);
             return;     //非蓝牙模式不同步音量防止声音突变
         }
-        u8 *data = (u8 *)_data;
         app_audio_set_volume(APP_AUDIO_STATE_MUSIC, data[0], 1);
         app_audio_set_volume(APP_AUDIO_STATE_CALL, data[1], 1);
         r_printf("vol_sync: %d, %d\n", data[0], data[1]);

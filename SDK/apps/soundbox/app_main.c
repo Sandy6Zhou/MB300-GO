@@ -68,7 +68,11 @@
 
 /*任务列表 */
 const struct task_info task_info_table[] = {
+#if LE_AUDIO_MIX_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN
+    {"app_core",            1,     0,   1024 * 2,   768 },
+#else
     {"app_core",            1,     0,   1024,   768 },
+#endif
     {"btctrler",            4,     0,   512,   512 },
     {"btencry",             1,     0,   512,   128 },
 #if (BT_FOR_APP_EN)

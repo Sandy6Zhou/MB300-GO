@@ -184,6 +184,7 @@
 #define AUDIO_CODING_OGG          0x40000000
 #define AUDIO_CODING_LHDC         0x80000000
 #define AUDIO_CODING_LHDC_V5      0xA0000000
+#define AUDIO_CODING_MIDI_CTRL    0xB0000000
 
 //#define AUDIO_CODING_STU_PICK     0x10000000
 //#define AUDIO_CODING_STU_APP      0x20000000
@@ -258,3 +259,12 @@
 #define  LIMITER_PRECISION_MAX              EFx_PRECISION_PRO //最高
 
 #endif/*_AUDIO_DEF_H_*/
+
+/*
+ *******************************************************************
+ *						MIDI Definitions
+ *******************************************************************
+ */
+#define MIDI_CTRL_DEC_ENABLE          0
+#define MIDI_FILE_DEC_ENABLE          0
+#define CONFIG_MIDI_DEC_ADDR
