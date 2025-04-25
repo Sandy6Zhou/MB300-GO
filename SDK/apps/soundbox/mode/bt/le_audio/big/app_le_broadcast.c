@@ -1281,6 +1281,8 @@ int app_broadcast_deal(int scene)
         //当前处于蓝牙模式并且挂起前广播作为发送设备，恢复广播的操作在播放a2dp处执行
         if (mode && (mode->name == APP_MODE_BT)) {
             if (broadcast_last_role == BROADCAST_ROLE_TRANSMITTER) {
+                ret = 1;
+                break;
             }
         }
         //当前处于蓝牙模式并且挂起前广播，恢复广播并作为接收设备

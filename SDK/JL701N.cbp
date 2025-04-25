@@ -389,6 +389,7 @@
 </Build>
 <Unit filename="apps/common/app_mode_manager/app_mode_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/app_mode_manager/app_mode_manager.h" />
+<Unit filename="apps/common/bt_common/bt_fre_offset_storage.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/bt_common/bt_test_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/clock_manager/clock_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/clock_manager/clock_manager.h" />
@@ -448,6 +449,7 @@
 <Unit filename="apps/common/device/storage_device/nandflash/nandflash.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/storage_device/norflash/norflash.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/storage_device/norflash/norflash_sfc.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/touch_panel/IT7259E.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/usb/demo/host/udisk_block_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/usb/device/cdc.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/usb/device/cdc.h" />
@@ -1021,6 +1023,7 @@
 <Unit filename="apps/soundbox/ui/lcd/STYLE_SOUNDBOX/sink_action.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/lcd/STYLE_SOUNDBOX/spdif_action.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/lcd/STYLE_SOUNDBOX/system_action.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/soundbox/ui/lcd/STYLE_SOUNDBOX/ui_touch_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/lcd/lyrics_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/ui/lcd/lyrics_api.h" />
 <Unit filename="apps/soundbox/ui/lcd/ui_sys_param_api.c"><Option compilerVer="CC"/></Unit>
@@ -1463,6 +1466,7 @@
 <Unit filename="interface/driver/cpu/br28/asm/power/power_trim.h" />
 <Unit filename="interface/driver/cpu/br28/asm/power/rtc_app.h" />
 <Unit filename="interface/driver/cpu/br28/asm/power_interface.h" />
+<Unit filename="interface/driver/cpu/br28/asm/psram_api.h" />
 <Unit filename="interface/driver/cpu/br28/asm/rdec.h" />
 <Unit filename="interface/driver/cpu/br28/asm/rtc.h" />
 <Unit filename="interface/driver/cpu/br28/asm/sdmmc.h" />
@@ -1601,6 +1605,7 @@
 <Unit filename="interface/media/effects/audio_howling_gate.h" />
 <Unit filename="interface/media/effects/audio_hw_crossover.h" />
 <Unit filename="interface/media/effects/audio_limiter.h" />
+<Unit filename="interface/media/effects/audio_llns_dns.h" />
 <Unit filename="interface/media/effects/audio_multiband_crossover.h" />
 <Unit filename="interface/media/effects/audio_multiband_drc.h" />
 <Unit filename="interface/media/effects/audio_multiband_limiter.h" />
@@ -1687,6 +1692,7 @@
 <Unit filename="interface/media/tech_lib/effect_surTheta_api.h" />
 <Unit filename="interface/media/tech_lib/jla_ll_codec_api.h" />
 <Unit filename="interface/media/tech_lib/jlsp_kws.h" />
+<Unit filename="interface/media/tech_lib/jlsp_llns_dns.h" />
 <Unit filename="interface/media/tech_lib/jlsp_vad.h" />
 <Unit filename="interface/media/tws/jl_tws.h" />
 <Unit filename="interface/system/bank_switch.h" />
@@ -1746,6 +1752,7 @@
 <Unit filename="interface/ui/jl_ui/ui/ui_measure.h" />
 <Unit filename="interface/ui/jl_ui/ui/ui_number.h" />
 <Unit filename="interface/ui/jl_ui/ui/ui_page_manager.h" />
+<Unit filename="interface/ui/jl_ui/ui/ui_page_switch.h" />
 <Unit filename="interface/ui/jl_ui/ui/ui_pic.h" />
 <Unit filename="interface/ui/jl_ui/ui/ui_progress.h" />
 <Unit filename="interface/ui/jl_ui/ui/ui_progress_multi.h" />

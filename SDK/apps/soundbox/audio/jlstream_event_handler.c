@@ -437,6 +437,9 @@ static int tws_switch_get_status()
 #if TCFG_LOCAL_TWS_ENABLE
     struct app_mode *mode;
     mode = app_get_current_mode();
+    if (mode == NULL) { //有可能此时处于模式切换临界情况
+        return 0;
+    }
     if (mode->name == APP_MODE_BT || mode->name == APP_MODE_SINK) {
         return 0;
     } else {

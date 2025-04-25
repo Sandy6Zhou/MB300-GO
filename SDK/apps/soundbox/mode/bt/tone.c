@@ -131,7 +131,10 @@ static int tone_tws_event_handler(int *_event)
         }
         tone_player_stop();
 #if TCFG_TWS_TONE_PLAY
-        if (role == TWS_ROLE_MASTER) {
+        if ((role == TWS_ROLE_MASTER) &&
+            ((bt_get_call_status() != BT_CALL_OUTGOING)
+             && (bt_get_call_status() != BT_CALL_INCOMING)
+             && (bt_get_call_status() != BT_CALL_ACTIVE))) {
 #if TCFG_USER_TWS_ENABLE
             tws_play_tone_file(get_tone_files()->tws_connect, 400);
 #else

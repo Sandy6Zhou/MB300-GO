@@ -207,13 +207,7 @@ static u16 multi_bis_rx_temp_buf_len = 0;
 static int cur_deal_scene = -1; /*< 当前系统处于的运行场景 */
 static struct app_auracast_t app_auracast;
 static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频和本地音频切换回调接口指针 */
-static uint8_t match_auracast_num = 3;
-uint8_t match_aurcast_name[4][28] = {
-    [0] = "JBL Clip 5",
-    [1] = "LE-H_54B7E5C85311",
-    [2] = "MoerDuo_BLE",
-    [3] = "JL_auracast",
-};
+static char auracast_listen_name[28];
 
 static unsigned char errpacket[2] = {
     0x02, 0x00
@@ -225,7 +219,7 @@ auracast_user_config_t user_config = {
     .config_variant = AURACAST_BIS_VARIANT,
     .encryption = AURACAST_BIS_ENCRYPTION_ENABLE,
     .broadcast_id = 0x123456,
-    .broadcast_name = "JL_auracast",
+    /* .broadcast_name = "JL_auracast", */
 };
 auracast_advanced_config_t user_advanced_config = {
     .bn = AURACAST_ISO_BN,
@@ -255,7 +249,7 @@ u8 lea_cfg_support_ll_hci_cmd_in_lea_lib = 1;
 
 #define AURACAST_SINK_MAX_RECORD_NUM  3
 #define AURACAST_SINK_RECORDED_WIRTE_VM     0
-#define AURACAST_SINK_FILTER_TIMEOUT  10*1000L
+#define AURACAST_SINK_FILTER_TIMEOUT  0*1000L
 
 static u8 auracast_sink_start_record = 0;
 static u8 auracast_sink_curr_connect_mac_addr[6];
@@ -679,6 +673,18 @@ static bool match_name(char *target_name, char *source_name, size_t target_len)
     return FALSE;
 }
 
+void read_auracast_listen_name(void)
+{
+    int len = syscfg_read(CFG_AURACAST_LISTEN_NAME, auracast_listen_name, sizeof(auracast_listen_name));
+    if (len <= 0) {
+        r_printf("ERR:Can not read the auracast listen name\n");
+        return;
+    }
+
+    put_buf((const u8 *)auracast_listen_name, sizeof(auracast_listen_name));
+    y_printf("sink_listen_name:%s", auracast_listen_name);
+}
+
 static void auracast_sync_info_report(uint8_t *packet, uint16_t length)
 {
     if (!app_auracast_init_flag) {
@@ -695,12 +701,13 @@ static void auracast_sync_info_report(uint8_t *packet, uint16_t length)
     printf("Advertising_SID[%d]Address_Type[%d]ADDR:\n", config->Advertising_SID, config->Address_Type);
     put_buf(config->source_mac_addr, 6);
     printf("auracast name:%s\n", config->broadcast_name);
-#if 1
-    //不匹配设备名，搜到直接同步，如需匹配设备名，请#if 0
-    app_auracast_sink_big_sync_create(config);
-    app_auracast_mutex_post(&mutex, __LINE__);
-    return ;
-#endif
+    if (match_name(auracast_listen_name, "no_match_name", strlen((void *)auracast_listen_name))) {
+        //不匹配设备名，搜到直接同步，如需匹配设备名，请#if 0
+        y_printf("no need match name");
+        app_auracast_sink_big_sync_create(config);
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return ;
+    }
 
 #if 0
     printf("last_connect_addr:\n");
@@ -756,14 +763,13 @@ static void auracast_sync_info_report(uint8_t *packet, uint16_t length)
 #endif
 
 
-    printf("match auracast name:%s[%d]\n", match_aurcast_name[match_auracast_num], (int)strlen((void *)match_aurcast_name[match_auracast_num]));
-    if (match_name((void *)config->broadcast_name, (void *)match_aurcast_name[match_auracast_num], strlen((void *)match_aurcast_name[match_auracast_num]))) {
-        printf("auracast name match\n");
+    if (match_name((void *)config->broadcast_name, (void *)auracast_listen_name, strlen((void *)auracast_listen_name))) {
+        g_printf("auracast name match\n");
         app_auracast_sink_big_sync_create(config);
         app_auracast_mutex_post(&mutex, __LINE__);
         return;
     } else {
-        printf("auracast name no match\n");
+        r_printf("auracast name no match\n");
         app_auracast_mutex_post(&mutex, __LINE__);
         //auracast_sink_rescan();
         return;
@@ -1101,6 +1107,8 @@ int app_auracast_sink_open()
     app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_sink_open");
 
+    read_auracast_listen_name();
+
     le_auracast_state = 0;
     app_auracast_sink_init();
     //auracast_sink_init();
@@ -1274,6 +1282,9 @@ int app_auracast_source_open()
 #endif
     app_auracast_mutex_pend(&mutex, __LINE__);
     log_info("auracast_source_open");
+
+    /* memcpy(user_config.broadcast_name, get_le_audio_pair_name(), sizeof(user_config.broadcast_name)); */
+    strcpy(user_config.broadcast_name, get_le_audio_pair_name());
 
     auracast_source_init();
     auracast_source_config(&user_config);

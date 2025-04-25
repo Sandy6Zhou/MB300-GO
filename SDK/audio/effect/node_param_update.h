@@ -71,6 +71,7 @@ int gain_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 噪声门限参数更新 */
 int noisegate_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 混响参数更新 */
+int plate_reverb_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass);
 int plate_reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* 混响V2参数更新 */
 int reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
@@ -91,6 +92,7 @@ int channel_expander_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* eq参数更新 */
 int eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /* eq系数表更新*/
+int eq_update_tab_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass);
 int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index);
 /* 软件EQ参数更新接口 */
 int sw_eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
@@ -142,6 +144,8 @@ int autoduck_trigger_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int autoduck_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 /*spatial_adv 参数更新*/
 int spatial_adv_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+int llns_dns_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+int llns_dns_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass);
 
 /*通用音效模块更新*/
 int node_param_update_parm(u16 uuid, u8 mode_index, char *node_name, u8 cfg_index);

@@ -984,14 +984,20 @@ int app_connected_switch(void)
         }
     }
 
-    if (find) {
-        play_tone_file_alone_callback(get_tone_files()->le_connected_close,
-                                      (void *)TONE_INDEX_CONNECTED_CLOSE,
-                                      connected_tone_play_end_callback);
-    } else {
-        play_tone_file_alone_callback(get_tone_files()->le_connected_open,
-                                      (void *)TONE_INDEX_CONNECTED_OPEN,
-                                      connected_tone_play_end_callback);
+    if (!tone_player_runing()) {
+        if (find) {
+            bt_work_mode_select(g_bt_hdl.last_work_mode);
+            play_tone_file_alone_callback(get_tone_files()->le_connected_close,
+                                          (void *)TONE_INDEX_CONNECTED_CLOSE,
+                                          connected_tone_play_end_callback);
+        } else {
+            if (g_bt_hdl.work_mode !=  BT_MODE_CIG) {
+                bt_work_mode_select(BT_MODE_CIG);
+                play_tone_file_alone_callback(get_tone_files()->le_connected_open,
+                                              (void *)TONE_INDEX_CONNECTED_OPEN,
+                                              connected_tone_play_end_callback);
+            }
+        }
     }
     return 0;
 }
@@ -1178,6 +1184,7 @@ int app_connected_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
         connected_app_mode_exit = 0;
+    case LE_AUDIO_APP_OPEN:
         config_connected_as_master = 1;
         mode = app_get_current_mode();
         if (mode) {
@@ -1192,6 +1199,7 @@ int app_connected_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_EXIT");
         //退出当前模式
         connected_app_mode_exit = 1;
+    case LE_AUDIO_APP_CLOSE:
         config_connected_as_master = 0;
         app_connected_suspend();
         break;

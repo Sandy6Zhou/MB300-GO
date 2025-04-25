@@ -101,7 +101,7 @@ const int device_bulk_read_async_enable = 0;
 //================================================//
 const int SCALE_EFFECT_WITHOUT_PSRAM_ENABLE     = 0;
 const int ENABLE_LUA_VIRTUAL_MACHINE = 0;
-const int UI_DATA_STORE_IN_NORFLASH = 0;
+const int UI_DATA_STORE_IN_NORFLASH = 1;
 
 const int ARABIC_MODE_SWITCH      = 0;
 const int HEBREW_MODE_SWITCH      = 0;

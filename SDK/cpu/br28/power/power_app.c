@@ -7,6 +7,7 @@
 #include "asm/power_interface.h"
 #include "app_config.h"
 #include "includes.h"
+#include "asm/psram_api.h"
 #include "gpio_config.h"
 
 //-------------------------------------------------------------------
@@ -24,6 +25,17 @@
 static u32 usb_io_con = 0;
 void sleep_enter_callback()
 {
+    /* 此函数禁止添加打印 */
+#if (defined(TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+    psram_flush_all_cache();
+    if (psram_check_memory_used_status()) {
+        psram_heap_reset();
+        psram_enter_sleep(PSRAM_STATE_POWER_OFF);
+    } else {
+        psram_enter_sleep(PSRAM_STATE_POWER_STANDBY);
+    }
+#endif
+
     u32 value = 0xffff;
     putchar('<');
 
@@ -44,6 +56,11 @@ void sleep_enter_callback()
 
 void sleep_exit_callback()
 {
+#if (defined(TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+    psram_exit_sleep();
+#endif
+
+
 #if (CONFIG_DEBUG_ENABLE && ((TCFG_DEBUG_UART_TX_PIN == IO_PORT_DP) || (TCFG_DEBUG_UART_TX_PIN == IO_PORT_DM))) || \
     (TCFG_CFG_TOOL_ENABLE && (TCFG_COMM_TYPE == TCFG_UART_COMM) && ((TCFG_ONLINE_TX_PORT == IO_PORT_DP) || (TCFG_ONLINE_RX_PORT == IO_PORT_DM))) || \
     (TCFG_CFG_TOOL_ENABLE && (TCFG_COMM_TYPE == TCFG_USB_COMM)) || \

@@ -31,6 +31,11 @@ if not %RCSP_EN%A==A (
 )
 
 if %UI_RESOURCE_EN%A==1A (
+	copy ..\..\JL_LCD ..\..\JL
+    set UI_RESOURCE_FILE=..\..\JL ..\..\font
+)
+if %UI_RESOURCE_EN%A==2A (
+	copy ..\..\JL_OLED ..\..\JL
     set UI_RESOURCE_FILE=..\..\JL ..\..\font
 )
 

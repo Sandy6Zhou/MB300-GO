@@ -99,6 +99,8 @@ const int CONFIG_BTSTACK_TWS_AUDIO_SHARE_ENABLE  = 0;
    #endif
 #endif
 
+const char config_product_con_pair_rssi = 0;
+
 #if RCSP_MODE
 int app_info_debug_enable = 0;//BIT(4);
 /* #define RCSP_API_LOG		0 */

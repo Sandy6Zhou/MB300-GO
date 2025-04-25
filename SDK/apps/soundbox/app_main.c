@@ -176,6 +176,7 @@ const struct task_info task_info_table[] = {
     {"app_proto",           2,     0,   768,   64  },
 #endif
     {"ui",                  3,     0,   1024,  1024  },
+    {"touch_task",	2,     0,   512,   0  },
 #if (TCFG_DEV_MANAGER_ENABLE)
     {"dev_mg",           	3,     0,   512,   512 },
 #endif
@@ -382,6 +383,11 @@ static struct app_mode *app_task_init()
 #if TCFG_UI_ENABLE
     UI_INIT((void *)&ui_cfg_data);
 #endif /* #if TCFG_UI_ENABLE */
+
+#if (TCFG_TOUCH_PANEL_ENABLE && TCFG_TP_IT7259E_ENABLE)
+    void it7259e_init();
+    it7259e_init();
+#endif
 
 #if TCFG_APP_RTC_EN
     alarm_init();

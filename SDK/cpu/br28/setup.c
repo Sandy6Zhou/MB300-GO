@@ -21,6 +21,13 @@ extern void exception_irq_handler(void);
 extern int __crc16_mutex_init();
 
 
+_WEAK_
+void psram_early_init(void)
+{
+    return;
+}
+
+
 
 #if 0
 ___interrupt
@@ -204,6 +211,8 @@ void setup_arch()
 
     //上电初始所有io
     port_init();
+
+    psram_early_init();
 
 #if CONFIG_DEBUG_ENABLE || CONFIG_DEBUG_LITE_ENABLE
     void debug_uart_init();

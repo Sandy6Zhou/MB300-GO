@@ -66,6 +66,12 @@ extern void ui_auto_shut_down_enable(void);
 extern u8 ui_auto_shut_down_disable(void);
 extern int ui_simple_key_msg_post(int, int);
 
+typedef enum {
+    SLIDE_MODE_OFF,
+    SLIDE_MODE_NOT_RIGHT_ALL,
+    SLIDE_MODE_NOT_RIGHT_FIRST,
+    SLIDE_MODE_NOT_LOOP,
+} CARD_SLIDE_MODE;
 
 //特殊api
 #if(CONFIG_UI_STYLE == STYLE_JL_SOUNDBAR)

@@ -112,7 +112,7 @@ void update_music_pipeline_node_list(u8 mode_index, u8 cfg_index)
     }
 }
 
-#if TCFG_MIC_EFFECT_ENABLE
+#if (TCFG_MIC_EFFECT_ENABLE || (defined CONFIG_WIRELESS_MIC_ENABLE))
 //麦克风音效
 void get_mic_pipeline_node_uuid()
 {

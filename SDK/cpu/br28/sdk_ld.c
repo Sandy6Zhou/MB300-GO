@@ -63,6 +63,12 @@ CODE_BEG        = 0x6000100;
 CODE_BEG        = 0x6000120;
 #endif
 
+#if (defined(TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+PSRAM_BEGIN = 0x2000000;
+PSRAM_SIZE = TCFG_PSRAM_SIZE;
+PSRAM_END = PSRAM_BEGIN + PSRAM_SIZE;
+#endif /* #if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE) */
+
 //=============== About BT RAM ===================
 //CONFIG_BT_RX_BUFF_SIZE = (1024 * 18);
 
@@ -74,7 +80,9 @@ MEMORY
     //ram1 - 用于volatile-heap
 	//ram1(rwx)         : ORIGIN = RAM1_BEG,  LENGTH = RAM1_SIZE
 
-	psr_ram(rwx)        : ORIGIN = 0x2000000,  LENGTH = 8*1024*1024
+#if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+	psram(rwx)        : ORIGIN = PSRAM_BEGIN,  LENGTH = PSRAM_SIZE
+#endif /* #if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE) */
 }
 
 
@@ -247,19 +255,6 @@ SECTIONS
 
 	_HEAP_BEGIN = . ;
 	_HEAP_END = RAM0_END;
-
-
-    . = ORIGIN(psr_ram);
-	.psr_data_code ALIGN(32):
-	{
-	    *(.psram_data_code)
-		. = ALIGN(4);
-	} > psr_ram
-
-	.psr_bss_code ALIGN(32):
-	{
-		. = ALIGN(4);
-	} > psr_ram
 
     . = ORIGIN(code0);
     .text ALIGN(4):SUBALIGN(4)
@@ -447,6 +442,33 @@ SECTIONS
 
 		. = ALIGN(32);
 	  } > code0
+
+#if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+	. = ORIGIN(psram);
+	.ps_ram_data_code ALIGN(32):
+	{
+	    *(.psram_data)
+	    *(.psram_code)
+		. = ALIGN(4);
+	} > psram
+
+	.ps_ram_bss ALIGN(32):
+	{
+	    *(.psram_bss)
+		. = ALIGN(4);
+	} > psram
+
+	.ps_ram_noinit ALIGN(32):
+	{
+	    *(.psram_noinit)
+		. = ALIGN(4);
+	} > psram
+
+	_PSRAM_HEAP_BEGIN = .;
+	_PSRAM_HEAP_END = PSRAM_END;
+
+#endif /* #if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE) */
+
 }
 
 #include "app.ld"
@@ -504,12 +526,28 @@ aac_addr = ADDR(.overlay_aac);
 aac_begin = aec_begin + aec_size;
 aac_size =  SIZEOF(.overlay_aac);
 
-psr_data_code_begin = aac_begin + aac_size;
+ps_ram_data_code_begin = aac_begin + aac_size;
 #else
-psr_data_code_begin = data_code_begin + data_code_size;
+ps_ram_data_code_begin = data_code_begin + data_code_size;
 #endif
-psr_data_code_addr = ADDR(.psr_data_code);
-psr_data_code_size =  SIZEOF(.psr_data_code);
+
+#if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE)
+ps_ram_data_code_addr = ADDR(.ps_ram_data_code);
+ps_ram_data_code_size =  SIZEOF(.ps_ram_data_code);
+
+ps_ram_bss_addr = ADDR(.ps_ram_bss);
+ps_ram_bss_size =  SIZEOF(.ps_ram_bss);
+
+ps_ram_noinit_addr = ADDR(.ps_ram_noinit);
+ps_ram_noinit_size =  SIZEOF(.ps_ram_noinit);
+
+ps_ram_size =  PSRAM_SIZE;
+
+PROVIDE(PSRAM_HEAP_BEGIN = _PSRAM_HEAP_BEGIN);
+PROVIDE(PSRAM_HEAP_END = _PSRAM_HEAP_END);
+_PSRAM_MALLOC_SIZE = _PSRAM_HEAP_END - _PSRAM_HEAP_BEGIN;
+PROVIDE(PSRAM_MALLOC_SIZE = _PSRAM_HEAP_END - _PSRAM_HEAP_BEGIN);
+#endif /* #if ((defined TCFG_PSRAM_DEV_ENABLE) && TCFG_PSRAM_DEV_ENABLE) */
 
 /*
 lc3_addr = ADDR(.overlay_lc3);

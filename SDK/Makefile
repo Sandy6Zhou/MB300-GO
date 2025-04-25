@@ -289,6 +289,7 @@ INCLUDES := \
 # 需要编译的 .c 文件
 c_SRC_FILES := \
 	apps/common/app_mode_manager/app_mode_manager.c \
+	apps/common/bt_common/bt_fre_offset_storage.c \
 	apps/common/bt_common/bt_test_api.c \
 	apps/common/clock_manager/clock_manager.c \
 	apps/common/config/app_config.c \
@@ -326,6 +327,7 @@ c_SRC_FILES := \
 	apps/common/device/storage_device/nandflash/nandflash.c \
 	apps/common/device/storage_device/norflash/norflash.c \
 	apps/common/device/storage_device/norflash/norflash_sfc.c \
+	apps/common/device/touch_panel/IT7259E.c \
 	apps/common/device/usb/demo/host/udisk_block_test.c \
 	apps/common/device/usb/device/cdc.c \
 	apps/common/device/usb/device/custom_hid.c \
@@ -659,6 +661,7 @@ c_SRC_FILES := \
 	apps/soundbox/ui/lcd/STYLE_SOUNDBOX/sink_action.c \
 	apps/soundbox/ui/lcd/STYLE_SOUNDBOX/spdif_action.c \
 	apps/soundbox/ui/lcd/STYLE_SOUNDBOX/system_action.c \
+	apps/soundbox/ui/lcd/STYLE_SOUNDBOX/ui_touch_demo.c \
 	apps/soundbox/ui/lcd/lyrics_api.c \
 	apps/soundbox/ui/lcd/ui_sys_param_api.c \
 	apps/soundbox/ui/led/led_config.c \

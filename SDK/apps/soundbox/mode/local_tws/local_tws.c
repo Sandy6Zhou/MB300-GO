@@ -456,6 +456,9 @@ static int local_tws_msg_handler(int *msg)
         break;
 
     case CMD_TWS_VOL_REPORT:
+        if (app_audio_get_volume(APP_AUDIO_STATE_IDLE) == cmd[1]) {
+            break;
+        }
         app_audio_set_volume(APP_AUDIO_STATE_IDLE, cmd[1], 1);
         if (cmd[1] >= app_audio_get_max_volume()) {
             if (tone_player_runing() == 0) {

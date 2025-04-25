@@ -754,9 +754,6 @@ int lcd_drv_init(void *p)
     lcd_drv_cmd_list(__lcd->lcd_cmd, __lcd->cmd_cnt);
     printf("send cmd list finish");
 
-    gpio_set_mode(IO_PORT_SPILT(IO_PORTB_04), PORT_OUTPUT_LOW);
-    gpio_set_mode(IO_PORT_SPILT(IO_PORTB_05), PORT_OUTPUT_LOW);
-    gpio_set_mode(IO_PORT_SPILT(IO_PORTB_09), PORT_OUTPUT_LOW);
     return 0;
 }
 

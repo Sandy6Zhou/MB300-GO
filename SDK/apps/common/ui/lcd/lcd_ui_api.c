@@ -874,6 +874,245 @@ REGISTER_LP_TARGET(lcd_backlight_lp_target) = {
     .is_idle = lcd_bl_idle_query,
 };
 
+//=================================================================================//
+// @brief: 卡片滑动模式管理，用于左侧侧边栏、负一屏等效果
+//	限制首页右滑、所有页面右滑和最后一页左滑
+//=================================================================================//
+
+#include "ui/ui_page_switch.h"
+
+extern int g_cur_left;
+
+volatile static int scroll_time = 0;
+
+__attribute__((weak)) void page_auto_scroll(void *priv)
+{
+    scroll_time++;
+    if (scroll_time >= 5) {
+        printf("Attention : wait TOUCH_UP timeout, TOUCH_UP may be lost!\n");
+        struct element_touch_event *e = (struct element_touch_event *)priv;
+        e->event = ELM_EVENT_TOUCH_UP;
+        ui_card_ontouch(e);
+        scroll_time = 0;
+    }
+}
+
+static int ui_page_slide_mode = 0;
+
+int ui_page_manager_mode_set(u8 mode)
+{
+    ui_page_slide_mode = mode;
+    return  ui_page_slide_mode;
+}
+
+int ui_page_manager_mode_get(void)
+{
+    return ui_page_slide_mode;
+}
+
+//=================================================================================//
+// @brief: 卡片管理开关
+//=================================================================================//
+
+static int ui_card_slide_dis = false;
+
+void ui_card_enable()
+{
+    ui_card_slide_dis = false;
+}
+
+void ui_card_disable()
+{
+    ui_card_slide_dis = true;
+}
+
+int ui_card_ontouch(struct element_touch_event *e)
+{
+    static struct position pos = {0};
+    int xoffset, yoffset;
+    struct element *p;
+    static u8 move_en = 1;
+    static int slide_en = 0;
+    static int slide_cnt = 0;
+    static int startx = 0, starty = 0, endx = 0, endy = 0;
+    struct ui_page *page;
+    static int first_result = -1;
+    static int result = -1;
+    static int page_in_touchdown = 0;
+    static u16 ui_move_timer = 0;
+
+    if (ui_card_slide_dis) {
+        page_in_touchdown = 0;
+        return ui_event_ontouch(e);
+    }
+
+    int mode = 0;
+    int page_switch_mode  = ui_page_manager_mode_get();
+    struct element *curr_elm = 0;
+
+    /* y_printf("ui_card_ontouch %d, (%d, %d)\n", e->event, e->pos.x, e->pos.y); */
+    switch (e->event) {
+    case ELM_EVENT_TOUCH_DOWN:
+        page_in_touchdown = ui_get_current_window_id();
+        page = ui_page_search(ui_get_current_window_id());
+        if (!page) {
+            break;
+        }
+        if (slide_en) {
+            ui_page_move_auto(ui_get_current_window_id(), mode);
+            slide_en = false;
+        }
+
+        list_for_each_child_element(p, ui_core_get_root()) {
+            ASSERT(p->id == ui_get_current_window_id());
+        }
+        pos.x = e->pos.x;
+        pos.y = e->pos.y;
+        startx = e->pos.x;
+        starty = e->pos.y;
+        first_result = -1;
+        result = -1;
+
+        curr_elm = ui_core_get_element_by_id(ui_get_current_window_id());
+        g_cur_left = curr_elm->css.left;
+
+        putchar('D');
+        break;
+
+    case ELM_EVENT_TOUCH_MOVE:
+        page = ui_page_search(ui_get_current_window_id());
+        if (!page) {
+            if (slide_en) {
+                slide_en = false;
+            }
+            break;
+        }
+        if (page_in_touchdown != page->id) {
+            return 0;
+        }
+        xoffset = e->pos.x - pos.x;
+        yoffset = e->pos.y - pos.y;
+        pos.x = e->pos.x;
+        pos.y = e->pos.y;
+        putchar('M');
+
+        result = get_direction(startx, starty, e->pos.x, e->pos.y);
+        if ((first_result == -1) && (result > 0)) {
+            first_result = result;
+        }
+
+        if (result != first_result) {
+            startx = e->pos.x;
+            starty = e->pos.y;
+            first_result = result;
+        }
+
+        if (result != first_result) {
+            startx = e->pos.x;
+            starty = e->pos.y;
+            first_result = result;
+        }
+
+        move_en = ui_page_move_callback_run();
+
+//左滑侧边栏
+#if (TCFG_UI_ENABLE_LEFT_MENU)
+        if (ui_get_current_window_id() == ID_WINDOW_BT && (ui_page_num() == 1)) {
+            if (result == DIRECTION_LEFT) {
+                ui_page_manager_mode_set(1);
+            } else if (result == DIRECTION_RIGHT) {
+                ui_page_manager_mode_set(1);
+            } else {
+                ui_page_manager_mode_set(0);
+            }
+        } else {
+            ui_page_manager_mode_set(0);
+        }
+        page_switch_mode = ui_page_manager_mode_get();
+#endif
+
+        if ((move_en != 0) && (xoffset != 0) && ((result == DIRECTION_LEFT) || (result == DIRECTION_RIGHT)) && ((first_result == DIRECTION_LEFT) || (first_result == DIRECTION_RIGHT))) {
+            if (page_switch_mode) {//左滑侧边栏
+                struct ui_page *first_page =  ui_page_get_first();
+                int first_win = first_page->id;
+                int last_win = ui_page_prev(first_win);
+                int curr_win = ui_get_current_window_id();
+                int prev_win = ui_page_prev(curr_win);
+                int next_win = ui_page_next(curr_win);
+
+                if ((page_switch_mode == SLIDE_MODE_NOT_RIGHT_ALL) && (first_result == DIRECTION_RIGHT)) { //所有页面禁止右滑,单向循环
+                    slide_en = false;
+                } else if ((page_switch_mode == SLIDE_MODE_NOT_RIGHT_FIRST) && (first_result == DIRECTION_RIGHT) && (curr_win == first_win)) { //首页禁止右滑
+                    slide_en = false;
+                } else if ((page_switch_mode == SLIDE_MODE_NOT_LOOP) && (((first_result == DIRECTION_RIGHT) && (curr_win == first_win)) || ((first_result == DIRECTION_LEFT) && (next_win == first_win)))) {
+                    slide_en = false;
+                } else { //正常滑动
+                    ui_page_move(ui_get_current_window_id(), xoffset, yoffset, mode);
+                    slide_en = true;
+                }
+
+                curr_elm = ui_core_get_element_by_id(ui_get_current_window_id());
+                if ((slide_en == false) && (curr_elm->css.left != 0)) {
+                    slide_en = true; //屏幕未居中时走自动居中流程,防止卡住
+                }
+                scroll_time = 0;
+                if (slide_en) {
+                    return 0;
+                }
+            } else {
+                ui_page_move(ui_get_current_window_id(), xoffset, yoffset, mode);
+                slide_en = true;
+                /* if (!ui_move_timer) { */
+                /* ui_move_timer = sys_timer_add(e, page_auto_scroll, 20); */
+                /* } */
+                scroll_time = 0;
+                return 0;
+            }
+        }
+        break;
+
+    case ELM_EVENT_TOUCH_L_MOVE:
+    case ELM_EVENT_TOUCH_R_MOVE:
+        /* case ELM_EVENT_TOUCH_U_MOVE: */
+        /* case ELM_EVENT_TOUCH_D_MOVE: */
+        if (!ENABLE_LUA_VIRTUAL_MACHINE) {
+            page = ui_page_search(ui_get_current_window_id());
+            if (page) {
+                return 0;
+            }
+        }
+        break;
+
+    case ELM_EVENT_TOUCH_UP:
+        page = ui_page_search(ui_get_current_window_id());
+        if (!page) {
+            break;
+        }
+
+        putchar('U');
+        if (slide_en) {
+            /* if (ui_move_timer) { */
+            /* sys_timer_del(ui_move_timer); */
+            /* ui_move_timer = 0; */
+            /* } */
+            ui_page_move_auto(ui_get_current_window_id(), mode);
+            slide_en = false;
+            return 0;
+        }
+        break;
+    }
+
+    if (slide_en) {
+        /* printf("slide_en is true!!!\n"); */
+        return 0;
+    }
+
+    return ui_event_ontouch(e);
+}
+
+/* 页面卡片滑动管理 */
+
+
 struct ui_msg {
     struct list_head entry;
     struct touch_event touch;
@@ -888,7 +1127,19 @@ static void ui_task(void *p)
     int ret;
     struct element_key_event e = {0};
 
+    /* 初始化卡片页面列表 */
     ui_page_init();
+    ui_page_add(PAGE_1); //自定义添加滑动页面列表
+    ui_page_add(PAGE_2);
+    ui_page_add(PAGE_3);
+    ui_page_add(PAGE_4);
+    /* 初始化卡片页面列表 */
+
+    /* 左右滑动抬手后自动滑屏的参数调节 */
+    ui_page_set_param(2000, // 判断滑动距离超过 n/10000 坐标后才滑动
+                      2000, // 每次自动滑动 n/10000 屏幕的距离
+                      1); // 滑动的间隔 n*10 ms
+
     mount(NULL, "flash", "sdfile", 0, NULL);
 
     ui_framework_init(p);
@@ -918,11 +1169,22 @@ static void ui_task(void *p)
 
     u8 touch_move_msg = 0;
     struct ui_msg ui_msg_move;
+
+    u8 msg_filter_en = false;
+    u8 tmsg_cnt = 0;
+    void wdt_clr(void);
+
     while (1) {
         ret = os_taskq_pend(NULL, msg, ARRAY_SIZE(msg)); //500ms_reflash
         if (ret != OS_TASKQ) {
             continue;
         }
+
+        if (tmsg_cnt++ > 30) {
+            tmsg_cnt = 0;
+            wdt_clr();
+        }
+        msg_filter_en = false;
 
         if (msg[0] == UI_MSG_TOUCH) {
             touch = (struct touch_event *)&msg[2];
@@ -963,16 +1225,38 @@ static void ui_task(void *p)
                     t.event = touch->event;
                     t.pos.x = touch->x;
                     t.pos.y = touch->y;
+                    t.has_energy = touch->has_energy;
+                    if (msg_filter_en && ((t.event == ELM_EVENT_TOUCH_DOWN)
+                                          || (t.event == ELM_EVENT_TOUCH_MOVE)
+                                          || (t.event == ELM_EVENT_TOUCH_L_MOVE)
+                                          || (t.event == ELM_EVENT_TOUCH_R_MOVE)
+                                          || (t.event == ELM_EVENT_TOUCH_UP)
+                                         )) {
+                        list_del(&ui_msg->entry);
+                        free(ui_msg);
+                        continue;
+                    }
 
+                    if (tmsg_cnt++ > 5) {
+                        tmsg_cnt = 0;
+                        wdt_clr();
+                    }
                     if (ui_msg->msg_hook) {
                         ((void(*)(u8))ui_msg->msg_hook)(0);
                     }
+#if 1
+                    ui_card_ontouch(&t);
+#else
                     ui_event_ontouch(&t);
+#endif
                     if (ui_msg->msg_hook) {
                         ((void(*)(u8))ui_msg->msg_hook)(1);
                     }
                     list_del(&ui_msg->entry);
                     free(ui_msg);
+                    if (t.event == ELM_EVENT_TOUCH_UP) {
+                        msg_filter_en = true;
+                    }
                 }
                 continue;
             }
@@ -990,11 +1274,19 @@ static void ui_task(void *p)
                 t.event = touch->event;
                 t.pos.x = touch->x;
                 t.pos.y = touch->y;
-
+                t.has_energy = touch->has_energy;
+                if (tmsg_cnt++ > 5) {
+                    tmsg_cnt = 0;
+                    wdt_clr();
+                }
                 if (ui_msg->msg_hook) {
                     ((void(*)(u8))ui_msg->msg_hook)(0);
                 }
+#if 1
+                ui_card_ontouch(&t);
+#else
                 ui_event_ontouch(&t);
+#endif
                 if (ui_msg->msg_hook) {
                     ((void(*)(u8))ui_msg->msg_hook)(1);
                 }
@@ -1020,11 +1312,16 @@ static void ui_task(void *p)
             t.event = touch->event;
             t.pos.x = touch->x;
             t.pos.y = touch->y;
+            t.has_energy = touch->has_energy;
             /* printf("event = %d %d %d \n", t.event, t.pos.x, t.pos.y); */
             if (msg[1]) {
                 ((void(*)(u8))msg[1])(0);
             }
+#if 1
+            ui_card_ontouch(&t);
+#else
             ui_event_ontouch(&t);
+#endif
             if (msg[1]) {
                 ((void(*)(u8))msg[1])(1);
             }

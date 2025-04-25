@@ -9,6 +9,7 @@
 #include "app_le_auracast.h"
 #include "fm_api.h"
 #include "dual_conn.h"
+#include "app_le_connected.h"
 
 #if TCFG_USER_TWS_ENABLE
 void bt_tws_onoff(u8 onoff)
@@ -80,7 +81,10 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_CIG:
-
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+        le_audio_scene_deal(LE_AUDIO_APP_CLOSE);
+        app_connected_uninit();
+#endif
         break;
     case BT_MODE_3IN1:
 
@@ -126,6 +130,11 @@ int bt_work_mode_select(u8 mode)
 #endif
         break;
     case BT_MODE_CIG:
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+        app_connected_init();
+        le_audio_scene_deal(LE_AUDIO_APP_OPEN);
+        app_connected_open(0);
+#endif
 
         break;
     case BT_MODE_3IN1:
@@ -161,6 +170,10 @@ void bt_work_mode_switch_to_next(void)
     if (work_mode == BT_MODE_TWS) {
         work_mode = BT_MODE_AURACAST;
     }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+    if (work_mode == BT_MODE_TWS) {
+        work_mode = BT_MODE_CIG;
+    }
 #endif
 #endif
 
@@ -175,7 +188,13 @@ void bt_work_mode_switch_to_next(void)
         work_mode =  BT_MODE_CIG;
     }
 #endif
-    if (work_mode == BT_MODE_CIG) {
+
+#if (!(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
+    if (work_mode ==  BT_MODE_CIG) {
+        work_mode =  BT_MODE_3IN1;
+    }
+#endif
+    if (work_mode == BT_MODE_3IN1) {
         work_mode = BT_MODE_SIGLE_BOX;
     }
 

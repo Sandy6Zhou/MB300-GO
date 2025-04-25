@@ -111,7 +111,7 @@ static u8 bredr_close_flag = 0;
 static u8 *transmit_buf;    /*!< 用于发送端发数 */
 static struct list_head connected_list_head = LIST_HEAD_INIT(connected_list_head);
 static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频和本地音频切换回调接口指针 */
-u8 cig_peripheral_support_lea_profile  = 1;
+u8 cig_peripheral_support_lea_profile  = 0;
 const cig_callback_t cig_central_cb = {
     .receive_packet_cb      = connected_iso_callback,
     .event_cb               = connected_central_event_callback,

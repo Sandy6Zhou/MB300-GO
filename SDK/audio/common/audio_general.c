@@ -335,7 +335,15 @@ const int voicechanger_effect_v_config = (0
 /*mb drc/limiter 3带使能(1.2k) */
 const int audio_crossover_3band_enable       = 1;
 
-
+/*
+ * 某些算法参数更新需要重新申请buffer，
+ * 为防止重新申请时内存不足导致异常，
+ * 此处设置需要保留的内存大小，
+ * 当判断若重新申请buf后，系统内存小于该值则不重新申请，
+ * 打印"xxx buf realloc fail"(需要打开log_tag_const_d_EFFECTS)
+ * 可视化工具界面显示"流程打开buf失败"
+ */
+const int audio_effect_realloc_reserve_mem = (13 * 1024);
 
 /*
  *******************************************************************
@@ -425,7 +433,7 @@ int audio_general_init()
 #if defined(TCFG_SCENE_UPDATE_ENABLE) && TCFG_SCENE_UPDATE_ENABLE
     //若流程中有较多音效模块（或渲染封装节点），会导致此处遍历模块耗时较长
     get_music_pipeline_node_uuid();
-#if TCFG_MIC_EFFECT_ENABLE
+#if (TCFG_MIC_EFFECT_ENABLE || (defined CONFIG_WIRELESS_MIC_ENABLE))
     get_mic_pipeline_node_uuid();
 #endif
 #endif

@@ -352,6 +352,7 @@ int syscfg_tools_init(void);
 
 #define     CFG_LEA_PRODUCET_TEST_NAME  633
 #define     CFG_LEA_PAIR_NAME           634
+#define     CFG_AURACAST_LISTEN_NAME    635
 
 //其它类配置项[651 ~ 700]
 #define 	CFG_STORE_BIN_ONLY_END		700
