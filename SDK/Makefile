@@ -100,7 +100,6 @@ DEFINES := \
 	-DCONFIG_RELEASE_ENABLE \
 	-DCONFIG_SOUNDBOX_CASE_ENABLE \
 	-DCONFIG_CPU_BR28 \
-	-DCONFIG_USB_SUPPORT_MRX_TX \
 	-DCONFIG_PRINT_IN_MASK \
 	-DLWIP_USE_BT \
 	-DCONFIG_NEW_BREDR_ENABLE \
@@ -182,6 +181,7 @@ INCLUDES := \
 	-Iinterface/utils/fs \
 	-Iinterface/utils/generic \
 	-Iinterface/utils/math/cpu/br28 \
+	-Iinterface/net/mbedtls_3_4_0 \
 	-Iinterface/btstack/third_party/rcsp \
 	-Iinterface/media/media_new \
 	-Iinterface/media/media_new/media \
@@ -217,6 +217,10 @@ INCLUDES := \
 	-Iaudio/cpu/br28/audio_dec \
 	-Iaudio/common \
 	-Iaudio/effect \
+	-Iinterface/net/lwip_2_2_0/lwip/port \
+	-Iinterface/net/lwip_2_2_0/lwip/src \
+	-Iinterface/net/lwip_2_2_0/lwip/src/include \
+	-Iapps/common/netapps/iflytek \
 	-Iapps/common/third_party_profile/jieli/rcsp \
 	-Iapps/common/third_party_profile/jieli/rcsp/adv \
 	-Iapps/common/third_party_profile/jieli/rcsp/rcsp_functions \
@@ -283,6 +287,28 @@ INCLUDES := \
 	-Iinterface/media/cvp \
 	-Iinterface/system/math/cpu/br28 \
 	-Iinterface/media/effects \
+	-Iinterface/system/os \
+	-Iinterface/system/port \
+	-Ilib/net/lwip_2_1_3/apps/ntp \
+	-Iapps/common/netapps \
+	-Ilib/net/web_socket \
+	-Iinterface/net/web_socket \
+	-Iinterface/net/lwip_2_2_0 \
+	-Iapps/common/netapps/my_cjson \
+	-Iinterface/net \
+	-Iinterface/net/lwip_2_2_0/lwip/src/include/netif \
+	-Iinterface/net/lwip_2_2_0/lwip/port/arch \
+	-Iinterface/net/lwip_2_2_0/lwip/app/ctp \
+	-Iinterface/net/lwip_2_2_0/lwip/app/cdp \
+	-Iinterface/net/lwip_2_2_0/lwip/app/dhcp_srv \
+	-Iinterface/net/lwip_2_2_0/lwip/app/dtp \
+	-Iinterface/net/lwip_2_2_0/lwip/app/sock_api \
+	-Iinterface/net/lwip_2_2_0/lwip/app/udtp \
+	-Iinterface/net/lwip_2_2_0/lwip/src/include/lwip \
+	-Iinterface/net/lwip_2_2_0/lwip/app \
+	-Iinterface/net/lwip_2_2_0/lwip/app/mssdp \
+	-Iinterface/net/lwip_2_2_0/lwip/app/ddns \
+	-Iinterface/net/lte_module \
 	-I$(SYS_INC_DIR) \
 
 
@@ -291,6 +317,7 @@ c_SRC_FILES := \
 	apps/common/app_mode_manager/app_mode_manager.c \
 	apps/common/bt_common/bt_fre_offset_storage.c \
 	apps/common/bt_common/bt_test_api.c \
+	apps/common/cJSON/cJSON.c \
 	apps/common/clock_manager/clock_manager.c \
 	apps/common/config/app_config.c \
 	apps/common/config/bt_name_parse.c \
@@ -376,6 +403,19 @@ c_SRC_FILES := \
 	apps/common/music/music_decrypt.c \
 	apps/common/music/music_id3.c \
 	apps/common/music/music_player.c \
+	apps/common/net/lwip_2_2_0/apps/sock_api/sock_api.c \
+	apps/common/net/lwip_2_2_0/port/LwIP.c \
+	apps/common/net/lwip_2_2_0/port/bt_ethernetif.c \
+	apps/common/net/lwip_2_2_0/port/fixme.c \
+	apps/common/net/lwip_2_2_0/port/sys_arch.c \
+	apps/common/netapps/iflytek/ifly_api.c \
+	apps/common/netapps/iflytek/ifly_auth.c \
+	apps/common/netapps/iflytek/ifly_socket.c \
+	apps/common/netapps/iflytek/ifly_sparkdesk.c \
+	apps/common/netapps/iflytek/ifly_tts.c \
+	apps/common/netapps/iflytek/ifly_vad.c \
+	apps/common/netapps/iflytek/ifly_vad_demo.c \
+	apps/common/netapps/my_cjson/my_cjson.c \
 	apps/common/temp_trim/dtemp_pll_trim.c \
 	apps/common/test/fs_test.c \
 	apps/common/third_party_profile/common/3th_profile_api.c \
@@ -541,6 +581,7 @@ c_SRC_FILES := \
 	apps/soundbox/log_config/lib_btstack_config.c \
 	apps/soundbox/log_config/lib_driver_config.c \
 	apps/soundbox/log_config/lib_media_config.c \
+	apps/soundbox/log_config/lib_net_config.c \
 	apps/soundbox/log_config/lib_system_config.c \
 	apps/soundbox/log_config/lib_update_config.c \
 	apps/soundbox/message/adapter/app_msg.c \
@@ -713,6 +754,7 @@ c_SRC_FILES := \
 	audio/common/demo/codec_demo/audio_enc_file_demo.c \
 	audio/common/demo/codec_demo/audio_file_dec_demo.c \
 	audio/common/demo/codec_demo/audio_frame_codec_demo.c \
+	audio/common/demo/hw_math_v2_demo.c \
 	audio/common/frame_length_adaptive.c \
 	audio/common/online_debug/aud_data_export.c \
 	audio/common/online_debug/aud_mic_dut.c \
@@ -892,8 +934,6 @@ c_SRC_FILES := \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_gc9b71_320x386.c \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
-	cpu/br28/ui_driver/led7/led7_driver.c \
-	cpu/br28/ui_driver/ui_common.c \
 	cpu/components/gpadc_battery.c \
 	cpu/components/iic_api.c \
 	cpu/components/iic_soft.c \
@@ -902,6 +942,8 @@ c_SRC_FILES := \
 	cpu/components/led_api.c \
 	cpu/components/rdec_soft.c \
 	cpu/components/two_io_led.c \
+	cpu/components/ui_driver/led7/led7_driver.c \
+	cpu/components/ui_driver/ui_common.c \
 	cpu/config/gpio_file_parse.c \
 	cpu/config/lib_power_config.c \
 	cpu/periph_demo/gptimer_demo.c \
@@ -1087,6 +1129,9 @@ LFLAGS := \
 	cpu/br28/liba/ui_draw_new.a \
 	cpu/br28/liba/font_new.a \
 	cpu/br28/liba/ui_new.a \
+	cpu/br28/liba/lwip_2_2_0.a \
+	cpu/br28/liba/mbedtls_3_4_0.a \
+	cpu/br28/liba/websocket.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \

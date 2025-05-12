@@ -34,6 +34,7 @@ typedef struct {
     uint8_t Num_BIS;
     uint8_t BIS[8];
     uint16_t Connection_Handle[2];
+    uint8_t bn;
 } auracast_sink_source_info_t;
 
 typedef enum {
@@ -86,6 +87,7 @@ extern void auracast_sink_set_broadcast_code(u8 *key);
 extern void auracast_sink_set_source_filter(u8 state, u8 *mac);
 extern void auracast_sink_set_scan_filter(u8 state, u8 filter_num, u8 *mac);
 extern void auracast_sink_event_callback_register(auracast_sink_event_callback_t callback);
+extern int auracast_source_user_send_iso_packet(uint8_t bis_index, uint8_t bis_sub_event_counter, u8 *data, u8 len);
 
 
 ////////////////////////////// bass

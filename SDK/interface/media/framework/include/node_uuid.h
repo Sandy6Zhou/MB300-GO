@@ -195,5 +195,6 @@
 #define NODE_UUID_DISTORTION_CLIPPING      0x97AA
 #define NODE_UUID_FREQUENCY_COMPRESSOR     0xBFE4
 #define NODE_UUID_SPATIAL_ADV              0xA64E//空间音频封装
+#define NODE_UUID_HOWLING_AHS              0x872A//神经网络啸叫抑制
 
 #endif

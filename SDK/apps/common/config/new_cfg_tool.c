@@ -195,7 +195,7 @@ void all_assemble_package_send_to_pc(u8 id, u8 sq, u8 *buf, u32 len)
 #if (TCFG_COMM_TYPE == TCFG_UART_COMM)
     ci_uart_write(send_buf, len + 9);
 #elif (TCFG_COMM_TYPE == TCFG_USB_COMM)
-    cdc_write_data(0, send_buf, len + 9);
+    cdc_write_data(0, send_buf, len + 9, 0);
 #elif (TCFG_COMM_TYPE == TCFG_SPP_COMM)
 #if SPP_DATA_USED_LVT
     app_online_db_ack(parse_seq, buf, len);

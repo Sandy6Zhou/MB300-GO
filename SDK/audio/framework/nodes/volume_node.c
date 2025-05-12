@@ -471,7 +471,7 @@ static int volume_ioc_update_parm(struct volume_hdl *hdl, int parm)
 #endif
                 hdl->bypass = vol_cfg->bypass;
                 audio_digital_vol_set(hdl->dvol_hdl, vol_cfg->cur_vol);
-                if ((hdl->scene != STREAM_SCENE_MIC_EFFECT) || (hdl->scene != STREAM_SCENE_MIC_EFFECT2)) {//混响在线调试音量不更新音量状态的值
+                if ((hdl->scene != STREAM_SCENE_MIC_EFFECT) && (hdl->scene != STREAM_SCENE_MIC_EFFECT2)) {//混响在线调试音量不更新音量状态的值
                     app_audio_change_volume(app_audio_get_state(), vol_cfg->cur_vol);
                 }
             }

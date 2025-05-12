@@ -176,6 +176,7 @@ typedef struct {
             uint8_t         rtn;            // The number of retransmitted times.
             uint8_t         nInterval;
             uint16_t        pairSwMs;       // Pair switch time               (uints:ms).
+            uint16_t        adv_int_slot;   // legacy adv interval            (uints:slot).
         } bst;
     };
 } big_parameter_t;

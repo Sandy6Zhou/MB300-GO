@@ -138,6 +138,9 @@ const struct task_info task_info_table[] = {
      */
     {"audio_enc",           6,     0,   768,   128 },
     {"aec",					2,	   1,   768,   128 },
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+    {"ahs",					2,	   1,   768,   0 },
+#endif
 
     {"aec_dbg",				3,	   0,   512,   128 },
     {"update",				1,	   0,   512,   0   },
@@ -358,8 +361,10 @@ static struct app_mode *app_task_init()
     app_var_init();
     app_version_check();
 
+#ifndef CONFIG_CPU_BR56
     sdfile_init();
     syscfg_tools_init();
+#endif
 #if (defined(TCFG_DEBUG_DLOG_ENABLE) && TCFG_DEBUG_DLOG_ENABLE)
     dlog_init();
 #endif

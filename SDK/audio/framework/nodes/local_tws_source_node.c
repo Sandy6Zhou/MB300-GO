@@ -311,23 +311,40 @@ static u8 local_tws_data_trans_open(struct local_tws_source_context *ctx)
     return local_tws_channel;
 }
 
+static void sbc_codec_format_init(struct local_tws_source_context *ctx)
+{
+    switch (ctx->fmt.sample_rate) {
+    case 48000:
+        ctx->sbc_fmt.frequency = SBC_FREQ_48000;
+        break;
+    case 32000:
+        ctx->sbc_fmt.frequency = SBC_FREQ_32000;
+        break;
+    default:
+        ctx->sbc_fmt.frequency = SBC_FREQ_44100;
+        break;
+    }
+    ctx->sbc_fmt.blocks = SBC_BLK_16;
+    ctx->sbc_fmt.subbands = SBC_SB_8;
+    ctx->sbc_fmt.mode = SBC_MODE_STEREO;
+    ctx->sbc_fmt.allocation = 0;
+    ctx->sbc_fmt.endian = SBC_LE;
+    ctx->sbc_fmt.bitpool = 53;
+}
+
 static int local_tws_source_ioc_start(struct stream_iport *iport)
 {
     struct local_tws_source_context *ctx = (struct local_tws_source_context *)iport->node->private_data;
     if (ctx->fmt.coding_type == AUDIO_CODING_SBC) {
-        ctx->sbc_fmt.frequency = SBC_FREQ_44100;
-        ctx->sbc_fmt.blocks = SBC_BLK_16;
-        ctx->sbc_fmt.subbands = SBC_SB_8;
-        ctx->sbc_fmt.mode = SBC_MODE_STEREO;
-        ctx->sbc_fmt.allocation = 0;
-        ctx->sbc_fmt.endian = SBC_LE;
-        ctx->sbc_fmt.bitpool = 53;
+        sbc_codec_format_init(ctx);
     }
     ctx->head_coding_type = jl_tws_coding_type_id(ctx->fmt.coding_type);
     ctx->head_frame_duration = jl_tws_match_frame_duration(ctx->fmt.frame_dms);
     int frame_len = 0;
     if (ctx->fmt.coding_type == AUDIO_CODING_JLA) {
         frame_len = ctx->fmt.bit_rate / 8 * ctx->fmt.frame_dms / 1000 / 10 + 2;
+        ctx->look_ahead_latency = (int)((u64)jla_look_ahead_pcm_frames(ctx->fmt.sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / ctx->fmt.sample_rate);
+        ctx->frame_latency = jla_frame_latency(ctx->fmt.sample_rate, ctx->fmt.frame_dms);
     } else if (ctx->fmt.coding_type == AUDIO_CODING_SBC) {
         u8 subbands = ctx->sbc_fmt.subbands ? 8 : 4;
         u8 blocks = ((ctx->sbc_fmt.blocks) + 1) * 4;
@@ -339,14 +356,19 @@ static int local_tws_source_ioc_start(struct stream_iport *iport)
         } else {
             frame_len += ((blocks * channels * ctx->sbc_fmt.bitpool) + 7) >> 3;
         }
+        ctx->look_ahead_latency = (int)((u64)sbc_look_ahead_pcm_frames(ctx->sbc_fmt.subbands) * TIMESTAMP_US_DENOMINATOR * 1000000 / ctx->fmt.sample_rate);
+        ctx->frame_latency = 128 * 1000000 / ctx->fmt.sample_rate;
         printf("sbc_len = %d\n", frame_len);
     } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
         frame_len = jla_v2_enc_out_len(ctx->fmt.sample_rate, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
+        ctx->look_ahead_latency = (int)((u64)jla_v2_look_ahead_pcm_frames(ctx->fmt.sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / ctx->fmt.sample_rate);
+        ctx->frame_latency = jla_v2_frame_latency(ctx->fmt.sample_rate, ctx->fmt.frame_dms);
     } else {
         printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
     }
     ctx->packet_len = sizeof(struct jl_tws_header) + frame_len * ctx->frame_num;
     printf("packet : %d, %lu, %d\n", ctx->packet_len, sizeof(struct jl_tws_header), frame_len * ctx->frame_num);
+    g_printf("local tws sample rate : %d, look_ahead_latency : %dus, frame latency : %dus\n", ctx->fmt.sample_rate, ctx->look_ahead_latency / TIMESTAMP_US_DENOMINATOR, ctx->frame_latency);
     if (!ctx->tws_channel) {
         ctx->tws_channel = local_tws_data_trans_open(ctx);
         tws_conn_system_clock_init(TIMESTAMP_US_DENOMINATOR);
@@ -413,20 +435,7 @@ static int local_tws_source_ioc_fmt_nego(struct stream_iport *iport)
     } else {
         ctx->fmt.sample_rate = in_fmt->sample_rate;
         ctx->head_sample_rate = jl_tws_match_sample_rate(in_fmt->sample_rate);
-        if (ctx->fmt.coding_type == AUDIO_CODING_JLA) {
-            ctx->look_ahead_latency = (int)((u64)jla_look_ahead_pcm_frames(in_fmt->sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
-            ctx->frame_latency = jla_frame_latency(in_fmt->sample_rate, ctx->fmt.frame_dms);
-        } else if (ctx->fmt.coding_type == AUDIO_CODING_SBC) {
-            ctx->look_ahead_latency = (int)((u64)sbc_look_ahead_pcm_frames(ctx->sbc_fmt.subbands) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
-            ctx->frame_latency = 128 * 1000000 / in_fmt->sample_rate;
-        } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
-            ctx->look_ahead_latency = (int)((u64)jla_v2_look_ahead_pcm_frames(in_fmt->sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / in_fmt->sample_rate);
-            ctx->frame_latency = jla_v2_frame_latency(in_fmt->sample_rate, ctx->fmt.frame_dms);
-        } else {
-            printf("error !!!  unsuport coding_type, %s, %d\n", __func__, __LINE__);
-        }
     }
-    g_printf("local tws sample rate : %d, look_ahead_latency : %dus, frame latency : %dus\n", ctx->fmt.sample_rate, ctx->look_ahead_latency / TIMESTAMP_US_DENOMINATOR, ctx->frame_latency);
 
     return ret;
 }

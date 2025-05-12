@@ -412,34 +412,34 @@ typedef struct ipv6_mreq {
  * we restrict parameters to at most 128 bytes.
  */
 #if !defined(FIONREAD) || !defined(FIONBIO)
-#define IOCPARM_MASK    0x7fUL          /* parameters must be < 128 bytes */
-#define IOC_VOID        0x20000000UL    /* no parameters */
-#define IOC_OUT         0x40000000UL    /* copy out parameters */
-#define IOC_IN          0x80000000UL    /* copy in parameters */
-#define IOC_INOUT       (IOC_IN|IOC_OUT)
+#define IOCPARM_MASK_LWIP    0x7fU           /* parameters must be < 128 bytes */
+#define IOC_VOID_LWIP        0x20000000UL    /* no parameters */
+#define IOC_OUT_LWIP         0x40000000UL    /* copy out parameters */
+#define IOC_IN_LWIP          0x80000000UL    /* copy in parameters */
+#define IOC_INOUT_LWIP       (IOC_IN_LWIP|IOC_OUT_LWIP)
 /* 0x20000000 distinguishes new &
    old ioctl's */
-#define _IO(x,y)        ((long)(IOC_VOID|((x)<<8)|(y)))
+#define _IO_LWIP(x,y)        ((long)(IOC_VOID_LWIP|((x)<<8)|(y)))
 
-#define _IOR(x,y,t)     ((long)(IOC_OUT|((sizeof(t)&IOCPARM_MASK)<<16)|((x)<<8)|(y)))
+#define _IOR_LWIP(x,y,t)     ((long)(IOC_OUT_LWIP|((sizeof(t)&IOCPARM_MASK_LWIP)<<16)|((x)<<8)|(y)))
 
-#define _IOW(x,y,t)     ((long)(IOC_IN|((sizeof(t)&IOCPARM_MASK)<<16)|((x)<<8)|(y)))
+#define _IOW_LWIP(x,y,t)     ((long)(IOC_IN_LWIP|((sizeof(t)&IOCPARM_MASK_LWIP)<<16)|((x)<<8)|(y)))
 #endif /* !defined(FIONREAD) || !defined(FIONBIO) */
 
 #ifndef FIONREAD
-#define FIONREAD    _IOR('f', 127, unsigned long) /* get # bytes to read */
+#define FIONREAD    _IOR_LWIP('f', 127, unsigned long) /* get # bytes to read */
 #endif
 #ifndef FIONBIO
-#define FIONBIO     _IOW('f', 126, unsigned long) /* set/clear non-blocking i/o */
+#define FIONBIO     _IOW_LWIP('f', 126, unsigned long) /* set/clear non-blocking i/o */
 #endif
 
 /* Socket I/O Controls: unimplemented */
 #ifndef SIOCSHIWAT
-#define SIOCSHIWAT  _IOW('s',  0, unsigned long)  /* set high watermark */
-#define SIOCGHIWAT  _IOR('s',  1, unsigned long)  /* get high watermark */
-#define SIOCSLOWAT  _IOW('s',  2, unsigned long)  /* set low watermark */
-#define SIOCGLOWAT  _IOR('s',  3, unsigned long)  /* get low watermark */
-#define SIOCATMARK  _IOR('s',  7, unsigned long)  /* at oob mark? */
+#define SIOCSHIWAT  _IOW_LWIP('s',  0, unsigned long)  /* set high watermark */
+#define SIOCGHIWAT  _IOR_LWIP('s',  1, unsigned long)  /* get high watermark */
+#define SIOCSLOWAT  _IOW_LWIP('s',  2, unsigned long)  /* set low watermark */
+#define SIOCGLOWAT  _IOR_LWIP('s',  3, unsigned long)  /* get low watermark */
+#define SIOCATMARK  _IOR_LWIP('s',  7, unsigned long)  /* at oob mark? */
 #endif
 
 /* commands for fnctl */
@@ -533,6 +533,11 @@ struct timeval {
     long    tv_sec;         /* seconds */
     long    tv_usec;        /* and microseconds */
 };
+struct timezone {
+    int	tz_minuteswest;	/* minutes west of Greenwich */
+    int	tz_dsttime;	/* type of dst correction */
+};
+
 #endif /* LWIP_TIMEVAL_PRIVATE */
 
 #ifdef __cplusplus

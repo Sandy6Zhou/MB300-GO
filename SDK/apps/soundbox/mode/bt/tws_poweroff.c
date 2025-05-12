@@ -22,6 +22,7 @@
 #include "app_le_broadcast.h"
 #include "le_broadcast.h"
 #include "app_le_connected.h"
+#include "mic_effect.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 
@@ -325,8 +326,14 @@ void sys_enter_soft_poweroff(enum poweroff_reason reason)
     anc_poweroff();
 #endif
 
-    /* TWS同时关机,先断开手机  */
     if (reason == POWEROFF_NORMAL_TWS) {
+        //主从关机前都要判断是否开了混响，然后关掉它
+#if TCFG_MIC_EFFECT_ENABLE
+        if (mic_effect_player_runing()) {
+            mic_effect_player_close();
+        }
+#endif
+        /* TWS同时关机,先断开手机  */
         bt_cmd_prepare(USER_CTRL_POWER_OFF, 0, NULL);
         g_bt_detach_timer = sys_timer_add(NULL, power_off_at_same_time, 50);
         return;

@@ -69,7 +69,9 @@ void music_player_err_deal(int err)
 
     switch (err) {
     case MUSIC_PLAYER_SUCC:
-        le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+        if (get_le_audio_curr_role()) {
+            le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+        }
         music_hdl.file_err_counter = 0;
         break;
     case MUSIC_PLAYER_ERR_NULL:

@@ -489,6 +489,12 @@
 #define TCFG_DATA_EXPORT_UART_TX_PORT IO_PORT_DM // 串口发送引脚
 #define TCFG_DATA_EXPORT_UART_BAUDRATE 2000000 // 串口波特率
 // ------------音频配置.json------------
+#define TCFG_IFLYTEK_ENABLE	0
+#if TCFG_IFLYTEK_ENABLE
+#define TCFG_IFLYTEK_VAD_DEMO	0
+#define TCFG_IFLYTEK_TTS_DEMO	0
+#define TCFG_IFLYTEK_SPARKDESK_DEMO	0
+#endif
 #endif
 
 

@@ -328,7 +328,6 @@ char bt_tws_get_local_channel()
 
 int get_bt_tws_connect_status()
 {
-    g_printf("%s %d\n", __func__, gtws.state & BT_TWS_SIBLING_CONNECTED);
     if (gtws.state & BT_TWS_SIBLING_CONNECTED) {
         return 1;
     }

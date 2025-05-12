@@ -38,12 +38,18 @@ struct dual_conn_handle {
     u8 page_head_inited;
     u8 page_scan_auto_disable;
     u8 inquiry_scan_disable;
+    u8 need_keep_scan;
     struct list_head page_head;
 };
 
 static struct dual_conn_handle g_dual_conn;
 static u8 page_mode_active = 0;
 static u8 page_timeout = 0;         //用来两边同时按下才发起配对的情况下，TWS未配对发起回连的超时之后插入可发现可连接
+
+void bt_set_need_keep_scan(u8 en)
+{
+    g_dual_conn.need_keep_scan = en;
+}
 
 void clr_page_mode_active(void)
 {
@@ -175,7 +181,7 @@ static int dual_conn_try_open_inquiry_scan()
     if (connect_device == 0) {
         write_scan_conn_enable(1, 1);
     } else if (connect_device == 1) {
-        if (g_dual_conn.device_num_recorded > 1) {
+        if (g_dual_conn.device_num_recorded > 1 || g_dual_conn.need_keep_scan) {
 #if TCFG_BT_DUAL_CONN_ENABLE
             write_scan_conn_enable(0, 1);
 #endif
@@ -271,6 +277,10 @@ static u8 *get_device_addr_in_page_list()
 
 static void tws_wait_pair_timeout(void *p)
 {
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
+    g_printf("__func__ %s %x\n", __func__, rets);
+
     g_dual_conn.timer = 0;
     tws_api_cancle_wait_pair();
     dual_conn_page_device();
@@ -389,7 +399,10 @@ void tws_dual_conn_state_handler()
                 write_scan_conn_enable(0, 1);
 #endif
             }
+        } else if (g_dual_conn.need_keep_scan) {
+            write_scan_conn_enable(0, 1);
         }
+
         if (have_page_device) {
             g_dual_conn.timer = sys_timeout_add(NULL, tws_wait_conn_timeout, 6000);
             tws_api_auto_role_switch_disable();
@@ -410,7 +423,7 @@ void tws_dual_conn_state_handler()
             if (tws_active) {
                 tws_api_wait_connection(0);
             }
-            if (g_dual_conn.device_num_recorded > 1) {
+            if (g_dual_conn.device_num_recorded > 1 || g_dual_conn.need_keep_scan) {
 #if TCFG_BT_DUAL_CONN_ENABLE
                 write_scan_conn_enable(0, 1);
 #endif
@@ -515,7 +528,7 @@ void tws_dual_conn_state_handler()
                 write_scan_conn_enable(1, 1);
             }
         } else if (connect_device == 1) {
-            if (g_dual_conn.device_num_recorded > 1) {
+            if (edr_background_active && (g_dual_conn.device_num_recorded > 1 || g_dual_conn.need_keep_scan)) {
                 write_scan_conn_enable(0, 1);
             }
 #if TCFG_TWS_PAIR_ALWAYS                     //打开TWS_PAIR_ALWAYS,在手机连接之后仍然可以进行配对
@@ -1219,6 +1232,10 @@ static int dual_conn_app_event_handler(int *msg)
         switch (msg[0]) {
         case APP_MSG_TWS_PAIRED:
             if (bt_get_total_connect_dev() == 0) {
+                if (g_dual_conn.timer) {
+                    sys_timeout_del(g_dual_conn.timer);
+                    g_dual_conn.timer = 0;
+                }
                 tws_api_create_connection(0);
                 g_dual_conn.timer = sys_timeout_add(NULL, tws_create_conn_timeout,
                                                     TCFG_TWS_CONN_TIMEOUT * 1000);
@@ -1235,6 +1252,10 @@ static int dual_conn_app_event_handler(int *msg)
             u8 tws_can_pair = !bt_get_total_connect_dev();
 #endif
             if (tws_can_pair) {
+                if (g_dual_conn.timer) {
+                    sys_timeout_del(g_dual_conn.timer);
+                    g_dual_conn.timer = 0;
+                }
                 if (bt_get_total_connect_dev() == 0) {
                     tws_api_set_quick_connect_addr(tws_set_auto_pair_code());
                     tws_api_auto_pair(0);

@@ -191,6 +191,8 @@ void iis_key_vol_up(void)
         iis_volume_set(__this->volume);
     } else {
         iis_volume_set(__this->volume);
+    }
+    if (__this->volume == app_audio_volume_max_query(AppVol_IIS)) {
         if (tone_player_runing() == 0) {
             /* tone_play(TONE_MAX_VOL); */
 #if TCFG_MAX_VOL_PROMPT

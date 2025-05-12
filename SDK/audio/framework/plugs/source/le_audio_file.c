@@ -153,7 +153,10 @@ static int le_audio_file_start(struct le_audio_file_handle *hdl)
         return 0;
     }
     hdl->timestamp_enable = 1;
-    hdl->reference = audio_reference_clock_select(hdl->file, 2);
+    if (!hdl->reference) {
+        hdl->reference = audio_reference_clock_select(hdl->file, 2);
+    }
+
     return 0;
 }
 
@@ -162,9 +165,6 @@ static int le_audio_file_stop(struct le_audio_file_handle *hdl)
     if (hdl->start) {
         le_audio_stream_set_rx_tick_handler(hdl->file, NULL, NULL);
 
-        if (hdl->reference) {
-            audio_reference_clock_exit(hdl->reference);
-        }
         le_audio_file_stop_abandon_data(hdl);
         hdl->start = 0;
     }
@@ -193,6 +193,10 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
         le_audio_file_start_abandon_data(hdl);
         break;
     case NODE_IOC_STOP:
+        if (hdl->reference) {
+            audio_reference_clock_exit(hdl->reference);
+        }
+        hdl->reference = 0;
         le_audio_file_stop(hdl);
         break;
     }

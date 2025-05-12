@@ -111,7 +111,18 @@ extern u32 __bt_movable_slot_start[];
 extern u32 __bt_movable_slot_end[];
 extern u8 __bt_movable_region_start[];
 extern u8 __bt_movable_region_end[];
+/*
+void lmp_receive_remote_bt_version(u16 company_id, u8 version)
+{
+    if(version < 6)
+    {
+       a2dp_support_delay_report = 0;
+    }else{
 
+       a2dp_support_delay_report = 1;
+    }
+}
+*/
 
 u8 get_sniff_out_status()
 {
@@ -967,6 +978,23 @@ void bt_get_time_date()
 void phone_date_and_time_feedback(u8 *data,  u16 len)
 {
     printf("time：%s ", data);
+
+#if TCFG_IFLYTEK_ENABLE
+    extern void get_time_from_bt(u8 * data);
+    get_time_from_bt(data);
+#if TCFG_IFLYTEK_VAD_DEMO
+        extern void ifly_vad_demo(void);
+        ifly_vad_demo();
+#endif
+#if TCFG_IFLYTEK_TTS_DEMO
+        void ifly_tts_demo(void);
+        ifly_tts_demo();
+#endif
+#if TCFG_IFLYTEK_SPARKDESK_DEMO
+        extern void ifly_sparkdesk_demo();
+        ifly_sparkdesk_demo();
+#endif
+#endif
 }
 void map_get_time_data(char *time, int status)
 {

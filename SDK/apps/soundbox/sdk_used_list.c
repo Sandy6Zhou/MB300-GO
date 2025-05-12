@@ -682,3 +682,6 @@ midi_ctrl_dec_plug
 #if TCFG_ENC_AAC_ENABLE
 aac_enc_plug
 #endif
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+ahs_node_adapter
+#endif

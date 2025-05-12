@@ -8,12 +8,15 @@
 
 
 struct alink_param {
-    u8 alink_close_en;          //所有通道关闭时，将alink关闭
-    u8 module_idx;         // 0代表模块0, 1代表模块1
-    u8 bit_width;          //位宽配置 0：16bit 1:24bit
-    u32 dma_size;          //决定iis buf大小，dma_len / 2 的值为中断起一次的长度len的值
-    u32 sr;                // 采样率配置
-    float fixed_pns;            // 固定pns,单位ms
+    u8 alink_close_en;    //所有通道关闭时，将alink关闭
+    u8 alink_work_mode;   //alink模式配置
+    u8 ch_num;            //通道数
+    u8 module_idx;        // 0代表模块0, 1代表模块1
+    u8 bit_width;         //位宽配置 0：16bit 1:24bit
+    u8 clk_close;         //0：模块关闭后，保持时钟继续输出。 1：模块关闭后，关闭时钟输出
+    u32 dma_size;         //决定iis buf大小，dma_len / 2 的值为中断起一次的长度len的值
+    u32 sr;               // 采样率配置
+    float fixed_pns;      // 固定pns,单位ms
 };
 struct ch_config {
     u8 len;//分组的长度

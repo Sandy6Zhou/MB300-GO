@@ -376,8 +376,19 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 #elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
 
     #define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV)
-
+#if (AURACAST_SOURCE_BIS_NUMS == 2 || AURACAST_SINK_BIS_NUMS == 2)
+#if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE       //开了第三方协议le_hw_nums需要额外增加，开多少协议个需要加多少个hw
+    const int config_btctler_le_hw_nums = 8; //默认多开两条支持2个APP连接
+#else
     const int config_btctler_le_hw_nums = 6;
+#endif
+#else
+#if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE       //开了第三方协议le_hw_nums需要额外增加，开多少协议个需要加多少个hw
+    const int config_btctler_le_hw_nums = 7;
+#else
+    const int config_btctler_le_hw_nums = 5;
+#endif
+#endif
     const int config_btctler_le_roles    = (LE_MASTER | LE_SLAVE | LE_ADV | LE_SCAN);
     const uint64_t config_btctler_le_features = LL_FEAT_ISO_BROADCASTER | LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING;
     const int config_btctler_le_rx_nums = 20;

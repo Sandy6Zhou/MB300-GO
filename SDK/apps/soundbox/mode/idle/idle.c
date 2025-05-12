@@ -369,12 +369,6 @@ void power_off_deal(int msg)
 
 #if CONFIG_TWS_POWEROFF_SAME_TIME
             if (goto_poweroff_cnt == POWER_OFF_CNT) {
-#if TCFG_MIC_EFFECT_ENABLE
-                if (mic_effect_player_runing()) {
-                    mic_effect_player_close();
-                }
-#endif
-
 #if TCFG_USER_TWS_ENABLE
                 if (get_tws_sibling_connect_state()) {
                     tws_api_sync_call_by_uuid(0x891E7CD3, API_TWS_POWER_OFF, 100);
@@ -382,6 +376,11 @@ void power_off_deal(int msg)
                 } else
 #endif
                 {
+#if TCFG_MIC_EFFECT_ENABLE
+                    if (mic_effect_player_runing()) {
+                        mic_effect_player_close();
+                    }
+#endif
                     power_off_tone_play_flag = 1;
                     sys_enter_soft_poweroff(POWEROFF_NORMAL);
                 }

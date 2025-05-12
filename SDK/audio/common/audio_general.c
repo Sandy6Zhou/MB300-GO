@@ -61,7 +61,11 @@ const int config_audio_split_gain_enable = TCFG_SPLIT_GAIN_NODE_ENABLE;
 const int config_audio_stereomix_enable = TCFG_STEROMIX_NODE_ENABLE;
 
 const int config_audio_adc0_enable = TCFG_ADC0_ENABLE;
+#ifdef TCFG_ADC1_ENABLE
 const int config_audio_adc1_enable = TCFG_ADC1_ENABLE;
+#else
+const int config_audio_adc1_enable = 0;
+#endif
 const int config_audio_adc2_enable = 0;
 const int config_audio_adc3_enable = 0;
 const int config_audio_adc4_enable = 0;
@@ -69,7 +73,11 @@ const int config_audio_adc5_enable = 0;
 const int config_audio_adc6_enable = 0;
 const int config_audio_adc7_enable = 0;
 const int config_audio_adc0_input_mode = TCFG_ADC0_MODE;
+#ifdef TCFG_ADC1_ENABLE
 const int config_audio_adc1_input_mode = TCFG_ADC1_MODE;
+#else
+const int config_audio_adc1_input_mode = 0;
+#endif
 const int config_audio_adc2_input_mode = 0;
 const int config_audio_adc3_input_mode = 0;
 const int config_audio_adc4_input_mode = 0;
@@ -83,8 +91,9 @@ const int config_audio_adc7_input_mode = 0;
  *******************************************************************
  */
 const int config_audio_cvp_ref_source = 1;/*0:DAC Internal 1:External*/
-#ifdef TCFG_AUDIO_SIDETONE_ENABLE
-const int config_audio_cvp_ref_ch_recognize_enable = TCFG_AUDIO_SIDETONE_ENABLE;
+#if ((defined(TCFG_AUDIO_SIDETONE_ENABLE) && TCFG_AUDIO_SIDETONE_ENABLE) || \
+    (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE))
+const int config_audio_cvp_ref_ch_recognize_enable = 1;
 #else
 const int config_audio_cvp_ref_ch_recognize_enable = 0;
 #endif
@@ -335,6 +344,9 @@ const int voicechanger_effect_v_config = (0
 /*mb drc/limiter 3带使能(1.2k) */
 const int audio_crossover_3band_enable       = 1;
 
+//howling_ahs配置
+const int const_audio_howling_ahs_ref_src_type = 1; //0:不使能参考数据变采样，1:软件src，2:硬件src
+const int const_audio_howling_ahs_data_export = 0;  //数据写卡导出，需要使能AUDIO_DATA_EXPORT_VIA_UART，串口写卡工具配置3通道，每通道512byte
 /*
  * 某些算法参数更新需要重新申请buffer，
  * 为防止重新申请时内存不足导致异常，

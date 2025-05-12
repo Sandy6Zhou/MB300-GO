@@ -12,6 +12,7 @@ enum {
     FM_MODE,
     SPDIF_MODE,
     PC_MODE,
+    SINK_MODE,
     NOT_SUPPORT_MODE,
 };
 

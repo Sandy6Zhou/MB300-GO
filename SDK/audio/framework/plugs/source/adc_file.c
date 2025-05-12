@@ -14,6 +14,7 @@
 #include "asm/audio_common.h"
 #include "mic_effect.h"
 #include "pc_mic_recoder.h"
+#include "effects/audio_howling_ahs.h"
 #if TCFG_AUDIO_ANC_ENABLE
 #include "audio_anc.h"
 #endif
@@ -501,6 +502,13 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
         audio_cvp_phase_align();
 #endif
     }
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+    if (hdl->scene == STREAM_SCENE_MIC_EFFECT) {
+        if (audio_ahs_status()) {
+            howling_ahs_read_ref_data();
+        }
+    }
+#endif
 
     if (frame) {
 #ifdef TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
@@ -653,6 +661,17 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #endif
         break;
 #endif/*WIRELESS_MIC_PRODUCT_MODE*/
+    case STREAM_SCENE_MIC_EFFECT:
+        u32 mic_eff_sr = 44100;
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+        mic_eff_sr = 16000;
+#endif
+#if SUPPORT_CHAGE_AUDIO_CLK
+        fmt->sample_rate    = audio_adc_sample_rate_mapping(mic_eff_sr);
+#else
+        fmt->sample_rate    = mic_eff_sr;
+#endif
+        break;
     default:
 #if SUPPORT_CHAGE_AUDIO_CLK
         fmt->sample_rate    = audio_adc_sample_rate_mapping(44100);

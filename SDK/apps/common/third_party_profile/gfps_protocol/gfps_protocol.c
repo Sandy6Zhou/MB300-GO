@@ -21,6 +21,7 @@
 #include "volume_node.h"
 #include "asm/charge.h"
 #include "gfps_platform_api.h"
+#include "dual_conn.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
 
@@ -125,7 +126,11 @@ void generate_rfcomm_battery_data(u8 *data)
 static void gfps_ctl_bt_enter_pair_mode()
 {
     printf("%s", __func__);
+#if TCFG_USER_TWS_ENABLE
     tws_dual_conn_close();
+#else
+    dual_conn_close();
+#endif
     lmp_hci_write_scan_enable((1 << 1) | 1);
     bt_set_need_keep_scan(1);
 }

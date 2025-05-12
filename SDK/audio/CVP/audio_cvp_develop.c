@@ -100,7 +100,6 @@ struct audio_aec_hdl {
     int (*output_handle)(s16 *dat, u16 len);//输出回调函数
 };
 struct audio_aec_hdl *aec_hdl = NULL;
-struct audio_aec_hdl  aec_hdl_mem AT(.aec_mem);
 
 #define AEC_REF_CBUF_SIZE         (AEC_FRAME_POINTS * 6)
 #define AEC_REF_CBUF_DOOR_SIZE    (AEC_REF_CBUF_SIZE / 2)
@@ -475,15 +474,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     overlay_load_code(OVERLAY_AEC);
     aec_code_movable_load();
 
-    /* aec_hdl = zalloc(sizeof(struct audio_aec_hdl)); */
-    /* if (aec_hdl == NULL) { */
-    /*     printf("aec_hdl malloc failed"); */
-    /*     return -ENOMEM; */
-    /* } */
-    /* audio_overlay_load_code(OVERLAY_AEC); */
-
-    memset(&aec_hdl_mem, 0, sizeof(aec_hdl_mem));
-    aec_hdl = &aec_hdl_mem;
+    aec_hdl = zalloc(sizeof(struct audio_aec_hdl));
     printf("aec_hdl size:%ld\n", sizeof(struct audio_aec_hdl));
     /* clk_set("sys", AEC_CLK); */
 
@@ -967,7 +958,7 @@ void audio_aec_far_refbuf(s16 *buf, u16 len)
 * Note(s)    : None.
 *********************************************************************
 */
-void audio_aec_output_sel(u8 sel, u8 agc)
+void audio_aec_output_sel(CVP_OUTPUT_ENUM sel, u8 agc)
 {
     if (aec_hdl) {
         aec_hdl->output_sel = sel;

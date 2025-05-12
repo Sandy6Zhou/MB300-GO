@@ -9,7 +9,23 @@
 #define DEFAULT_CONNECT_TO 15 //s
 #define SOCK_MAGIC 0x1a2b3c4d
 
-extern int gettimeofday(struct timeval *__restrict __tv, void *__tz);
+int my_gettimeofday(struct timeval *__restrict __tv, struct timezone *__tz)
+{
+    if (__tv) {
+        __tv->tv_sec = jiffies_msec() / 1000;
+        __tv->tv_usec = jiffies_msec() % 1000 * 1000;
+    }
+
+    if (__tz) {
+        __tz->tz_minuteswest = 0;
+        __tz->tz_dsttime = 0;
+    }
+
+    return 0;
+}
+
+
+extern void *calloc(unsigned long count, unsigned long size);
 
 inline static int sock_hdl_check(struct sock_hdl *hdl, const char *func)
 {
@@ -249,7 +265,7 @@ int sock_recvfrom(void *sock_hdl, void *mem, size_t len, int flags, struct socka
         }
         if (hdl->recv_to) {
             hdl->recv_to_flag = 0;
-            gettimeofday(&tv, NULL);
+            my_gettimeofday(&tv, NULL);
             recv_to_timing = tv.tv_sec * 1000 + tv.tv_usec / 1000 + hdl->recv_to;
         }
         do {
@@ -267,7 +283,7 @@ int sock_recvfrom(void *sock_hdl, void *mem, size_t len, int flags, struct socka
             if (ret <= 0) {
                 if (ret < 0 && sock_would_block(hdl)) {
                     if (hdl->recv_to) {
-                        gettimeofday(&tv, NULL);
+                        my_gettimeofday(&tv, NULL);
                         if (tv.tv_sec * 1000 + tv.tv_usec / 1000  > recv_to_timing) {
                             hdl->recv_to_flag = 1;
                             os_mutex_post(&hdl->recv_mtx);
@@ -293,7 +309,7 @@ int sock_recvfrom(void *sock_hdl, void *mem, size_t len, int flags, struct socka
     } else {
         if (hdl->recv_to) {
             hdl->recv_to_flag = 0;
-            gettimeofday(&tv, NULL);
+            my_gettimeofday(&tv, NULL);
             recv_to_timing = tv.tv_sec * 1000 + tv.tv_usec / 1000 + hdl->recv_to;
         }
         while (1) {
@@ -313,7 +329,7 @@ int sock_recvfrom(void *sock_hdl, void *mem, size_t len, int flags, struct socka
             if (ret <= 0) {
                 if (ret < 0 && sock_would_block(hdl)) {
                     if (hdl->recv_to) {
-                        gettimeofday(&tv, NULL);
+                        my_gettimeofday(&tv, NULL);
                         if (tv.tv_sec * 1000 + tv.tv_usec / 1000 > recv_to_timing) {
                             hdl->recv_to_flag = 1;
                             return -1;
@@ -377,7 +393,7 @@ int sock_send(void *sock_hdl, const void *buf, u32 len, int flag)
 
         if (hdl->send_to) {
             hdl->send_to_flag = 0;
-            gettimeofday(&tv, NULL);
+            my_gettimeofday(&tv, NULL);
             send_to_timing = tv.tv_sec * 1000 + tv.tv_usec / 1000 + hdl->send_to;
         }
         while (1) {
@@ -403,7 +419,7 @@ int sock_send(void *sock_hdl, const void *buf, u32 len, int flag)
             } else {
                 if (ret < 0 && sock_would_block(hdl)) {
                     if (hdl->send_to) {
-                        gettimeofday(&tv, NULL);
+                        my_gettimeofday(&tv, NULL);
                         if (tv.tv_sec * 1000 + tv.tv_usec / 1000  > send_to_timing) {
                             hdl->send_to_flag = 1;
                             os_mutex_post(&hdl->send_mtx);

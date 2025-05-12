@@ -189,6 +189,10 @@ extern int errno;
 #endif /* LWIP_ERRNO_INCLUDE */
 #endif /* LWIP_ERRNO_STDINCLUDE */
 
+#ifndef errno
+extern int errno;
+#endif
+
 #endif /* LWIP_PROVIDE_ERRNO */
 
 #ifdef __cplusplus

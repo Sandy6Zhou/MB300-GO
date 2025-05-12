@@ -49,7 +49,13 @@ u8 fm_inside_init(void *priv)
 
     fm_inside_on();  //fm analog init
     fm_inside_io_ctrl(SET_FM_INSIDE_SCAN_ARG1, FMSCAN_CNR,  SEEK_CNT_MAX, SEEK_CNT_ZERO_MAX);
+
+#ifdef CONFIG_CPU_BR27
     fm_inside_set_stereo(TCFG_FM_INSIDE_STEREO_ENABLE, TCFG_FM_INSIDE_STEREO_SEPARATION_SELECTION); //TCFG_FM_INSIDE_STEREO_ENABLE: 0 mono, 1 stereo. TCFG_FM_INSIDE_STEREO_SEPARATION_SELECTION:选择立体声分离度0 1 2
+#else
+    fm_inside_set_stereo(TCFG_FM_INSIDE_STEREO_ENABLE);
+#endif
+
 #if TCFG_FM_INSIDE_AGC_ENABLE
     fm_inside_agc_en_set(1);
     fm_inside_agc_timer = sys_timer_add(NULL, __fm_inside_agc_trim, 1000);

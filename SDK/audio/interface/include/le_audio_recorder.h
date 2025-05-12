@@ -36,8 +36,13 @@ void le_audio_fm_recorder_close(void);
 int le_audio_pc_recorder_open(void *params, void *le_audio, int latency);
 void le_audio_pc_recorder_close(void);
 
-int le_audio_wireless_mic_tx_set_dvol(u8 vol);
+int le_audio_wireless_mic_tx_set_dvol(u8 vol, s16 mute_en);
+void le_audio_wireless_mic_tx_dvol_mute(bool mute);
 void le_audio_wireless_mic_tx_dvol_up(void);
 void le_audio_wireless_mic_tx_dvol_down(void);
+int le_audio_wireless_mic_tx_monitor_set_dvol(u8 vol, s16 mute_en);
+void le_audio_wireless_mic_tx_monitor_dvol_mute(bool mute);
+void le_audio_wireless_mic_tx_monitor_dvol_up(void);
+void le_audio_wireless_mic_tx_monitor_dvol_down(void);
 #endif
 

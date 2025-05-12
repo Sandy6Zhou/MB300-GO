@@ -796,6 +796,7 @@ int app_broadcast_open()
 
     bis_switch_onoff = 1;
 
+#if (defined CONFIG_CPU_BR27) || (defined CONFIG_CPU_BR28)
 #if THIRD_PARTY_PROTOCOLS_SEL
     multi_protocol_bt_ble_enable(0);
 #if THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN
@@ -809,6 +810,7 @@ int app_broadcast_open()
     } else {
         ble_connect_dev_detect_timer = 0;
     }
+#endif
 #endif
     log_info("broadcast_open");
 
@@ -897,6 +899,8 @@ int app_broadcast_open_with_role(u8 role)
     }
 
     bis_switch_onoff = 1;
+
+#if (defined CONFIG_CPU_BR27) || (defined CONFIG_CPU_BR28)
 #if THIRD_PARTY_PROTOCOLS_SEL
     multi_protocol_bt_ble_enable(0);
     u32 temp_role = role + 1;
@@ -911,6 +915,7 @@ int app_broadcast_open_with_role(u8 role)
     } else {
         ble_connect_dev_detect_timer = 0;
     }
+#endif
 #endif
 
     log_info("broadcast_open_with_role %d", role);
@@ -983,10 +988,12 @@ int app_broadcast_close(u8 status)
 
     log_info("broadcast_close");
 
+#if (defined CONFIG_CPU_BR27) || (defined CONFIG_CPU_BR28)
 #if THIRD_PARTY_PROTOCOLS_SEL
     if (ble_connect_dev_detect_timer) {
         sys_timeout_del(ble_connect_dev_detect_timer);
     }
+#endif
 #endif
     //由于是异步操作需要加互斥量保护，避免和开启开广播的流程同时运行,添加的流程请放在互斥量保护区里面
     app_broadcast_mutex_pend(&mutex, __LINE__);
@@ -1019,11 +1026,13 @@ int app_broadcast_close(u8 status)
 
     bis_switch_onoff = 0;
 
+#if (defined CONFIG_CPU_BR27) || (defined CONFIG_CPU_BR28)
 #if THIRD_PARTY_PROTOCOLS_SEL
     if (status != APP_BROADCAST_STATUS_SUSPEND) {
         ll_set_private_access_addr_pair_channel(0);
         multi_protocol_bt_ble_enable(1);
     }
+#endif
 #endif
 
     return ret;

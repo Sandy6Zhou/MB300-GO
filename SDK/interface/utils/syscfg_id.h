@@ -273,6 +273,8 @@ int syscfg_tools_init(void);
 #define     CFG_BT_FRE_OFFSET3			164
 #define     CFG_BT_FRE_OFFSET4			165
 
+#define     VM_ID_XOSC_TRIM             166
+
 #define     CFG_ONLINE_EQ_DRC_DATA_ID   254//在线调试保存参数的id
 #define     CFG_ONLINE_SAVE_ID          255//在线保存文件大小的id
 

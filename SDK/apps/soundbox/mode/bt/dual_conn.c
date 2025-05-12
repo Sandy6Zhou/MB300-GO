@@ -39,11 +39,17 @@ struct dual_conn_handle {
     u8 page_head_inited;
     u8 page_scan_auto_disable;
     u8 inquiry_scan_disable;
+    u8 need_keep_scan;
     struct list_head page_head;
 };
 
 static struct dual_conn_handle g_dual_conn;
 static u8 page_mode_active = 0;
+
+void bt_set_need_keep_scan(u8 en)
+{
+    g_dual_conn.need_keep_scan = en;
+}
 
 void clr_page_mode_active(void)
 {
@@ -248,7 +254,9 @@ void dual_conn_state_handler()
         write_scan_conn_enable(1, 1);
     } else if (connect_device == 1) {
 #if TCFG_BT_DUAL_CONN_ENABLE
-        if (g_dual_conn.device_num_recorded > 1) {
+        if (g_dual_conn.need_keep_scan) {
+            write_scan_conn_enable(0, 1);
+        } else if (g_dual_conn.device_num_recorded > 1) {
             if (have_page_device) {
                 r_printf("have_page_device\n");
                 dual_conn_page_device();

@@ -22,9 +22,9 @@ static u8 mic_scene = 0; //记录混响场景序号
 
 /* 命名规则：节点名+模式名，如 SurBt、CrossAux、Eq0File */
 #if defined(MEDIA_UNIFICATION_EN)&&MEDIA_UNIFICATION_EN
-static char *music_mode[] = {"Media", "Media", "Media", "Media", "Media"};
+static char *music_mode[] = {"Media", "Media", "Media", "Media", "Media", "Media"};
 #else
-static char *music_mode[] = {"Bt", "Aux", "File", "Fm", "Spd"};
+static char *music_mode[] = {"Bt", "Aux", "File", "Fm", "Spd", "Sink"};
 #endif
 static char *father_name[] = {"VSPro", "3dPlus", "VBassPro"}; //模块节点名,如添加新的模块节点名，需对宏定义MEDIA_MODULE_NODE_UPDATE_EN进行配置使能
 static char *sur_name[] = {"Sur"};
@@ -117,6 +117,8 @@ u8 get_current_mode_index()
         return SPDIF_MODE;
     case APP_MODE_PC:
         return PC_MODE;
+    case APP_MODE_SINK:
+        return SINK_MODE;
     default:
         printf("mode not support scene switch %d\n", mode->name);
         return NOT_SUPPORT_MODE;
@@ -148,6 +150,9 @@ int get_mode_scene_num()
         break;
     case APP_MODE_PC:
         uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"pc_spk");
+        break;
+    case APP_MODE_SINK:
+        uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"local_tws");
         break;
     default:
         printf("mode not support scene switch %d\n", mode->name);

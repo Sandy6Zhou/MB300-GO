@@ -68,9 +68,9 @@ void local_tws_cmd_send(u8 *data, u8 len)
     free(cmd_list);
 }
 
-void local_tws_vol_report(u8 vol, u8 ui_reflash)
+void local_tws_vol_report(u8 vol, u8 ui_reflash, u8 max_vol_prompt)
 {
-    u8 data[] = {CMD_TWS_VOL_REPORT, vol, ui_reflash};
+    u8 data[] = {CMD_TWS_VOL_REPORT, vol, ui_reflash, max_vol_prompt};
     log_debug("%s %d\n", __func__, vol);
     local_tws_cmd_send(data, sizeof(data));
 }
@@ -183,7 +183,7 @@ u8 local_tws_get_remote_dec_status(void)
 static void sync_vol_timer_hdl(void *priv)
 {
     s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
-    local_tws_vol_report((u8)vol, 1);
+    local_tws_vol_report((u8)vol, 1, 1);
     __this->timer = 0;
 }
 
@@ -199,7 +199,7 @@ void local_tws_sync_vol(void)
         sys_timeout_del(__this->timer);
     }
     s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
-    local_tws_vol_report((u8)vol, 1);
+    local_tws_vol_report((u8)vol, 1, 1);
     /* __this->timer = sys_timeout_add(NULL, sync_vol_timer_hdl, 1000); */
 }
 
@@ -314,7 +314,7 @@ void local_tws_exit_mode(void)
                     sys_timeout_del(__this->timer);
                 }
                 s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
-                local_tws_vol_report((u8)vol, 0);
+                local_tws_vol_report((u8)vol, 0, 0);
             }
         }
     }
@@ -359,7 +359,7 @@ static int local_tws_msg_handler(int *msg)
         log_info("CMD_TWS_ENTER_SINK_MODE_RSP:%d %d\n", app_get_current_mode()->name, cmd[1]);
         __this->role = LOCAL_TWS_ROLE_SOURCE;
         s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);      //source同步一次音量给sink避免两边音量不同步
-        local_tws_vol_report((u8)vol, 0);
+        local_tws_vol_report((u8)vol, 0, 0);
         if (__this->role == LOCAL_TWS_ROLE_SOURCE &&  __this->sync_tone_name && app_in_mode(cmd[1])) {        //cmd[1] = mode, 如果不等于当前模式则说明已经切到下个模式
             tone_player_stop();
             tws_play_tone_file_alone_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
@@ -386,7 +386,9 @@ static int local_tws_msg_handler(int *msg)
 
     case CMD_TWS_BACK_TO_BT_MODE_RSP:
         log_info("CMD_TWS_BACK_TO_BT_MODE_RSP\n");
-        if (app_in_mode(APP_MODE_BT) && g_bt_hdl.background.backmode == BACKGROUND_GOBACK_WITH_MODE_SWITCH) {
+        if (app_in_mode(APP_MODE_BT) && \
+            g_bt_hdl.background.backmode == BACKGROUND_GOBACK_WITH_MODE_SWITCH && \
+            __this->sync_tone_name && bt_get_call_status() == BT_CALL_HANGUP) {
             tone_player_stop();
             tws_play_tone_file_alone_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
             __this->sync_tone_name = NULL;
@@ -448,25 +450,25 @@ static int local_tws_msg_handler(int *msg)
 
     case CMD_TWS_VOL_UP:
         app_send_message(APP_MSG_VOL_UP, 0);
-        local_tws_sync_vol();
+        /* local_tws_sync_vol(); */
         break;
     case CMD_TWS_VOL_DOWN:
         app_send_message(APP_MSG_VOL_DOWN, 0);
-        local_tws_sync_vol();
+        /* local_tws_sync_vol(); */
         break;
 
     case CMD_TWS_VOL_REPORT:
-        if (app_audio_get_volume(APP_AUDIO_STATE_IDLE) == cmd[1]) {
-            break;
-        }
-        app_audio_set_volume(APP_AUDIO_STATE_IDLE, cmd[1], 1);
-        if (cmd[1] >= app_audio_get_max_volume()) {
+        if ((cmd[1] >= app_audio_get_max_volume()) && cmd[3]) {
             if (tone_player_runing() == 0) {
 #if TCFG_MAX_VOL_PROMPT
                 play_tone_file(get_tone_files()->max_vol);
 #endif
             }
         }
+        if (app_audio_get_volume(APP_AUDIO_STATE_IDLE) == cmd[1]) {
+            break;
+        }
+        app_audio_set_volume(APP_AUDIO_STATE_IDLE, cmd[1], 1);
         if (cmd[2]) {   //sink shound be reflash ui
             app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_IDLE));
         }

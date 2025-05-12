@@ -105,7 +105,7 @@ set RCSP_EN=1
 set UI_RESOURCE_EN=1
 #elif TCFG_UI_ENABLE && TCFG_LCD_OLED_ENABLE
 set	UI_RESOURCE_EN=2
-#else 
+#else
 set	UI_RESOURCE_EN=0
 #endif
 

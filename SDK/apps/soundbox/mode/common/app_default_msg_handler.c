@@ -432,15 +432,6 @@ void app_common_device_event_handler(int *msg)
         if (true == app_in_mode(APP_MODE_MUSIC)) {
             music_device_msg_handler(msg);
         }
-        ret = dev_status_event_filter(msg);///解码设备上下线， 设备挂载等处理
-        if (ret == true) {
-            if (msg[1] == DEVICE_EVENT_IN) {
-                ///设备上线， 非解码模式切换到解码模式播放
-                if (true != app_in_mode(APP_MODE_MUSIC)) {
-                    app = APP_MODE_MUSIC;
-                }
-            }
-        }
 #endif
 #if TCFG_APP_RECORD_EN
         if (true == app_in_mode(APP_MODE_RECORD)) {
@@ -450,6 +441,27 @@ void app_common_device_event_handler(int *msg)
 #if TCFG_MIX_RECORD_ENABLE
         mix_record_device_msg_handler(msg);
 #endif // TCFG_MIX_RECORD_ENABLE
+
+        ret = dev_status_event_filter(msg);///解码设备上下线， 设备挂载等处理
+        if (ret == true) {
+            if (msg[1] == DEVICE_EVENT_IN) {
+                ///设备上线， 非解码模式切换到解码模式播放
+#if TCFG_APP_MUSIC_EN
+                if (true != app_in_mode(APP_MODE_MUSIC)) {
+                    app = APP_MODE_MUSIC;
+                    break;
+                }
+#endif
+
+#if  TCFG_APP_RECORD_EN || TCFG_MIX_RECORD_ENABLE
+                //处理仅使能录音模式时，开机有设备在线无法切到record模式
+                if (true == app_in_mode(APP_MODE_IDLE)) {
+                    app = APP_MODE_RECORD;
+                    break;
+                }
+#endif
+            }
+        }
         break;
     case DEVICE_EVENT_FROM_LINEIN:
 #if TCFG_APP_LINEIN_EN

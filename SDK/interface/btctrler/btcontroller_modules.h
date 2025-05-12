@@ -315,4 +315,13 @@ extern void bt_rf_PA_control_io_remap(u16 tx_io, u16 rx_io);
 void disturb_scan_timeout_cb_api();
 int link_disturb_scan_enable();
 void set_lmp_support_dual_con(u8 en);
+
+typedef struct {
+    u8 sel;
+    u8 no_signalling;
+    u8 is_ble;
+} DUT_TXMODE_RESET_PARA;
+
+
+
 #endif

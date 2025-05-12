@@ -17,6 +17,8 @@
 #include "audio_config_def.h"
 #include "fm_api.h"
 #include "le_audio_mix_mic_recorder.h"
+#include "asm/dac.h"
+#include "cvp/aec_ref_dac_ch_data.h"
 
 void mic_effect_ram_code_load();
 void mic_effect_ram_code_unload();
@@ -144,7 +146,7 @@ int mic_effect_player_open()
             printf("mic_effect stream[%d] thread_name:%s\n", i, mic_effect_thread_name);
             jlstream_add_thread(player->stream[i], mic_effect_thread_name);
 
-#if CPU_CORE_NUM > 1
+#if (CPU_CORE_NUM > 1) && (!(defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)) //ahs-nn不使能mic_effect多线程
             if (CONFIG_JLSTREAM_MULTI_THREAD_ENABLE) {
                 sprintf(mic_effect_thread_name, "mic_effect%d", mic_effect_thread_name_idx);
                 mic_effect_thread_name_idx++;
@@ -152,7 +154,21 @@ int mic_effect_player_open()
                 jlstream_add_thread(player->stream[i], mic_effect_thread_name);
             }
 #endif
+
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+            if (config_audio_dac_mix_enable) {
+                set_aec_ref_dac_ch_name("DacEff");
+                aec_ref_dac_ch_data_read_init();
+            }
+            u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
+            jlstream_node_ioctl(player->stream[i], NODE_UUID_HOWLING_AHS, NODE_IOC_SET_FMT, (int)ref_sr);
+            jlstream_node_ioctl(player->stream[i], NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);
+#endif
+
             err = jlstream_start(player->stream[i]);
+            if (err) {
+                goto __exit1;
+            }
         } else {
             printf("mic_effect stream[%d] NULL\n", i);
         }
@@ -236,6 +252,12 @@ void mic_effect_player_close()
 #endif
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
+
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+    if (config_audio_dac_mix_enable) {
+        aec_ref_dac_ch_data_read_exit();
+    }
+#endif
 }
 
 static u8 pause_mark = 0;

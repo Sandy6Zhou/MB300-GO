@@ -989,6 +989,7 @@ void hdmi_cec_close(void)
         os_time_dly(10);
 
         gptimer_pause(__this->tid);
+        gptimer_set_capture_filter(__this->tid, 0);
         gptimer_set_work_mode(__this->tid, GPTIMER_MODE_CAPTURE_EDGE_RISE);
         gptimer_deinit(__this->tid);
         __this->tid = -1;
