@@ -734,6 +734,90 @@ struct tone_player *play_fileplay_file(const char *file_name, u8 index)
     }
 }
 
+#if TCFG_DEC_ENGINE_SOUND_ENABLE
+#include "codec/carEngine_synth_h.h"
+static void engine_player_callback(void *private_data, int event)
+{
+    void *file = NULL;
+    struct tone_player *player;
+    struct jlstream *stream = (struct jlstream *)private_data;
+    switch (event) {
+    case STREAM_EVENT_START:
+        break;
+    }
+}
+
+#define ENGINE_FILE_PATH  FLASH_RES_PATH"out.sound"
+void engine_file_close(struct tone_player *player)
+{
+    if (player) {
+        if (player->file) {
+            resfile_close(player->file);
+            player->file = NULL;
+        }
+        free(player);
+    }
+}
+
+struct tone_player *engine_file_play(void *path)
+{
+    struct tone_player *player = zalloc(sizeof(struct tone_player));
+    player->file = resfile_open((const char *)path);
+    if (!player->file) {
+        printf("engine_player_faild: %s\n", path);
+        return NULL;
+    }
+    //需要新建数据流程图,不可直接用提示音的数据流程图,不然播提示音时相当于同一条数据流启动了两次
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music");
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_TONE);
+    if (!player->stream) {
+        goto __exit0;
+    }
+    jlstream_set_callback(player->stream, player->stream, engine_player_callback);
+    jlstream_set_scene(player->stream, STREAM_SCENE_TONE);
+    jlstream_set_coexist(player->stream, 0);
+    jlstream_set_dec_file(player->stream, player, &tone_file_ops);
+    int err = jlstream_start(player->stream);
+    if (err) {
+        goto __exit1;
+    }
+    return player;
+__exit1:
+    jlstream_release(player->stream);
+__exit0:
+    engine_file_close(player);
+    return NULL;
+
+}
+
+//摩托引擎声解码控制
+//cmd:命令，可选：FIRE_ON,FIRE_OFF,SET_LEVEL,SET_MAX_LEVEL,SET_LEVEL_SPEEDUP
+//arg:命令的参数值：
+
+int engine_ioctl(struct jlstream *stream, enum engine_cmd cmd, int arg)
+{
+    struct engine_parm parm = {
+        cmd,
+        arg,
+    };
+    int ret = -1;
+    if (stream) {
+        ret = jlstream_node_ioctl(stream, NODE_UUID_DECODER, NODE_IOC_SET_PRIV_FMT, (int)&parm);
+    }
+    return ret;
+}
+
+void engine_sound_play_demo(void)
+{
+    struct tone_player *player = engine_file_play(ENGINE_FILE_PATH);
+    if (player && player->stream) {
+        engine_ioctl(player->stream, FIRE_ON, 0);
+        engine_ioctl(player->stream, SET_LEVEL, 40); //最高到40
+    }
+}
+#endif
+
+
 void fileplay_close(struct tone_player *player)
 {
     if (player) {

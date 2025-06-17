@@ -48,6 +48,20 @@ int net_event_cb(int *msg)
     case LWIP_BT_DHCP_BOUND_SUCC:
         puts("LWIP_BT_DHCP_BOUND_SUCC\n");
         bt_dhcp_flag = 1;
+
+#if TCFG_IFLYTEK_VAD_DEMO
+        extern void ifly_vad_demo(void);
+        ifly_vad_demo();
+#endif
+
+#if TCFG_IFLYTEK_TTS_DEMO
+        void ifly_tts_demo(void);
+        ifly_tts_demo();
+#endif
+#if TCFG_IFLYTEK_SPARKDESK_DEMO
+        extern void ifly_sparkdesk_demo();
+        ifly_sparkdesk_demo();
+#endif
         /* extern int jl_net_time_sync(); */
         /* jl_net_time_sync(); */
         break;

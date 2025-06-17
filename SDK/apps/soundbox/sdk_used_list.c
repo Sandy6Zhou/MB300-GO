@@ -671,6 +671,11 @@ distortion_clipping_node_adapter
 frequency_compressor_node_adapter
 #endif
 
+#if TCFG_VIRTUAL_BASS_PRO_MODULE_NODE_ENABLE
+virtual_bass_pro_node_adapter
+#endif
+
+
 #if MIDI_FILE_DEC_ENABLE
 midi_dec_plug
 #endif
@@ -685,3 +690,8 @@ aac_enc_plug
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
 ahs_node_adapter
 #endif
+
+#if TCFG_DEC_ENGINE_SOUND_ENABLE
+engine_dec_plug
+#endif
+

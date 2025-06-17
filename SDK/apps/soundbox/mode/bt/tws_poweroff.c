@@ -23,6 +23,7 @@
 #include "le_broadcast.h"
 #include "app_le_connected.h"
 #include "mic_effect.h"
+#include "app_le_auracast.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 
@@ -70,6 +71,12 @@ void sys_auto_shut_down_enable(void)
     }
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    if ((get_auracast_role() == APP_AURACAST_AS_SOURCE) || (get_auracast_status() == APP_AURACAST_STATUS_SYNC)) {
+        log_error("sys_auto_shut_down_enable cannot in le audio open\n");
+        return;
+    }
+#endif
     //cis连接时不能自动关机
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (app_get_connected_role() && (!(app_get_connected_role() & BIT(7)))) {

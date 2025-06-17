@@ -56,10 +56,10 @@ void sys_auto_shut_down_disable(void)
 void sys_auto_shut_down_enable(void)
 {
 #if TCFG_AUTO_SHUT_DOWN_TIME
-#if TCFG_BT_BACKGROUND_ENABLE
     if (bt_get_total_connect_dev()) {
         return;
     }
+#if TCFG_BT_BACKGROUND_ENABLE
     if (bt_background_active()) {
         log_info("sys_auto_shut_down_enable cannot in background\n");
         return;
@@ -74,6 +74,12 @@ void sys_auto_shut_down_enable(void)
     }
 #endif
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    if ((get_auracast_role() == APP_AURACAST_AS_SOURCE) || (get_auracast_status() == APP_AURACAST_STATUS_SYNC)) {
+        log_error("sys_auto_shut_down_enable cannot in le audio open\n");
+        return;
+    }
+#endif
     //cis连接时不能自动关机
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     if (app_get_connected_role() && (!(app_get_connected_role() & BIT(7)))) {

@@ -76,7 +76,7 @@
 #include "debug.h"
 
 #if TCFG_LE_AUDIO_APP_CONFIG
-struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
+struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX, .background.broadcast_mode = 1};
 #elif TCFG_USER_TWS_ENABLE      //不开广播且打开TWS的情况下开机默认为TWS模式
 struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_TWS};
 #else
@@ -85,7 +85,7 @@ struct bt_mode_var g_bt_hdl = {.work_mode = BT_MODE_SIGLE_BOX};
 
 #if TCFG_APP_BT_EN
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | MULTI_CLIENT_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 
 #include "multi_protocol_main.h"
 #endif
@@ -344,6 +344,10 @@ void bt_function_select_init()
     printf_buf((void *)tmp_ble_addr, 6);
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
+    bt_change_hci_class_type(BD_CLASS_WEARABLE_HEADSET | LE_AUDIO_CLASS);   //经典蓝牙地址跟le audio地址一样要置上BIT(14)
+#endif
+
 #if (CONFIG_BT_MODE != BT_NORMAL)
     set_bt_enhanced_power_control(1);
 #endif
@@ -373,7 +377,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         rcsp_init();
 #endif
 #endif
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | MULTI_CLIENT_EN))||(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
         multi_protocol_bt_init();
 #endif
         break;
@@ -643,7 +647,11 @@ bool bt_check_already_initializes(void)
 
 struct app_mode *app_enter_bt_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct bt_event *event;
     struct app_mode *next_mode;
 
@@ -725,7 +733,7 @@ static void bt_no_background_exit_check(void *priv)
     }
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN))
+#if (THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | MULTI_CLIENT_EN))
     multi_protocol_bt_exit();
 #endif
 
@@ -982,18 +990,6 @@ void phone_date_and_time_feedback(u8 *data,  u16 len)
 #if TCFG_IFLYTEK_ENABLE
     extern void get_time_from_bt(u8 * data);
     get_time_from_bt(data);
-#if TCFG_IFLYTEK_VAD_DEMO
-        extern void ifly_vad_demo(void);
-        ifly_vad_demo();
-#endif
-#if TCFG_IFLYTEK_TTS_DEMO
-        void ifly_tts_demo(void);
-        ifly_tts_demo();
-#endif
-#if TCFG_IFLYTEK_SPARKDESK_DEMO
-        extern void ifly_sparkdesk_demo();
-        ifly_sparkdesk_demo();
-#endif
 #endif
 }
 void map_get_time_data(char *time, int status)

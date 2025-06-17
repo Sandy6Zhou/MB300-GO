@@ -50,6 +50,8 @@ int audio_src_base_wait_irq_callback(void *resample, void *priv, void (*callback
 
 int audio_src_base_frame_resample(void *resample, struct resample_frame *in_frame, struct resample_frame *out_frame);
 
+int audio_src_base_get_phase(void *resample);
+
 void audio_src_base_close(void *resample);
 
 int audio_src_base_filter_frames(void *resample);

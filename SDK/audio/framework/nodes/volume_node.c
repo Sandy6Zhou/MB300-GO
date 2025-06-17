@@ -270,6 +270,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     case STREAM_SCENE_LE_AUDIO:
     case STREAM_SCENE_LOCAL_TWS:
     case STREAM_SCENE_TDM:
+    case STREAM_SCENE_LOUDSPEAKER_IIS:
+    case STREAM_SCENE_LOUDSPEAKER_MIC:
         /*puts("set_a2dp_volume\n");*/
         hdl->state = APP_AUDIO_STATE_MUSIC;
         params.vol        = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);

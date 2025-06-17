@@ -146,6 +146,8 @@ int autoduck_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int spatial_adv_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int llns_dns_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 int llns_dns_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass);
+/*vitual bass pro参数更新*/
+int virtual_bass_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 
 /*通用音效模块更新*/
 int node_param_update_parm(u16 uuid, u8 mode_index, char *node_name, u8 cfg_index);

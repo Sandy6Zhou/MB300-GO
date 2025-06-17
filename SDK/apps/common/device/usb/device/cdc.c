@@ -78,6 +78,8 @@ struct usb_cdc_gadget {
     u8 itf_num; //接口号
     u8 bulk_ep_out;
     u8 bulk_ep_in;
+
+    u8 tx_rx_flag;
 };
 
 static struct usb_cdc_gadget *cdc_hdl[CDC_MAX_NUM];
@@ -227,6 +229,9 @@ u32 cdc_read_data(const usb_dev usb_id, u8 *buf, u32 len, u32 num)
     if (cdc_hdl[num] == NULL) {
         return 0;
     }
+    if (cdc_hdl[num]->tx_rx_flag == 0) {
+        return 0;
+    }
     u8 *cdc_rx_buf = cdc_hdl[num]->buffer;
     u32 ep = cdc_hdl[num]->bulk_ep_out & 0x7f;
     os_mutex_pend(&cdc_hdl[num]->mutex_data, 0);
@@ -243,6 +248,9 @@ u32 cdc_write_data(const usb_dev usb_id, u8 *buf, u32 len, u32 num)
 {
     u32 txlen, offset;
     if (cdc_hdl[num] == NULL) {
+        return 0;
+    }
+    if (cdc_hdl[num]->tx_rx_flag == 0) {
         return 0;
     }
     if ((cdc_hdl[num]->bmTransceiver & (BIT(1) | BIT(4))) != (BIT(1) | BIT(4))) {
@@ -279,6 +287,7 @@ static void cdc_endpoint_init(struct usb_device_t *usb_device, u32 itf)
     u8 num = cdc_itf2num(itf);
 
     ASSERT(cdc_hdl[num], "cdc not register");
+    cdc_hdl[num]->tx_rx_flag = 0;
     const usb_dev usb_id = usb_device2id(usb_device);
 
 
@@ -398,6 +407,7 @@ static u32 cdc_setup(struct usb_device_t *usb_device, struct usb_ctrlrequest *ct
             }
             usb_set_data_payload(usb_device, ctrl_req, cdc_hdl[num]->subtype_data, len);
             dump_line_coding((struct usb_cdc_line_coding *)cdc_hdl[num]->subtype_data);
+            cdc_hdl[num]->tx_rx_flag = 1;
             break;
         case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
             log_info("set control line state - %d", ctrl_req->wValue);
@@ -561,6 +571,7 @@ void cdc_release(const usb_dev usb_id)
         if (cdc_hdl[num] == NULL) {
             continue;
         }
+        cdc_hdl[num]->tx_rx_flag = 0;
         if (cdc_hdl[num]->bulk_ep_out_buf) {
             usb_free_ep_dmabuffer(usb_id, cdc_hdl[num]->bulk_ep_out_buf);
             cdc_hdl[num]->bulk_ep_out_buf = NULL;

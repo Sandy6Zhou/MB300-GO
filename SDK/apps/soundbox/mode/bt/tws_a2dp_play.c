@@ -29,6 +29,7 @@
 #include "bt_key_func.h"
 #include "bt_tws.h"
 #include "tws_a2dp_play.h"
+#include "app_le_auracast.h"
 
 #if(TCFG_USER_TWS_ENABLE)
 
@@ -40,7 +41,8 @@ static u16 wait_enter_bt_timer = 0;
 static u8 SEND_A2DP_PLAY_REQ_FLAG = 0;
 void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 {
-    if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0)) {
+    u8 addr_unset[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};        //处理后台情况下手机提示音或者快速播放暂停操作，小机打开能量检测，只设置了a2dp_play_status但是未开始播放, 导致状态设置之后无法清除
+    if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0) && (memcmp(g_play_addr, addr_unset, 6) != 0)) {
         return;
     }
     a2dp_play_status = st;
@@ -49,6 +51,11 @@ void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 u8 app_get_a2dp_play_status(void)
 {
     return a2dp_play_status;
+}
+
+void set_g_play_addr(u8 *addr)
+{
+    memcpy(g_play_addr, addr, 6);
 }
 
 u8 *get_g_play_addr(void)
@@ -65,8 +72,8 @@ void tws_a2dp_player_close(u8 *bt_addr)
     bt_stop_a2dp_slience_detect(bt_addr);
     a2dp_media_close(bt_addr);
     if (memcmp(bt_addr, g_play_addr, 6) == 0) {
-        memset(g_play_addr, 0xff, 6);
         app_set_a2dp_play_status(bt_addr, 0);
+        memset(g_play_addr, 0xff, 6);
     }
 }
 

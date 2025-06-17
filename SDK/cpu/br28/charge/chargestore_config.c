@@ -20,7 +20,7 @@ static void chargestore_wakeup_callback(P33_IO_WKUP_EDGE edge)
 }
 
 static const struct _p33_io_wakeup_config port1 = {
-    .pullup_down_mode = PORT_KEEP_STATE,
+    .pullup_down_mode   = PORT_INPUT_FLOATING,
     .filter      		= PORT_FLT_DISABLE,
     .edge               = FALLING_EDGE,
     .gpio               = TCFG_CHARGESTORE_PORT,

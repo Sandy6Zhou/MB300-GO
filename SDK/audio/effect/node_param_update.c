@@ -520,6 +520,56 @@ int virtual_surround_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_inde
     return jlstream_set_node_param(NODE_UUID_UPMIX_2TO5, node_name, &cfg, sizeof(cfg));
 }
 
+int effect_dev0_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct user_effect_tool_param cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_EFFECT_DEV0, node_name, &cfg, sizeof(cfg));
+}
+int effect_dev1_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct user_effect_tool_param cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_EFFECT_DEV1, node_name, &cfg, sizeof(cfg));
+}
+int effect_dev2_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct user_effect_tool_param cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_EFFECT_DEV2, node_name, &cfg, sizeof(cfg));
+}
+int effect_dev3_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct user_effect_tool_param cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_EFFECT_DEV3, node_name, &cfg, sizeof(cfg));
+}
+int effect_dev4_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct user_effect_tool_param cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_EFFECT_DEV4, node_name, &cfg, sizeof(cfg));
+}
 int limiter_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
     struct limiter_param_tool_set cfg = {0};
@@ -567,6 +617,18 @@ int pcm_delay_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
         return -1;
     }
     return jlstream_set_node_param(NODE_UUID_PCM_DELAY, node_name, &cfg, sizeof(cfg));
+
+}
+
+int split_gain_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct split_gain_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_SPLIT_GAIN, node_name, &cfg, sizeof(cfg));
 
 }
 int howling_gate_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
@@ -690,6 +752,18 @@ int spatial_adv_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return jlstream_set_node_param(NODE_UUID_SPATIAL_ADV, node_name, &cfg, sizeof(cfg));
 }
+
+int virtual_bass_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    struct virtual_bass_pro_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    return jlstream_set_node_param(NODE_UUID_VIRTUAL_BASS_PRO, node_name, &cfg, sizeof(cfg));
+}
+
 
 int llns_dns_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass)
 {

@@ -13,6 +13,7 @@
 #include "reference_time.h"
 #include "system/timer.h"
 #include "app_config.h"
+#include "effects/effects_adj.h"
 
 struct le_audio_file_handle {
     u8 start;
@@ -23,7 +24,13 @@ struct le_audio_file_handle {
     struct stream_node *node;
     int play_latency;
     u16 timer;
+    u8 ble_to_local_time;
+    u8 ble_to_local_id;
 };
+
+struct le_audio_file_params {
+    u8 ble_to_local_time;
+} __attribute__((packed));
 
 static void abandon_le_audio_data(void *p)
 {
@@ -80,6 +87,9 @@ static enum stream_node_state le_audio_get_frame(void *file, struct stream_frame
     }
 
     memcpy(frame->data, le_audio_frame->data, le_audio_frame->len);
+    if (hdl->ble_to_local_time) {
+        le_audio_frame->timestamp = le_audio_ble_to_local_time(hdl->ble_to_local_id, le_audio_frame->timestamp);
+    }
     /*put_buf(frame->data, 16);*/
     frame->len = le_audio_frame->len;
     frame->timestamp = (le_audio_frame->timestamp & 0xfffffff) * TIMESTAMP_US_DENOMINATOR;
@@ -103,6 +113,12 @@ static void *le_audio_file_init(void *priv, struct stream_node *node)
     node->type |= /* NODE_TYPE_IRQ | */ NODE_TYPE_FLOW_CTRL;//关闭irq类型的配置，避免解码器拆包的情况下，激活不及时的问题
 #endif
 
+
+    u16 plug_uuid = get_source_node_plug_uuid(priv);
+    struct le_audio_file_params params = {0};
+    jlstream_read_node_data_by_cfg_index(plug_uuid, hdl->node->subid, 0, (void *)&params, NULL);
+    hdl->ble_to_local_time = params.ble_to_local_time;
+    printf("hdl->ble_to_local_time : %d\n", hdl->ble_to_local_time);
     return hdl;
 }
 
@@ -150,12 +166,19 @@ static int le_audio_file_start(struct le_audio_file_handle *hdl)
     hdl->start = 1;
     int err = stream_node_ioctl(hdl->node, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SYNCTS, 0);
     if (err) {
-        return 0;
+        err = stream_node_ioctl(hdl->node, NODE_UUID_PLAY_SYNC, NODE_IOC_SYNCTS, 0);
+        if (err) {
+            return 0;
+        }
     }
     hdl->timestamp_enable = 1;
     if (!hdl->reference) {
         hdl->reference = audio_reference_clock_select(hdl->file, 2);
     }
+    if (hdl->ble_to_local_time) {
+        hdl->ble_to_local_id = le_audio_ble_to_local_time_init();
+    }
+
 
     return 0;
 }
@@ -195,6 +218,9 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
     case NODE_IOC_STOP:
         if (hdl->reference) {
             audio_reference_clock_exit(hdl->reference);
+        }
+        if (hdl->ble_to_local_time) {
+            le_audio_ble_to_local_time_close(hdl->ble_to_local_id);
         }
         hdl->reference = 0;
         le_audio_file_stop(hdl);

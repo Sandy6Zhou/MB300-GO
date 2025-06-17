@@ -19,6 +19,7 @@
 #include "dual_conn.h"
 #include "bt_tws.h"
 #include "tws_a2dp_play.h"
+#include "wireless_trans.h"
 
 #if (TCFG_BT_BACKGROUND_ENABLE)
 
@@ -376,7 +377,13 @@ static void bt_background_goback(int msg_type, int *msg, BACKGROUND_GOBACK_MODE 
         g_bt_hdl.background.goback_fitler = 1;
         g_bt_hdl.background.backmode = mode;
         if (g_bt_hdl.background.backmode == BACKGROUND_GOBACK_WITH_PHONE) {		//由通话返回蓝牙模式需要记录当前模式，在通话结束之后返回
-            g_bt_hdl.background.goback_mode = app_get_current_mode()->name;
+            if (app_get_current_mode()) {       //可能当前模式正在退出curr_mode为NULL
+                g_bt_hdl.background.goback_mode = app_get_current_mode()->name;
+#if TCFG_LE_AUDIO_APP_CONFIG
+                u8 role = get_le_audio_curr_role();
+                g_bt_hdl.background.broadcast_mode = role ? role : 1;
+#endif
+            }
         }
         app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
 #if TCFG_USER_TWS_ENABLE
@@ -476,6 +483,7 @@ static int background_app_msg_handler(int *msg)
         background_add_forward_msg(MSG_FROM_BT_STACK, (int *)&event);
         g_bt_hdl.background.backmode = BACKGROUND_GOBACK_WITH_MUSIC;
         app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
+        set_g_play_addr(event.args);
 #if TCFG_USER_TWS_ENABLE
         u8 data[2] = {TWS_MSG_BACKGROUND_GO_BACK_TO_BT, BACKGROUND_GOBACK_WITH_MUSIC};
         tws_api_send_data_to_slave(&data, sizeof(data), TWS_FUNC_ID_BACKGROUND_SYNC);
@@ -554,7 +562,9 @@ static void bt_background_sync(void *_data, u16 len, bool rx)
         u8 *data = (u8 *)_data;
         if (data[0] == TWS_MSG_BACKGROUND_GO_BACK_TO_BT) {
             g_bt_hdl.background.backmode  = data[1];
-            g_bt_hdl.background.goback_mode = app_get_current_mode()->name;
+            if (app_get_current_mode()) {       //可能当前模式正在退出curr_mode为NULL
+                g_bt_hdl.background.goback_mode = app_get_current_mode()->name;
+            }
             app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
         }
     }

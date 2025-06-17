@@ -35,8 +35,12 @@ int linein_app_msg_handler(int *msg)
 
     printf("linein_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     if (get_broadcast_connect_status() &&
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC &&
+#endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
 #if LEA_BIG_VOL_SYNC_EN
@@ -68,10 +72,13 @@ int linein_app_msg_handler(int *msg)
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */
         break;
     case APP_MSG_MUSIC_PP:
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
-        if (get_broadcast_role() == 2) {
+        if (get_le_audio_curr_role() == 2) {
             //接收端已连上
             linein_volume_mute_mark ^= 1;
             audio_app_mute_en(linein_volume_mute_mark);
@@ -83,12 +90,10 @@ int linein_app_msg_handler(int *msg)
                 break;
             }
         }
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
-#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
-        if (get_auracast_role() == 2) {
+        if (get_le_audio_curr_role() == 2) {
             //接收端已连上
             linein_volume_mute_mark ^= 1;
             audio_app_mute_en(linein_volume_mute_mark);
@@ -100,12 +105,10 @@ int linein_app_msg_handler(int *msg)
                 break;
             }
         }
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
-#else
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
 #endif
+#endif
+        linein_last_onoff = linein_volume_pp();
+        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
         break;
     case APP_MSG_VOL_UP:
         linein_key_vol_up();

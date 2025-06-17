@@ -48,7 +48,8 @@ static u8 a2dp_play_status = 0;
 
 void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 {
-    if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0)) {
+    u8 addr_unset[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};        //处理后台情况下手机提示音或者快速播放暂停操作，小机打开能量检测，只设置了a2dp_play_status但是未开始播放, 导致状态设置之后无法清除
+    if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0) && (memcmp(g_play_addr, addr_unset, 6) != 0)) {
         return;
     }
     a2dp_play_status = st;
@@ -57,6 +58,11 @@ void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 u8 *get_g_play_addr(void)
 {
     return g_play_addr;
+}
+
+void set_g_play_addr(u8 *addr)
+{
+    memcpy(g_play_addr, addr, 6);
 }
 
 void a2dp_play_close(u8 *bt_addr)

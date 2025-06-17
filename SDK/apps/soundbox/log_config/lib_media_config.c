@@ -97,9 +97,13 @@ const s16 const_dac_trim_precision = TCFG_DAC_TRIM_PRECISION;
 const int config_audio_dac_output_channel = TCFG_AUDIO_DAC_CONNECT_MODE;
 const int config_audio_dac_output_mode    = TCFG_AUDIO_DAC_MODE;
 
-//<DAC NoiseGate>
+/*DAC NoiseGate Config:
+  DAC_NG_THRESHOLD_CLEAR 	= BIT(0)：信号小于等于噪声门阈值，清0
+  DAC_NG_THRESHOLD_MUTE		= BIT(0)|BIT(2)：信号小于等于噪声门阈值，清0并mute
+  DAC_NG_SILENCE_MUTE		= BIT(1)：信号静音(全0)时候mute
+*/
 #if (defined(TCFG_AUDIO_DAC_NOISEGATE_ENABLE) && TCFG_AUDIO_DAC_NOISEGATE_ENABLE)
-const int config_audio_dac_noisefloor_optimize_enable = BIT(0) | BIT(2);
+const int config_audio_dac_noisefloor_optimize_enable = DAC_NG_THRESHOLD_MUTE;
 #else
 const int config_audio_dac_noisefloor_optimize_enable = 0;
 #endif
@@ -409,9 +413,9 @@ const int JLA_DMS_VAL = LE_AUDIO_CODEC_FRAME_LEN;      //单位ms, 【只支持 
 #else
 const int JLA_DMS_VAL = 100;      //单位ms, 【只支持 25,50,100】
 #endif
-//JLA_DMS_FSINDEX配置采样率【只支持0到4】，影响用哪组表以及一次的处理长度(<=8k的时候，配0. <=16k的时候，配1.<=24k的时候，配2.<=32k的时候，配3.<=48k的时候，配4)
+//JLA_DMS_FSINDEX配置采样率【只支持0到5】，影响用哪组表以及一次的处理长度(8k:0  16k:1  24k:2  32k:3 48k/44.1K:4, 采样率全支持：配5)
 #ifndef JLA_CODING_SAMPLERATE
-const int JLA_DMS_FSINDEX = 4;
+const int JLA_DMS_FSINDEX = 5;
 #else
 #if(JLA_CODING_SAMPLERATE <= 8000)
 const int JLA_DMS_FSINDEX = 0;
@@ -732,7 +736,7 @@ const int DOWN_S_FLAG 				= 0; //混响降采样处理使能
 //***********************
 //*   	Reverb          *
 //***********************
-#if (CONFIG_CPU_BR56)
+#if (defined CONFIG_CPU_BR56) || (defined CONFIG_CPU_BR52)
 const int PLATE_REVERB_ROOM_SIZE_Mutiplier = 1; // 影响了plateReverb的nee_buf的大小( 约等于 33k * PLATE_REVERB_ROOM_SIZE_Mutiplier)，对应的是roomsize=100对应的是多大
 #else
 const int PLATE_REVERB_ROOM_SIZE_Mutiplier = 2; // 影响了plateReverb的nee_buf的大小( 约等于 33k * PLATE_REVERB_ROOM_SIZE_Mutiplier)，对应的是roomsize=100对应的是多大

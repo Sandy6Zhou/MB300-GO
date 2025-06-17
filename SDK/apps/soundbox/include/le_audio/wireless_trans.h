@@ -63,7 +63,7 @@ extern "C" {
 **************************************************************************************************/
 struct broadcast_cfg_args {
     u8 len;
-    u32 sdu_interval;
+    u32 iso_interval;
     u8 rtn;
     u8 mtl;
     u32 bitrate;
@@ -99,7 +99,7 @@ struct broadcast_platform_data {
 
 struct connected_cfg_args {
     u8 len;
-    u32 sdu_interval;
+    u32 iso_interval;
     u8 rtnCToP;
     u8 rtnPToC;
     u8 mtlCToP;
@@ -266,6 +266,7 @@ u16 get_big_transmit_data_len(void);
 u32 get_big_enc_output_buf_len(void);
 u32 get_big_dec_input_buf_len(void);
 u32 get_big_sdu_period_us(void);
+u32 get_big_iso_period_us(void);
 u32 get_big_tx_latency(void);
 u32 get_big_play_latency(void);
 u32 get_big_mtl_time(void);
@@ -300,6 +301,7 @@ u16 get_cig_transmit_data_len(void);
 u32 get_cig_enc_output_buf_len(void);
 u32 get_cig_dec_input_buf_len(void);
 u32 get_cig_sdu_period_us(void);
+u32 get_cig_iso_period_us(void);
 u32 get_cig_mtl_time(void);
 void set_cig_hdl(u8 role, u8 cig_hdl);
 cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 cig_hdl);

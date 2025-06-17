@@ -184,8 +184,12 @@ int music_app_msg_handler(int *msg)
 
     printf("music_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     if (get_broadcast_connect_status() &&
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC &&
+#endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
 #if LEA_BIG_VOL_SYNC_EN
@@ -234,9 +238,6 @@ int music_app_msg_handler(int *msg)
             if (file_player && file_player->stream) {
                 if (file_player->status == FILE_PLAYER_START) {
                     if (music_file_player_pp(file_player) == 0) {
-                        if (music_hdl.close_broadcast_need_resume_local_music_flag) {
-                            music_hdl.close_broadcast_need_resume_local_music_flag = 0;
-                        }
                         music_pp_flag = 1;
                     }
                     if (le_audio_scene_deal(LE_AUDIO_MUSIC_STOP) > 0) {
@@ -519,10 +520,12 @@ int music_app_msg_handler(int *msg)
             break;
         }
 
-        if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
-            err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
-        } else {
-            err = music_player_play_first_file(music_hdl.player_hd, logo);
+        if (!get_le_audio_curr_role() || dev_manager_get_total(1)) {
+            if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
+                err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
+            } else {
+                err = music_player_play_first_file(music_hdl.player_hd, logo);
+            }
         }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==0)
         //这段代码是为了解决：不固定广播角色下打开广播，点击pp键，音乐模式广播下的状态混乱
@@ -619,22 +622,12 @@ int music_app_msg_handler(int *msg)
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
-//当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
-void music_set_broadcast_local_open_flag(u8 en)
-{
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    music_hdl.close_broadcast_need_resume_local_music_flag = en;
-#endif
-}
-
 static int get_music_play_status(void)
 {
     if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     if (music_hdl.music_local_audio_resume_onoff == 1) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -643,19 +636,31 @@ static int get_music_play_status(void)
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
-    /* music_hdl.close_broadcast_need_resume_local_music_flag = 0; */
-    if (music_hdl.close_broadcast_need_resume_local_music_flag == 1 || music_hdl.music_local_audio_resume_onoff == 1) {
-        /* y_printf("=============>>>>>>>>>>>>>>> %s, %d, return PLAY!\n", __func__, __LINE__); */
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    }
+#endif
+
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SUSPEND) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
-        /* y_printf("=============>>>>>>>>>>>>>>> %s, %d, return STOP!\n", __func__, __LINE__); */
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     }
 #endif
 #endif
-
     if (music_file_get_player_status(get_music_file_player()) == FILE_PLAYER_START) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
@@ -670,28 +675,7 @@ static int music_local_audio_open(void)
 
     if (1) {//(get_music_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开本地播放
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-        if (music_hdl.close_broadcast_need_resume_local_music_flag) {
-            music_hdl.close_broadcast_need_resume_local_music_flag = 0;
-        }
-#endif
-        logo = dev_manager_get_logo(dev_manager_find_active(1));
-        if (music_player_runing()) {
-            if (dev_manager_get_logo(music_hdl.player_hd->dev) && logo) {///播放的设备跟当前活动的设备是同一个设备，不处理
-                if (0 == strcmp(logo, dev_manager_get_logo(music_hdl.player_hd->dev))) {
-                    log_w("the same dev!!\n");
-                    return true;
-                }
-            }
-        }
-
-        if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
-            err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
-        } else {
-            err = music_player_play_first_file(music_hdl.player_hd, logo);
-        }
-        ///错误处理
-        music_player_err_deal(err);
+        app_send_message(APP_MSG_MUSIC_PLAY_START, 0);
     }
     return err;
 }
@@ -708,22 +692,7 @@ static int music_local_audio_close(void)
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    if (music_file_get_player_status(file_player) == FILE_PLAYER_START) {
-        music_hdl.music_local_audio_resume_onoff = 1;
-    } else {
-        music_hdl.music_local_audio_resume_onoff = 0;
-    }
-#endif
-
     if (music_player_runing()) {
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-        /* if (music_player_runing()) {	//这句判断需要放在 music_player_stop之前 */
-        music_hdl.close_broadcast_need_resume_local_music_flag = 1;
-        /* } */
-#endif
         //关闭本地播放
         if (music_player_get_playing_breakpoint(music_hdl.player_hd, music_hdl.breakpoint, 1) == true) {
             music_player_stop(music_hdl.player_hd, 0); //先停止，防止下一步操作VM卡顿

@@ -505,6 +505,17 @@ int music_file_ab_repeat_close(struct file_player *music_player)
 #endif /*FILE_DEC_AB_REPEAT_EN*/
 
 
+//获取解码文件的码率,采样率和解码格式
+int music_file_get_fmt_api(struct file_player *music_player, struct stream_fmt *fmt)
+{
+    if (!music_player || !fmt) {
+        return false;
+    }
+    int err = jlstream_node_ioctl(music_player->stream, NODE_UUID_DECODER, NODE_IOC_GET_PRIV_FMT, (int)fmt);
+    //printf("coding_type:%x,sample_rate:%d,bit_rate:%d kb/s\n",fmt->coding_type,fmt->sample_rate,fmt->bit_rate);
+    return err;
+}
+
 int music_file_get_breakpoints(struct audio_dec_breakpoint *bp, struct file_player *music_player)
 {
     if (music_player) {
@@ -658,7 +669,7 @@ int file_dec_id3_post(struct file_player *player)
     info.set.item_limit_len = 64;
     info.set.frame_id_att[0] = 0x3f; // 0x3E;  0x3f;
     int ret = jlstream_node_ioctl(player->stream, NODE_UUID_DECODER, NODE_IOC_GET_ID3, (int)&info);
-    if (ret == 0) {
+    if ((ret == 0) && (info.data.len_list)) {
         for (int i = 0; i < info.set.n_items; i++) {
             if ((info.data.len_list[i] != 0) && info.data.mptr[i] != 0) {
                 printf("%d\t :  %s\n", i, info.data.mptr[i]);        //显示字符串.
@@ -716,9 +727,11 @@ static int music_file_player_start(struct file_player *player)
     jlstream_set_dec_file(player->stream, player, &music_file_ops);
 
 #if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+    u8 mp3_flag = 0;
     u8 name[12 + 1] = {0}; //8.3+\0
     fget_name(player->file, name, sizeof(name));
     if (file_name_match_mp3((char *)name)) {
+        mp3_flag = 1;
 #if TCFG_DEC_ID3_V1_ENABLE
         if (player->p_mp3_id3_v1) {
             id3_obj_post(&player->p_mp3_id3_v1);
@@ -731,10 +744,6 @@ static int music_file_player_start(struct file_player *player)
         }
         player->p_mp3_id3_v2 = id3_v2_obj_get(player->file);
 #endif
-    } else {
-#if (TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE)
-        file_dec_id3_post(player);
-#endif
     }
 #endif
 #if TCFG_LOCAL_TWS_ENABLE
@@ -744,6 +753,16 @@ static int music_file_player_start(struct file_player *player)
     }
 #else
     err = jlstream_start(player->stream);
+#endif
+#if 0 //获取码率，采样率,解码格式
+    struct stream_fmt fmt;
+    music_file_get_fmt_api(player, &fmt);
+#endif
+
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+    if (!mp3_flag) {
+        file_dec_id3_post(player);
+    }
 #endif
 
     if (err) {

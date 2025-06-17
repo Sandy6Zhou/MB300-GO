@@ -252,7 +252,7 @@ int dev_status_event_filter(int *msg)
         (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
         (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
         (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-        if (get_le_audio_curr_role() == 2) {        //接收状态时解码已经关闭，需要在这里发退出命令
+        if (get_le_audio_curr_role() == 1) {        //接收状态时解码已经关闭，需要在这里发退出命令
             if (dev_manager_get_total(1) == 0 && app_in_mode(APP_MODE_MUSIC)) {        //这里防止没有设备在线了,还不退出音乐模式
                 app_send_message(APP_MSG_GOTO_NEXT_MODE, 0);
             }

@@ -26,8 +26,12 @@ int fm_app_msg_handler(int *msg)
         return 0;
     }
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
-    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER &&
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
+    if (get_broadcast_connect_status() &&
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC &&
+#endif
         (msg_type == APP_MSG_FM_SCAN_ALL
          || msg_type == APP_MSG_FM_SCAN_ALL_DOWN || msg_type == APP_MSG_FM_SCAN_ALL_UP
 #if LEA_BIG_VOL_SYNC_EN

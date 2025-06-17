@@ -24,8 +24,12 @@ int mic_app_msg_handler(int *msg)
 
     printf("live_mic_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-    if (get_broadcast_connect_status() &&  \
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
+    if (get_broadcast_connect_status() &&
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC &&
+#endif
         (msg_type == APP_MSG_MUSIC_PP  \
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
 #if LEA_BIG_VOL_SYNC_EN

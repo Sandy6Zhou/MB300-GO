@@ -150,17 +150,13 @@ static void ifly_socket_task_main(void *priv)
         ret = send_file_via_websocket(websockets_info, WCT_TXTDATA);
 #endif
 #if TCFG_IFLYTEK_TTS_DEMO
-        printf(">>>>>>zwz test\n");
         extern void ifly_tts_test(struct websocket_struct * web_info, char type);
         ifly_tts_test(websockets_info, WCT_TXTDATA);
-#endif // TCFG_IFLYTEK_TTS_DEMO
+#endif
 #if TCFG_IFLYTEK_SPARKDESK_DEMO
         extern int ifly_sparkdesk_test_demo(struct websocket_struct * web_info, char type);
         ret = ifly_sparkdesk_test_demo(websockets_info, WCT_TXTDATA);
-        if (ret == 0) {
-            goto exit_ws;
-        }
-#endif // TCFG_IFLYTEK_SPARKDESK_DEMO
+#endif
         if (ret == 0) {
             goto exit_ws;
         }
@@ -191,13 +187,12 @@ exit_ws:
     ifly_socket->event_cb(IFLY_SOCKET_EVT_EXIT, ifly_socket);
 
     free(ifly_socket->socket_hdl);
-#if TCFG_IFLYTEK_SPARKDESK_DEMO
+
     int msg[5];
     msg[0] = (int)task_kill_callback;
     msg[1] = 1;
     msg[2] = (int)os_current_task();
     err = os_taskq_post_type("app_core", Q_CALLBACK, 3, msg);
-#endif // TCFG_IFLYTEK_SPARKDESK_DEMO
     os_time_dly(-1);
 }
 

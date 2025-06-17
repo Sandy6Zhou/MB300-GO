@@ -59,6 +59,10 @@
 
 #define DAC_UNMUTE                         (0)
 #define DAC_MUTE                           (1)
+
+#define DAC_NG_THRESHOLD_CLEAR		  	   (1)	//BIT(0)：信号小于等于噪声门阈值，清0
+#define DAC_NG_THRESHOLD_MUTE			   (5) 	//BIT(0)|BIT(2)：信号小于等于噪声门阈值，清0并mute
+#define DAC_NG_SILENCE_MUTE				   (2)	//BIT(1)：信号静音(全0)时候mute
 /*
  *******************************************************************
  *						Class-D Driver Definitions
@@ -185,6 +189,7 @@
 #define AUDIO_CODING_LHDC         0x80000000
 #define AUDIO_CODING_LHDC_V5      0xA0000000
 #define AUDIO_CODING_MIDI_CTRL    0xB0000000
+#define AUDIO_CODING_ENGINE    	  0xC0000000
 
 //#define AUDIO_CODING_STU_PICK     0x10000000
 //#define AUDIO_CODING_STU_APP      0x20000000
@@ -268,3 +273,4 @@
 #define MIDI_CTRL_DEC_ENABLE          0
 #define MIDI_FILE_DEC_ENABLE          0
 #define CONFIG_MIDI_DEC_ADDR
+

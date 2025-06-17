@@ -15,6 +15,7 @@
 #include "le_broadcast.h"
 #include "le_connected.h"
 #include "dual_conn.h"
+#include "app_le_auracast.h"
 
 #if(TCFG_USER_TWS_ENABLE && TCFG_APP_BT_EN)
 
@@ -110,6 +111,12 @@ static void write_scan_conn_enable(bool scan_enable, bool conn_enable)
 
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && LEA_BIG_RX_CLOSE_EDR_EN)
     if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
+        return;
+    }
+#endif
+
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && LEA_BIG_RX_CLOSE_EDR_EN)
+    if (get_auracast_role() == APP_AURACAST_AS_SINK) {
         return;
     }
 #endif
@@ -560,6 +567,12 @@ static void dual_conn_page_device_timeout(void *p)
     }
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && LEA_BIG_RX_CLOSE_EDR_EN)
+    if (get_auracast_role() == APP_AURACAST_AS_SINK) {
+        return;
+    }
+#endif
+
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
 #if LEA_CIG_CENTRAL_CLOSE_EDR_CONN
@@ -670,7 +683,9 @@ static void dual_conn_page_devices_init()
         dual_conn_page_device();
     }
 #else
-    dual_conn_page_device();
+    if (g_bt_hdl.work_mode == BT_MODE_SIGLE_BOX) {
+        dual_conn_page_device();
+    }
 #endif
 }
 

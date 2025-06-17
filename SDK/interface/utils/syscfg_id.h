@@ -351,6 +351,7 @@ int syscfg_tools_init(void);
 
 #define     CFG_BIG_PARAMS              623
 #define     CFG_CIG_PARAMS              624
+#define     CFG_AURACAST_PARAMS         625
 
 #define     CFG_LEA_PRODUCET_TEST_NAME  633
 #define     CFG_LEA_PAIR_NAME           634

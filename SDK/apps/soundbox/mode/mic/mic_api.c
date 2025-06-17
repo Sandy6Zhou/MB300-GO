@@ -235,27 +235,11 @@ void mic_key_vol_down(void)
 
 static int get_mic_play_status(void)
 {
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-    if (get_broadcast_app_mode_exit_flag()) {
+    if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-    if (get_broadcast_role() == 2) {
-        //如果是作为接收端
-        if (__this->last_run_local_audio_close) {
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-            if ((__this->onoff_as_broadcast_receive == 1) || __this->mic_local_need_open_flag) {
-#else
-            if (__this->onoff_as_broadcast_receive == 1) {
-#endif
-                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-            } else {
-                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-            }
-            __this->last_run_local_audio_close = 0;
-        }
-    }
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX) && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     if (get_broadcast_role()) {
         if (__this->mic_local_audio_resume_onoff) {
             return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -265,22 +249,33 @@ static int get_mic_play_status(void)
     }
 #endif
 
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    if (__this->onoff || __this->mic_local_need_open_flag) {
-#else
-    if (__this->onoff) {
-#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SUSPEND) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#endif
-
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-    if (get_connected_app_mode_exit_flag()) {
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     }
 #endif
+#endif
+
+    if (get_le_audio_curr_role() == 2) {
+        //如果是作为接收端
+        if (__this->last_run_local_audio_close) {
+            if (__this->onoff_as_broadcast_receive == 1) {
+                return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+            } else {
+                return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+            }
+            __this->last_run_local_audio_close = 0;
+        }
+    }
 
     if (__this->onoff) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;

@@ -33,8 +33,12 @@ int pc_app_msg_handler(int *msg)
     }
     printf("pc_app_msg type:0x%x", msg[0]);
     u8 msg_type = msg[0];
-#if  (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX) && !TCFG_KBOX_1T3_MODE_EN
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN)
     if (get_broadcast_connect_status() &&
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC &&
+#endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
 #if LEA_BIG_VOL_SYNC_EN
@@ -197,16 +201,35 @@ static int get_pc_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SUSPEND) {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    }
+#endif
+#endif
+#if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
     if (pc_get_status()) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#else
+    return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+#endif
 }
 
 static int pc_local_audio_open(void)
 {
-    if (get_pc_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+    if (1) {
         //打开本地播放
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
         pc_spk_player_open();
@@ -217,7 +240,7 @@ static int pc_local_audio_open(void)
 
 static int pc_local_audio_close(void)
 {
-    if (get_pc_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+    if (1) {
         if (pc_spk_player_runing()) {
             //关闭本地播放
             pc_spk_player_close();

@@ -375,7 +375,7 @@ static void music_player_play_success(void *priv, int parm)
     if (music_file_name) {
         free(music_file_name);
     }
-    music_save_breakpoint(0);
+    music_save_breakpoint(1);
     app_send_message2(APP_MSG_MUSIC_FILE_NUM_CHANGED, __this->player_hd->fsn->file_counter, __this->player_hd->fsn->file_number);
     app_send_message(APP_MSG_MUSIC_PLAY_SUCCESS, 0);
 
@@ -437,16 +437,28 @@ void scandisk_msg_push(int *msg, u32 len)
 int scandisk_msg_pop(int *msg, int len)
 {
     scandisk_msg *pop;
-    if (music_idle_flag || list_empty(&scandisk_msg_head)) {
-        return 0;
-    } else {
-        pop = list_first_entry(&scandisk_msg_head,
-                               scandisk_msg, entry);
-        list_del(&pop->entry);
-        memcpy(msg, pop->msg, len);
-        free(pop);
-        g_printf("scandisk msg pop! %x\n", msg[0]);
-        return 1;
+    while (1) {
+        if (music_idle_flag || list_empty(&scandisk_msg_head)) {
+            return 0;
+        } else {
+            pop = list_first_entry(&scandisk_msg_head,
+                                   scandisk_msg, entry);
+            list_del(&pop->entry);
+            memcpy(msg, pop->msg, len);
+            free(pop);
+            g_printf("scandisk msg pop! %x\n", msg[0]);
+            const struct app_msg_handler *handler;
+            int abandon = 0;
+            for_each_app_msg_prob_handler(handler) {
+                if (handler->from == msg[0]) {
+                    abandon = handler->handler(msg + 1);
+                    if (abandon) {
+                        continue;
+                    }
+                }
+            }
+            return 1;
+        }
     }
 }
 //*----------------------------------------------------------------------------*/
@@ -526,6 +538,9 @@ static int music_player_scandisk_break(void)
         /* fall-through */
         case APP_MSG_GOTO_NEXT_MODE:
             //响应切换模式事件
+            __this->scandisk_break = 1;
+            break;
+        case APP_MSG_BT_A2DP_START:
             __this->scandisk_break = 1;
             break;
             //其他按键case 在这里增加
@@ -679,12 +694,6 @@ static int app_music_init()
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     btstack_init_in_other_mode();
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    //当固定为接收端时，其它模式下开广播切进music模式，关闭广播后music模式不会自动播放
-    music_set_broadcast_local_open_flag(1);
-#endif
 #endif
 
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_MUSIC);
@@ -850,11 +859,14 @@ int music_device_msg_handler(int *msg)
 
 struct app_mode *app_enter_music_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     app_music_init();
-
     while (1) {
         if (scandisk_msg_pop(msg, ARRAY_SIZE(msg)) == 0) {       /*先从扫盘记录消息中获取msg*/
             if (!app_get_message(msg, ARRAY_SIZE(msg), music_mode_key_table)) {

@@ -95,6 +95,7 @@ struct jlstream;
 #define NODE_IOC_MIDI_CTRL_PIT_BEND 0x00020038      //MIDI弯音轮
 #define NODE_IOC_MIDI_CTRL_VEL_VIBR 0x00020039      //MIDI抖动幅度
 #define NODE_IOC_MIDI_CTRL_QUE_KEY  0x0002003a      //MIDI查询指定通道的key播放
+#define NODE_IOC_GET_PRIV_FMT 		0x0002003b		//获取解码码率等信息
 
 #define NODE_IOC_START              (0x00040000 | NODE_STA_RUN)
 #define NODE_IOC_PAUSE              (0x00040000 | NODE_STA_PAUSE)
@@ -163,6 +164,8 @@ enum stream_scene : u8 {
     STREAM_SCENE_LOCAL_TWS,
     STREAM_SCENE_MIDI,      //MIDI 琴解码
 
+    STREAM_SCENE_LOUDSPEAKER_IIS, //扩音器IIS
+    STREAM_SCENE_LOUDSPEAKER_MIC, //扩音器MIC
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
     STREAM_SCENE_TONE = 0x20,

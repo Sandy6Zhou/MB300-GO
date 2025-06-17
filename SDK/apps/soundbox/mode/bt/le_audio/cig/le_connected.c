@@ -23,6 +23,7 @@
 #include "le_audio_stream.h"
 #include "bt_event_func.h"
 #include "le_audio_player.h"
+#include "le_audio_common.h"
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
@@ -210,6 +211,8 @@ void connected_init(u8 role)
         return;
     }
 
+    le_audio_common_init();
+
     int os_ret = os_mutex_create(&connected_mutex);
     if (os_ret != OS_NO_ERR) {
         log_error("%s %d err, os_ret:0x%x", __FUNCTION__, __LINE__, os_ret);
@@ -332,7 +335,7 @@ int connected_central_connect_deal(void *priv)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
-    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     params.conn = hdl->cis_hdl;
@@ -594,7 +597,7 @@ static int connected_tx_align_data_handler(u8 cig_hdl)
                     txsync.cis_hdl = cis_hdl_info->cis_hdl;
                     connected_get_cis_tick_time(&txsync);
                     timestamp = (txsync.tx_ts + connected_hdl->cig_sync_delay +
-                                 get_cig_mtl_time() * 1000L + get_cig_sdu_period_us()) & 0xfffffff;
+                                 get_cig_mtl_time() * 1000L + get_cig_iso_period_us()) & 0xfffffff;
                     rlen = le_audio_stream_tx_data_handler(cis_hdl_info->recorder, transmit_buf,
                                                            get_cig_transmit_data_len(), timestamp, get_cig_play_latency());
                 }
@@ -837,7 +840,7 @@ int connected_perip_connect_deal(void *priv)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
-    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
     params.latency = get_cig_tx_latency();
@@ -1153,8 +1156,8 @@ static void connected_iso_callback(const void *const buf, size_t length, void *p
                 //收取音频数据
 #if CIS_AUDIO_PLC_ENABLE
                 if (length == 0) {
-                    /*get_cig_sdu_period_us返回是us单位，get_cig_audio_coding_frame_duration是ms*10单位 */
-                    u8 frame_num = get_cig_sdu_period_us() / 100 / get_cig_audio_coding_frame_duration();
+                    /*get_cig_iso_period_us返回是us单位，get_cig_audio_coding_frame_duration是ms*10单位 */
+                    u8 frame_num = get_cig_iso_period_us() / 100 / get_cig_audio_coding_frame_duration();
                     for (u8 j = 0; j < frame_num; j++) {
                         memcpy((u8 *)errpacket + length, errpacket, 2);
                         length += 2;
@@ -1451,7 +1454,7 @@ void cis_audio_recorder_reset(u16 cis_hdl)
                 params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
                 params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_cig_sdu_period_us();
-                params.fmt.isoIntervalUs = get_cig_sdu_period_us();
+                params.fmt.isoIntervalUs = get_cig_iso_period_us();
                 params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
 #if ((LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX) && (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE))
                 //两发一收central做接收，使用接收解码声道配置
@@ -1605,7 +1608,7 @@ int le_connected_audio_all_open(u16 cig_hdl)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_cig_audio_coding_frame_duration();
     params.fmt.sdu_period = get_cig_sdu_period_us();
-    params.fmt.isoIntervalUs = get_cig_sdu_period_us();
+    params.fmt.isoIntervalUs = get_cig_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     connected_hdl->role_name = "cig_central";

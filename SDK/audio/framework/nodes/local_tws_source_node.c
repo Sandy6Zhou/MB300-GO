@@ -250,6 +250,17 @@ static u32 jla_frame_latency(int sample_rate, int frame_dms)
     return (u32)frame_dms * 100;
 }
 
+static int jla_enc_out_len(int sample_rate, int frame_dms, int bit_rate)
+{
+    int input_point = 0;
+    if (sample_rate == 44100) {
+        input_point = frame_dms * 48000 / 10 / 1000;
+    } else {
+        input_point = frame_dms * sample_rate / 10 / 1000;
+    }
+
+    return bit_rate * input_point / (8 * sample_rate) + 2; //采用编码器内部计算帧长的公式,兼容44.1K采样率
+}
 static int sbc_look_ahead_pcm_frames(u8 subbands)
 {
     if (subbands == SBC_SB_8) {
@@ -342,7 +353,7 @@ static int local_tws_source_ioc_start(struct stream_iport *iport)
     ctx->head_frame_duration = jl_tws_match_frame_duration(ctx->fmt.frame_dms);
     int frame_len = 0;
     if (ctx->fmt.coding_type == AUDIO_CODING_JLA) {
-        frame_len = ctx->fmt.bit_rate / 8 * ctx->fmt.frame_dms / 1000 / 10 + 2;
+        frame_len = jla_enc_out_len(ctx->fmt.sample_rate, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
         ctx->look_ahead_latency = (int)((u64)jla_look_ahead_pcm_frames(ctx->fmt.sample_rate, ctx->fmt.frame_dms) * TIMESTAMP_US_DENOMINATOR * 1000000 / ctx->fmt.sample_rate);
         ctx->frame_latency = jla_frame_latency(ctx->fmt.sample_rate, ctx->fmt.frame_dms);
     } else if (ctx->fmt.coding_type == AUDIO_CODING_SBC) {

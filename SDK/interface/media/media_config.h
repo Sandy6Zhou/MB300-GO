@@ -39,6 +39,7 @@ extern const char config_audio_dac_trim_enable;
 extern const int config_audio_dac_mute_timeout;
 extern const int config_audio_dac_pa_mode;
 extern const int config_audio_dac_power_mode;
+extern const int config_audio_dac_underrun_time_lea;
 
 /*
  *******************************************************************
@@ -103,10 +104,12 @@ extern const int  stereo_phaser_run_mode;
 extern const int  stereo_flanger_run_mode;
 extern const int  stereo_chorus_run_mode;
 extern const int dynamic_eq_run_mode;
-extern const  int drc_detect_run_mode;
+extern const int drc_detect_run_mode;
+extern const int virtual_bass_pro_soft_crossover;
 extern const int audio_effect_realloc_reserve_mem;
 extern const int const_audio_howling_ahs_ref_src_type;
 extern const int const_audio_howling_ahs_data_export;
+extern const int const_audio_howling_ahs_iis_in_dac_out;
 
 /*
  *******************************************************************

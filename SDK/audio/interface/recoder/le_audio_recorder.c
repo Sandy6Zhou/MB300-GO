@@ -99,6 +99,7 @@ static struct le_audio_mic_recorder *g_mic_recorder = NULL;
 #endif
 
 struct le_audio_tx_vol {
+    //cppcheck-suppress  unusedStructMember
     bool mute;
     s16 dvol_step;
     s16 dvol;
@@ -431,7 +432,6 @@ int le_audio_muti_ch_iis_recorder_open(void *params_ch0, void *params_ch1, void 
     }
     //设置中断点数
     jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);
-    jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_VOCAL_TRACK_SYNTHESIS, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);//四声道时，指定声道合并单个声道的点数
     /*节点名字与数据流节点对应*/
     char *lea_enc_node_name = "LEA_ENC_CH0";
     char *lea_sync_node_name = "LEA_Sync_CH0";
@@ -615,7 +615,11 @@ int le_audio_pc_recorder_open(void *params, void *le_audio, int latency)
     }
     int err = 0;
     struct le_audio_stream_format *le_audio_fmt = (struct le_audio_stream_format *)params;
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
+#else
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"pc_le_audio");
+#endif
     struct stream_enc_fmt fmt = {
         .coding_type = le_audio_fmt->coding_type,
         .channel = le_audio_fmt->nch,
@@ -1065,14 +1069,26 @@ int le_audio_wireless_mic_tx_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_dvol_mute(bool mute)
 {
+    static u8 volume_before_muting = 0;
+
     if (mute) {
         //mute
         g_le_audio_tx_vol.mute = 1;
+        volume_before_muting = g_le_audio_tx_vol.dvol;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_vol.max_dvol;
+        }
         le_audio_wireless_mic_tx_set_dvol(0, mute);
     } else {
         //unmute
-        le_audio_wireless_mic_tx_set_dvol(0, mute);
         g_le_audio_tx_vol.mute = 0;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_vol.max_dvol;
+        }
+
+        le_audio_wireless_mic_tx_set_dvol(volume_before_muting, mute);
     }
 }
 
@@ -1142,14 +1158,26 @@ int le_audio_wireless_mic_tx_monitor_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_monitor_dvol_mute(bool mute)
 {
+    static u8 volume_before_muting = 0;
+
     if (mute) {
         //mute
         g_le_audio_tx_monitor_vol.mute = 1;
+        volume_before_muting = g_le_audio_tx_monitor_vol.dvol;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
+        }
         le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
     } else {
         //unmute
-        le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
         g_le_audio_tx_monitor_vol.mute = 0;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
+        }
+
+        le_audio_wireless_mic_tx_monitor_set_dvol(volume_before_muting, mute);
     }
 }
 

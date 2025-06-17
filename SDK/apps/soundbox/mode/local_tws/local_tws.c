@@ -231,6 +231,7 @@ static void local_tws_become_to_source(enum app_mode_t mode)
 {
     u8 data[2] = {CMD_TWS_ENTER_SINK_MODE_REQ, mode};     //mode参数会回发给发送端，如果发送端收到了命令回复之后所在的模式不等于发送命令时的模式则不响应rsp
     local_tws_cmd_send(data, sizeof(data));
+    __this->local_tws_mode_en = 1;
 }
 
 static void local_tws_become_to_sink(enum app_mode_t mode)
@@ -245,6 +246,11 @@ static void local_tws_become_to_sink(enum app_mode_t mode)
     }
 }
 
+u8 local_tws_mode_exit()
+{
+    return !__this->local_tws_mode_en;
+}
+
 /* 功能描述： 在每个模式init调用, 切到蓝牙模式通知对端设备切回蓝牙，非蓝牙模式则通知对端设备进行Sink模式 */
 /* 输入参数描述： file_name :当前模式提示音文件名  priv:提示音播放完之后回调本地音乐解码时的参数* */
 /* 输出参数描述： 0：表示执行成功  -1：tws未连接，走原本单箱进行模式的流程*/
@@ -256,6 +262,7 @@ int local_tws_enter_mode(const char *file_name, void *priv)
         return -1;
     }
     log_info("local_tws_enter_mode:%s\n", file_name);
+    __this->local_tws_mode_en = 1;
     if (get_bt_tws_connect_status()) {
         __this->sync_tone_name = file_name;
         __this->priv = priv;
@@ -304,6 +311,7 @@ void local_tws_exit_mode(void)
         return;
     }
     __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
+    __this->local_tws_mode_en = 0;
     if (get_bt_tws_connect_status()) {
         if (!(app_in_mode(APP_MODE_BT) || app_in_mode(APP_MODE_SINK))) {
             if (__this->remote_dec_status) {
@@ -361,8 +369,8 @@ static int local_tws_msg_handler(int *msg)
         s16 vol = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);      //source同步一次音量给sink避免两边音量不同步
         local_tws_vol_report((u8)vol, 0, 0);
         if (__this->role == LOCAL_TWS_ROLE_SOURCE &&  __this->sync_tone_name && app_in_mode(cmd[1])) {        //cmd[1] = mode, 如果不等于当前模式则说明已经切到下个模式
-            tone_player_stop();
-            tws_play_tone_file_alone_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
+            /* tone_player_stop(); */
+            tws_play_tone_file_preemption_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
             __this->sync_tone_name = NULL;
         }
         break;
@@ -389,8 +397,7 @@ static int local_tws_msg_handler(int *msg)
         if (app_in_mode(APP_MODE_BT) && \
             g_bt_hdl.background.backmode == BACKGROUND_GOBACK_WITH_MODE_SWITCH && \
             __this->sync_tone_name && bt_get_call_status() == BT_CALL_HANGUP) {
-            tone_player_stop();
-            tws_play_tone_file_alone_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
+            tws_play_tone_file_preemption_callback(__this->sync_tone_name, 200, LOCAL_TWS_SYNC_TONE_ID);
             __this->sync_tone_name = NULL;
         }
         break;
@@ -532,11 +539,11 @@ static int local_tws_event_handler(int *_event)
         break;
     case TWS_EVENT_DATA_TRANS_START:
         /*Source端打开本地传输Sink端会收到该event并收到参数，在此处打开本地解码*/
-        log_info("TWS_EVENT_DATA_TRANS_START");
-
-        if (app_in_mode(APP_MODE_BT)) { //蓝牙模式下不应该打开
-            ASSERT(0);
+        if (!app_in_mode(APP_MODE_SINK)) { //不在SINK模式下不应该打开
+            log_info("Not in sink mode not Respone TWS_EVENT_DATA_TRANS_START");
+            break;
         }
+        log_info("TWS_EVENT_DATA_TRANS_START");
 #if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
         //本地传输打开时不自动主从切换
         tws_api_auto_role_switch_disable();
@@ -553,6 +560,11 @@ static int local_tws_event_handler(int *_event)
         break;
     case TWS_EVENT_DATA_TRANS_CLOSE:
         /*Source端关闭本地传输Sink端会收到该event并收到参数，在此处关闭本地解码*/
+        if (!app_in_mode(APP_MODE_SINK)) { //不在SINK模式下不应该有关闭
+            log_info("Not in sink mode not Respone TWS_EVENT_DATA_TRANS_CLOSE");
+            break;
+        }
+
         log_info("TWS_EVENT_DATA_TRANS_CLOSE");
         local_tws_player_close();
         local_tws_dec_status_report(0);

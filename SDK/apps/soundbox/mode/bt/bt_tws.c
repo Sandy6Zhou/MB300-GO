@@ -695,7 +695,7 @@ int bt_tws_start_pair(void)
         if (bt_get_total_connect_dev()) {
             tws_api_wait_pair_when_phone_connect(0);
         } else {
-            tws_api_auto_pair(TCFG_TWS_PAIR_TIMEOUT * 1000);
+            tws_api_auto_pair(0);
         }
     }
 #else
@@ -943,14 +943,15 @@ int bt_tws_connction_status_event_handler(int *msg)
 
         gtws.state &= ~BT_TWS_SIBLING_CONNECTED;
 
+#if CONFIG_TWS_USE_COMMMON_ADDR == 0
+        lmp_hci_write_local_address(bt_get_mac_addr());
+#endif
+
         if (reason & TWS_DETACH_BY_REMOVE_PAIRS) {
             gtws.state &= ~BT_TWS_PAIRED;
             gtws.state |= BT_TWS_UNPAIRED;
             if (phone_link_connection == 0) {
                 gtws.state &= ~BT_TWS_PHONE_CONNECTED;
-#if CONFIG_TWS_USE_COMMMON_ADDR == 0
-                lmp_hci_write_local_address(bt_get_mac_addr());
-#endif
             }
             printf("<<<< tws detach by remove pairs:%x >>>>\n", gtws.state);
 #if TCFG_TWS_PAIR_ALWAYS && !TCFG_TWS_PAIR_BY_BOTH_SIDES    //打开TWS_PAIR_ALWAYS,在手机连接之后仍然可以进行配对
@@ -1070,6 +1071,12 @@ static void bt_tws_enter_sniff(void *parm)
 {
     int interval;
 
+#if TCFG_LOCAL_TWS_ENABLE
+    //处于本地传输状态不能进入tws_sniff
+    if (local_tws_get_role() != LOCAL_TWS_ROLE_NULL) {
+        return;
+    }
+#endif
     int state = tws_api_get_tws_state();
     if (state & TWS_STA_PHONE_DISCONNECTED) {
         interval = 400;

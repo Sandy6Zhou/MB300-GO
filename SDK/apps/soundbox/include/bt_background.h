@@ -27,6 +27,7 @@ typedef struct _background_var {
     u8 close_bt_hw_in_background;           // 1-处于后台模式时关闭整个蓝牙，重新进入蓝牙再初始化
     u16 goback_timer;                       // 后台由电话切回蓝牙模式之后需要再电话结束之后返回原来模式的定时器
     u8  goback_mode;						// 通话结束之后需要切回哪个模式
+    u8  broadcast_mode;                     // 记录当前广播模式, 返回的时候恢复
     u8  goback_fitler;                      // 后台返回过滤，通话可能会有多个消息触发返回，防止多次发消息切模式
     bool poweron_need_switch_mode;          // 开机如果有需要切换模式需要等待进入蓝牙模式初始化完成之后才切模式
     u8  poweron_mode;                       // 记录poweron任务时需要切换的任务模式，等待蓝牙初始化完成之后才跳转到此模式

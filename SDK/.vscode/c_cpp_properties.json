@@ -149,6 +149,7 @@
                 "${workspaceFolder}/apps/common/third_party_profile/swift_pair",
                 "${workspaceFolder}/apps/common/third_party_profile/gfps_protocol",
                 "${workspaceFolder}/apps/common/third_party_profile/custom_protocol_demo",
+                "${workspaceFolder}/apps/common/third_party_profile/multi_ble_clinet",
                 "${workspaceFolder}/interface/utils/apple_dock",
                 "${workspaceFolder}/apps/common/cJSON",
                 "${workspaceFolder}/interface/btstack",

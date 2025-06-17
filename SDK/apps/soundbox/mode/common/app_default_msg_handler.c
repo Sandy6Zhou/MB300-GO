@@ -34,6 +34,7 @@
 #include "rcsp_device_status.h"
 #include "btstack_rcsp_user.h"
 #include "bt_key_func.h"
+#include "le_audio_common.h"
 #if LE_AUDIO_MIX_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
@@ -387,10 +388,13 @@ void app_common_key_msg_handler(int *msg)
         break;
 
 
-    case APP_MSG_LE_AURACAST_SW_DEIVCE:
-        printf("---------%s %d--------", __FUNCTION__, __LINE__);
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN))
-        app_auracast_sink_switch_source_device(0);
+    case APP_MSG_LE_AUDIO_SW_CONNECT_DEIVCE:
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+        le_audio_switch_source_device(0);
+
 #endif
         break;
 

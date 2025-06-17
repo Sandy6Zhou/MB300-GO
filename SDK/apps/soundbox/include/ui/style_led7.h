@@ -17,6 +17,7 @@ enum ui_menu_main {
     UI_FM_MENU_MAIN,
     UI_PC_MENU_MAIN,
     UI_SPDIF_MENU_MAIN,
+    UI_LOUDSPEAKER_MENU_MAIN,
     UI_SINK_MENU_MAIN,
     UI_IIS_MENU_MAIN,
     UI_IDLE_MENU_MAIN,
@@ -37,6 +38,7 @@ enum {
     MENU_AUX,
     MENU_ALM_UP,
     MENU_SPDIF,
+    MENU_LOUDSPEAKER,
     MENU_SINK,
     MENU_IIS,
 
@@ -134,6 +136,7 @@ extern const struct ui_dis_api idle_main;
 extern const struct ui_dis_api spdif_main;
 extern const struct ui_dis_api sink_main;
 extern const struct ui_dis_api iis_main;
+extern const struct ui_dis_api loudspeaker_main;
 
 
 

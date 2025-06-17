@@ -243,6 +243,7 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/gfps_protocol \
 	-Iapps/common/third_party_profile/custom_protocol_demo \
+	-Iapps/common/third_party_profile/multi_ble_clinet \
 	-Iinterface/utils/apple_dock \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
@@ -539,6 +540,7 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/jieli/rcsp/server/rcsp_data_respone.c \
 	apps/common/third_party_profile/jieli/trans_data_demo/le_trans_data.c \
 	apps/common/third_party_profile/jieli/trans_data_demo/spp_trans_data.c \
+	apps/common/third_party_profile/multi_ble_client/ble_multi_client.c \
 	apps/common/third_party_profile/multi_protocol_common.c \
 	apps/common/third_party_profile/multi_protocol_event.c \
 	apps/common/third_party_profile/multi_protocol_main.c \
@@ -605,6 +607,7 @@ c_SRC_FILES := \
 	apps/soundbox/mode/bt/dual_conn.c \
 	apps/soundbox/mode/bt/kws_voice_event_deal.c \
 	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c \
+	apps/soundbox/mode/bt/le_audio/auracast/le_auracast_config.c \
 	apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c \
@@ -647,6 +650,11 @@ c_SRC_FILES := \
 	apps/soundbox/mode/local_tws/local_tws.c \
 	apps/soundbox/mode/local_tws/sink.c \
 	apps/soundbox/mode/local_tws/sink_key_msg_table.c \
+	apps/soundbox/mode/loudspeaker/loudspeaker.c \
+	apps/soundbox/mode/loudspeaker/loudspeaker_api.c \
+	apps/soundbox/mode/loudspeaker/loudspeaker_app_msg_handler.c \
+	apps/soundbox/mode/loudspeaker/loudspeaker_key_msg_table.c \
+	apps/soundbox/mode/loudspeaker/ui_loudspeaker.c \
 	apps/soundbox/mode/mic/mic.c \
 	apps/soundbox/mode/mic/mic_api.c \
 	apps/soundbox/mode/mic/mic_app_msg_handler.c \
@@ -794,6 +802,7 @@ c_SRC_FILES := \
 	audio/effect/demo/frequency_shift_howling_demo.c \
 	audio/effect/demo/gain_demo.c \
 	audio/effect/demo/harmonic_exciter_demo.c \
+	audio/effect/demo/lhdc_x_demo.c \
 	audio/effect/demo/noisegate_demo.c \
 	audio/effect/demo/notch_howling_demo.c \
 	audio/effect/demo/pitch_speed_demo.c \
@@ -834,6 +843,7 @@ c_SRC_FILES := \
 	audio/framework/nodes/esco_tx_node.c \
 	audio/framework/nodes/iis_node.c \
 	audio/framework/nodes/le_audio_source.c \
+	audio/framework/nodes/lhdc_x_node.c \
 	audio/framework/nodes/local_tws_source_node.c \
 	audio/framework/nodes/multi_ch_iis_node.c \
 	audio/framework/nodes/ns_node.c \
@@ -876,6 +886,8 @@ c_SRC_FILES := \
 	audio/interface/player/le_audio_player.c \
 	audio/interface/player/linein_player.c \
 	audio/interface/player/local_tws_player.c \
+	audio/interface/player/loudspeaker_iis_player.c \
+	audio/interface/player/loudspeaker_mic_player.c \
 	audio/interface/player/mic_player.c \
 	audio/interface/player/pc_spk_player.c \
 	audio/interface/player/reference_time.c \
@@ -919,8 +931,6 @@ c_SRC_FILES := \
 	cpu/br28/periph/mcpwm.c \
 	cpu/br28/periph/rdec.c \
 	cpu/br28/periph/touch/lp_touch_key.c \
-	cpu/br28/periph/touch/lp_touch_key_range_algo.c \
-	cpu/br28/periph/touch/lp_touch_key_tool.c \
 	cpu/br28/periph/touch/lpctmu_hw.c \
 	cpu/br28/periph/touch/plcnt.c \
 	cpu/br28/power/key_wakeup.c \
@@ -934,7 +944,6 @@ c_SRC_FILES := \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_gc9b71_320x386.c \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_sh8601a_454x454.c \
 	cpu/br28/ui_driver/lcd_drive/lcd_spi/lcd_spi_st7789v_240x240.c \
-	cpu/components/gpadc_battery.c \
 	cpu/components/iic_api.c \
 	cpu/components/iic_soft.c \
 	cpu/components/ir_decoder.c \
@@ -1065,10 +1074,10 @@ LFLAGS := \
 	cpu/br28/liba/lib_ape_dec.a \
 	cpu/br28/liba/VirtualBass.a \
 	cpu/br28/liba/lib_virtual_bass_classic.a \
+	cpu/br28/liba/lib_virtual_bass_pro.a \
 	cpu/br28/liba/lib_plateReverb_adv.a \
 	cpu/br28/liba/lib_reverb_cal.a \
 	cpu/br28/liba/lib_Reverb.a \
-	cpu/br28/liba/lib_wtgv2_dec.a \
 	cpu/br28/liba/lib_voiceChanger.a \
 	cpu/br28/liba/lib_flac_dec.a \
 	cpu/br28/liba/lib_pitch_speed.a \

@@ -86,7 +86,7 @@ const int CONFIG_BTSTACK_TWS_AUDIO_SHARE_ENABLE  = 0;
 	const int CONFIG_BTSTACK_LE_AUDIO_ENABLE     = 0;
 #endif
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN)))
 	const int config_le_sm_sub_sc_bridge_edr_enable = 1;
 	const int config_le_sm_sub_sc_enable = 1;
 #else
@@ -111,7 +111,7 @@ int app_info_debug_enable = 0;//BIT(4);
 #endif
 
 //le 配置,可以优化代码和RAM
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN)))
 	const int config_le_hci_connection_num = 2;//支持同时连接个数
 	const int config_le_sm_support_enable = 1; //是否支持加密配对
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
@@ -127,10 +127,18 @@ int app_info_debug_enable = 0;//BIT(4);
 const int config_le_gatt_server_num = 2;   //支持server角色个数
 #elif THIRD_PARTY_PROTOCOLS_SEL
 const int config_le_gatt_server_num = 1;
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN))
+const int config_le_gatt_server_num = 1;
 #else
 const int config_le_gatt_server_num = 0;
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+const int config_le_gatt_client_num = 2;
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN))
+const int config_le_gatt_client_num = 1;
+#else
 const int config_le_gatt_client_num = 0;
+#endif
 #else
 const int config_le_gatt_server_num = 0;
 const int config_le_gatt_client_num = 0;

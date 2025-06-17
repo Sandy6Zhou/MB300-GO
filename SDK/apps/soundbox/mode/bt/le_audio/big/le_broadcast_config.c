@@ -214,7 +214,12 @@ u32 get_big_dec_input_buf_len(void)
 
 u32 get_big_sdu_period_us(void)
 {
-    return platform_data.args[platform_data_index].sdu_interval;
+    return platform_data.args[platform_data_index].iso_interval / platform_data.frame_len / 100;
+}
+
+u32 get_big_iso_period_us(void)
+{
+    return platform_data.args[platform_data_index].iso_interval;
 }
 
 u32 get_big_tx_latency(void)
@@ -329,7 +334,7 @@ void update_receiver_big_codec_params(void *sync_data)
     platform_data.args[platform_data_index].bitrate = data_sync->bit_rate;
     platform_data.sample_rate = data_sync->sample_rate;
     enc_output_frame_len = calcul_big_enc_output_frame_len(platform_data.frame_len, platform_data.args[platform_data_index].bitrate, 0);
-    big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, platform_data.args[platform_data_index].sdu_interval, platform_data.frame_len);
+    big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, platform_data.args[platform_data_index].iso_interval, platform_data.frame_len);
     dec_input_buf_len = calcul_big_dec_input_buf_len(big_transmit_data_len);
 }
 
@@ -337,7 +342,7 @@ void update_receiver_big_codec_params(void *sync_data)
 void update_receiver_big_params(uint16_t Max_PDU, uint16_t iso_Interval)
 {
     big_transmit_data_len = Max_PDU;
-    platform_data.args[platform_data_index].sdu_interval = iso_Interval;
+    platform_data.args[platform_data_index].iso_interval = iso_Interval;
 }
 
 static const struct broadcast_platform_data *get_broadcast_platform_data(u8 mode)
@@ -403,7 +408,7 @@ static const struct broadcast_platform_data *get_broadcast_platform_data(u8 mode
 #endif
 
     put_buf((const u8 *) & (platform_data.args[platform_data_index]), sizeof(struct broadcast_platform_data));
-    g_printf("sdu_interval:%d", platform_data.args[platform_data_index].sdu_interval);
+    g_printf("iso_interval:%d", platform_data.args[platform_data_index].iso_interval);
     g_printf("tx_latency:%d\n", platform_data.args[platform_data_index].tx_latency);
     g_printf("play_latency:%d\n", platform_data.args[platform_data_index].play_latency);
     g_printf("rtnCToP:%d", platform_data.args[platform_data_index].rtn);
@@ -453,14 +458,14 @@ big_parameter_t *set_big_params(u8 app_task, u8 role, u8 big_hdl)
         //普通广播
         enc_output_frame_len = calcul_big_enc_output_frame_len(data->frame_len, data->args[platform_data_index].bitrate, 0);
 #endif
-        big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].sdu_interval, data->frame_len);
+        big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].iso_interval, data->frame_len);
         dec_input_buf_len = calcul_big_dec_input_buf_len(big_transmit_data_len);
         enc_output_buf_len = calcul_big_enc_output_buf_len(big_transmit_data_len);
         if (tx_params) {
             tx_params->big_hdl = big_hdl;
-            tx_params->tx.mtl = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtl;
+            tx_params->tx.mtl = data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtl;
             tx_params->tx.rtn = data->args[platform_data_index].rtn - 1;
-            tx_params->tx.sdu_int_us = data->args[platform_data_index].sdu_interval;
+            tx_params->tx.sdu_int_us = data->args[platform_data_index].iso_interval;
             if (tx_params->tx.sdu_int_us < 10000) {
                 tx_params->form = 1;
             } else {
@@ -511,7 +516,7 @@ big_parameter_t *set_big_params(u8 app_task, u8 role, u8 big_hdl)
 #else
         enc_output_frame_len = calcul_big_enc_output_frame_len(data->frame_len, data->args[platform_data_index].bitrate, 0);
 #endif
-        big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].sdu_interval, data->frame_len);
+        big_transmit_data_len = calcul_big_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].iso_interval, data->frame_len);
         dec_input_buf_len = calcul_big_dec_input_buf_len(big_transmit_data_len);
         rx_params->big_hdl = big_hdl;
 
@@ -530,7 +535,7 @@ big_parameter_t *set_big_params(u8 app_task, u8 role, u8 big_hdl)
 
         rx_params->bst.rtn = data->args[platform_data_index].rtn - 1;
         rx_params->bst.enc.max_sdu = big_transmit_data_len;
-        rx_params->bst.enc.sdu_int_us = data->args[platform_data_index].sdu_interval;
+        rx_params->bst.enc.sdu_int_us = data->args[platform_data_index].iso_interval;
         if (data->coding_type == AUDIO_CODING_JLA) {
             rx_params->bst.enc.format = WIRELESS_TRANS_CODEC_JLA;
         } else if (data->coding_type == AUDIO_CODING_JLA_LW) {

@@ -323,9 +323,7 @@ static int get_linein_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     if (get_le_audio_curr_role()) {
         if (__this->last_run_local_audio_close) {
@@ -336,15 +334,6 @@ static int get_linein_play_status(void)
             } else {
                 return LOCAL_AUDIO_PLAYER_STATUS_STOP;
             }
-        }
-    }
-#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    //固定为接收端时，打开广播接收后，如果连接上了会关闭本地的音频，当关闭广播后，需要恢复本地的音频播放
-    if (get_le_audio_curr_role()) {
-        if (__this->last_run_local_audio_close) {
-            return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
-        } else {
-            return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
         }
     }
 #else
@@ -358,6 +347,22 @@ static int get_linein_play_status(void)
             }
             __this->last_run_local_audio_close = 0;
         }
+    }
+#endif
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SUSPEND) {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     }
 #endif
 #endif

@@ -30,4 +30,10 @@ void audio_reference_clock_exit(u8 id);
 u32 audio_reference_clock_remapping(u8 now_network, u8 dst_network, u32 clock);
 
 u8 audio_reference_network_exist(u8 reference);
+
+u8 le_audio_ble_to_local_time_init();
+
+u32 le_audio_ble_to_local_time(u8 id, u32 le_audio_time);
+
+void le_audio_ble_to_local_time_close(u8 id);
 #endif

@@ -20,6 +20,12 @@
 
 #include "typedef.h"
 
+#if (defined CONFIG_CPU_BD45) || (defined CONFIG_CPU_BR56)
+#define BLE_CODE_AT_RAM     AT(.le_ll_ram_code)
+#else
+#define BLE_CODE_AT_RAM
+#endif
+
 #if 0
 // LE CONTROLLER COMMANDS
 #define HCI_LE_CREATE_CONNECTION_CANCEL 				    0x0e
@@ -656,6 +662,7 @@ int ll_hci_create_conn(u8 *conn_param, u8 *addr_param);
 int ll_hci_create_conn_ext(void *param);
 
 int ll_hci_create_conn_cancel(void);
+int ll_hci_read_remote_feature(u16 conn_handle);
 
 int ll_hci_vendor_send_key_num(u16 con_handle, u8 num);
 

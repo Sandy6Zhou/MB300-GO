@@ -14,6 +14,7 @@
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "local_tws.h"
+#include "app_le_auracast.h"
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
 #endif
@@ -61,6 +62,7 @@ static int app_iis_init(void)
 
     tone_player_stop();
 
+    iis_volume_set(app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
 #if TCFG_LOCAL_TWS_ENABLE
     ret = local_tws_enter_mode(get_tone_files()->iis_mode, NULL);
 #endif //TCFG_LOCAL_TWS_ENABLE
@@ -78,11 +80,11 @@ static int app_iis_init(void)
     app_var.pitch_mode = PITCH_0;    //设置变调初始模式
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     btstack_init_in_other_mode();
-#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    iis_set_broadcast_local_open_flag(1);
-#endif
 #endif
 
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_IIS);
@@ -91,7 +93,11 @@ static int app_iis_init(void)
 
 struct app_mode *app_enter_iis_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     app_iis_init();
@@ -152,23 +158,33 @@ static int iis_mode_try_enter(int arg)
 static int iis_mode_try_exit()
 {
     int ret = 0;
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-    app_broadcast_deal(LE_AUDIO_APP_MODE_EXIT);
-
-#if (!TCFG_BT_BACKGROUND_ENABLE)
+    le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
+#if (!TCFG_BT_BACKGROUND_ENABLE && !TCFG_KBOX_1T3_MODE_EN)
     app_broadcast_close_in_other_mode();
 #endif
-
-    ret = btstack_exit_in_other_mode();
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
-    app_connected_deal(LE_AUDIO_APP_MODE_EXIT);
-
+    le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
 #if (!TCFG_BT_BACKGROUND_ENABLE && !TCFG_KBOX_1T3_MODE_EN)
     app_connected_close_in_other_mode();
 #endif
+#endif
+
+#if (!TCFG_KBOX_1T3_MODE_EN)
     ret = btstack_exit_in_other_mode();
+#endif
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
+#if (!TCFG_BT_BACKGROUND_ENABLE)
+    app_auracast_close_in_other_mode();
+    ret = btstack_exit_in_other_mode();
+#endif
 #endif
     return ret;
 }

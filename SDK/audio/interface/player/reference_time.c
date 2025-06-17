@@ -17,6 +17,7 @@
 
 #include "reference_time.h"
 #include "system/includes.h"
+#include "ble/hci_ll.h"
 /* #include "le_audio_stream.h" */
 
 /*
@@ -141,7 +142,6 @@ u32 audio_reference_clock_time(void)
         clk = list_first_entry(&reference_head, struct reference_clock, entry);
         if (LE_AUDIO_TIME_ENABLE && clk->network == 2) {
 #if 1
-            extern u32 bb_le_clk_get_time_us(void);
             return bb_le_clk_get_time_us();
 #else
             return le_audio_stream_current_time(clk->le_addr);
@@ -293,3 +293,79 @@ delete:
     }
     local_irq_enable();
 }
+
+struct ble_to_local_clock {
+    u8 id;
+    u32 local_time;
+    u32 le_audio_time;
+    struct list_head entry;
+};
+static LIST_HEAD(ble_to_local_head);
+static u8 ble_to_local_id = 1;
+
+u8 le_audio_ble_to_local_time_init()
+{
+    struct ble_to_local_clock *ble_to_local = (struct ble_to_local_clock *)zalloc(sizeof(struct ble_to_local_clock));
+    struct ble_to_local_clock *clk;
+    local_irq_disable();
+    if (list_empty(&ble_to_local_head)) {
+        ble_to_local->local_time = audio_jiffies_usec();
+        ble_to_local->le_audio_time = bb_le_clk_get_time_us();
+        //y_printf("-----  %u, %u, %d\n", ble_to_local->local_time, ble_to_local->le_audio_time, ble_to_local->local_time - ble_to_local->le_audio_time);
+    } else {
+        clk = list_first_entry(&ble_to_local_head, struct ble_to_local_clock, entry);
+        ble_to_local->local_time = clk->local_time;
+        ble_to_local->le_audio_time = clk->le_audio_time;
+        //y_printf("====  %u, %u, %d\n", ble_to_local->local_time, ble_to_local->le_audio_time, ble_to_local->local_time - ble_to_local->le_audio_time);
+    }
+    list_add(&ble_to_local->entry, &ble_to_local_head);
+
+    ble_to_local->id =  ble_to_local_id;
+    if (++ble_to_local_id == 0) {
+        ble_to_local_id++;
+    }
+
+    local_irq_enable();
+    /* printf(">>  id : %d \n",ble_to_local->id); */
+    return ble_to_local->id;
+}
+
+u32 le_audio_ble_to_local_time(u8 id, u32 le_audio_time)
+{
+    struct ble_to_local_clock *clk;
+    u32 local_timestamp = 0;
+    local_irq_disable();
+    list_for_each_entry(clk, &ble_to_local_head, entry) {
+        if (clk->id == id) {
+            local_timestamp = clk->local_time + ((le_audio_time - clk->le_audio_time) & 0xfffffff);
+            clk->local_time = local_timestamp;
+            clk->le_audio_time = le_audio_time;
+            /* printf("=%u %u =\n",local_timestamp, le_audio_time); */
+        }
+    }
+    local_irq_enable();
+    return  local_timestamp;
+}
+
+void le_audio_ble_to_local_time_close(u8 id)
+{
+    struct ble_to_local_clock *clk;
+    local_irq_disable();
+    list_for_each_entry(clk, &ble_to_local_head, entry) {
+        if (clk->id == id) {
+            goto delete;
+        }
+    }
+    local_irq_enable();
+    return;
+delete:
+    list_del(&clk->entry);
+    free(clk);
+    local_irq_enable();
+}
+
+
+
+
+
+

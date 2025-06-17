@@ -11,6 +11,7 @@ void *spdif_get_le_audio_hdl(void);
 u8 get_spdif_mute_state(void);
 
 #define AUDIO_SPDIF_IRQ_POINTS  256	//linein adc 中断点数
+#define SPDIF_LE_AUDIO_ROLE_DETECT_TIME_US	10000	//10s的spdif广播角色决定时间
 
 #endif
 

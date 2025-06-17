@@ -30,10 +30,12 @@ const int config_printf_time         = 1;
 const int config_asser         = TCFG_EXCEPTION_LOG_ENABLE;  // 1:使能异常打印; 2:追加额外调试信息(dump另外一个CPU寄存器信息)
 const int config_exception_reset_enable = TCFG_EXCEPTION_RESET_ENABLE;
 const int CONFIG_LOG_OUTPUT_ENABLE = 1;
+const int config_ulog_enable = 1;
 #else
 const int config_asser         = 0;
 const int config_exception_reset_enable = 1;
 const int CONFIG_LOG_OUTPUT_ENABLE = 0;
+const int config_ulog_enable = 0;
 #endif
 
 //================================================//

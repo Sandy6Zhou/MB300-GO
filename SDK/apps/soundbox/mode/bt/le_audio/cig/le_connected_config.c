@@ -141,9 +141,14 @@ u32 get_cig_dec_input_buf_len(void)
     return dec_input_buf_len;
 }
 
-u32 get_cig_sdu_period_us(void)
+u32 get_cig_iso_period_us(void)
 {
-    return platform_data.args[platform_data_index].sdu_interval;
+    return platform_data.args[platform_data_index].iso_interval / platform_data.frame_len / 100;
+}
+
+u32 get_cig_iso_period_us(void)
+{
+    return platform_data.args[platform_data_index].iso_interval;
 }
 
 u32 get_cig_mtl_time(void)
@@ -266,7 +271,7 @@ static const struct connected_platform_data *get_connected_platform_data(u8 mode
     platform_data.coding_type = LE_AUDIO_CODEC_TYPE;
 
     /* put_buf((const u8 *)&(platform_data.args[platform_data_index]), sizeof(struct connected_cfg_args)); */
-    g_printf("sdu_interval:%d", platform_data.args[platform_data_index].sdu_interval);
+    g_printf("sdu_interval:%d", platform_data.args[platform_data_index].iso_interval);
     g_printf("tx_latency:%d\n", platform_data.args[platform_data_index].tx_latency);
     g_printf("play_latency:%d\n", platform_data.args[platform_data_index].play_latency);
     g_printf("rtnCToP:%d", platform_data.args[platform_data_index].rtnCToP);
@@ -304,7 +309,7 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
         data->args[platform_data_index].bit_rate /= 2;
 #endif
         enc_output_frame_len = calcul_cig_enc_output_frame_len(data->frame_len, data->args[platform_data_index].bitrate);
-        cig_transmit_data_len = calcul_cig_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].sdu_interval, data->frame_len);
+        cig_transmit_data_len = calcul_cig_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].iso_interval, data->frame_len);
         dec_input_buf_len = calcul_cig_dec_input_buf_len(cig_transmit_data_len);
         enc_output_buf_len = calcul_cig_enc_output_buf_len(cig_transmit_data_len);
         if (central_params) {
@@ -317,23 +322,23 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
 
 #if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
 #if (LEA_CIG_CONNECT_MODE == LEA_CIG_2T1R_MODE)
-            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC % 1000) {
+            if (data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlPToC % 1000) {
                 //向上取整
                 round_up = 1;
             }
-            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
-            central_params->sduIntUsPToC = data->args[platform_data_index].sdu_interval;
+            central_params->mtlPToC = data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
+            central_params->sduIntUsPToC = data->args[platform_data_index].iso_interval;
             central_params->cis[0].rtnPToC = data->args[platform_data_index].rtnPToC - 1;
             central_params->cis[1].rtnPToC = data->args[platform_data_index].rtnPToC - 1;
             central_params->cis[0].maxSduPToC = cig_transmit_data_len;
             central_params->cis[1].maxSduPToC = cig_transmit_data_len;
 #else
-            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP % 1000) {
+            if (data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlCToP % 1000) {
                 //向上取整
                 round_up = 1;
             }
-            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
-            central_params->sduIntUsCToP = data->args[platform_data_index].sdu_interval;
+            central_params->mtlCToP = data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
+            central_params->sduIntUsCToP = data->args[platform_data_index].iso_interval;
             central_params->cis[0].rtnCToP = data->args[platform_data_index].rtnCToP - 1;
             central_params->cis[1].rtnCToP = data->args[platform_data_index].rtnCToP - 1;
             central_params->cis[0].maxSduCToP = cig_transmit_data_len;
@@ -342,19 +347,19 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
 #endif  //#if (LEA_CIG_TRANS_MODE == LEA_TRANS_SIMPLEX)
 
 #if (LEA_CIG_TRANS_MODE == LEA_TRANS_DUPLEX)
-            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP % 1000) {
+            if (data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlCToP % 1000) {
                 //向上取整
                 round_up = 1;
             }
-            central_params->mtlCToP = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
+            central_params->mtlCToP = data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlCToP / 1000 + round_up;
             round_up = 0;
-            if (data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC % 1000) {
+            if (data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlPToC % 1000) {
                 //向上取整
                 round_up = 1;
             }
-            central_params->mtlPToC = data->args[platform_data_index].sdu_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
-            central_params->sduIntUsCToP = data->args[platform_data_index].sdu_interval;
-            central_params->sduIntUsPToC = data->args[platform_data_index].sdu_interval;
+            central_params->mtlPToC = data->args[platform_data_index].iso_interval * data->args[platform_data_index].mtlPToC / 1000 + round_up;
+            central_params->sduIntUsCToP = data->args[platform_data_index].iso_interval;
+            central_params->sduIntUsPToC = data->args[platform_data_index].iso_interval;
 #if (LEA_TX_CHANNEL_SEPARATION && (LE_AUDIO_CODEC_CHANNEL == 2))
             u8 packet_num;
             u16 single_ch_trans_data_len;
@@ -408,7 +413,7 @@ cig_parameter_t *set_cig_params(u8 app_task, u8 role, u8 pair_without_addr)
         perip_params = &cig_perip_param;
         memcpy(perip_params->pair_name, get_le_audio_pair_name(), sizeof(perip_params->pair_name));
         enc_output_frame_len = calcul_cig_enc_output_frame_len(data->frame_len, data->args[platform_data_index].bitrate);
-        cig_transmit_data_len = calcul_cig_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].sdu_interval, data->frame_len);
+        cig_transmit_data_len = calcul_cig_transmit_data_len(enc_output_frame_len, data->args[platform_data_index].iso_interval, data->frame_len);
         dec_input_buf_len = calcul_cig_dec_input_buf_len(cig_transmit_data_len);
         if (pair_without_addr) {
             perip_params->perip.pri_ch = 0;

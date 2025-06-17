@@ -26,6 +26,7 @@
 #include "audio_config.h"
 #include "le_audio_player.h"
 #include "app_main.h"
+#include "le_audio_common.h"
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
 #endif
@@ -252,6 +253,8 @@ void broadcast_init(void)
         return;
     }
 
+    le_audio_common_init();
+
     int os_ret = os_mutex_create(&broadcast_mutex);
     if (os_ret != OS_NO_ERR) {
         log_error("%s %d err, os_ret:0x%x", __FUNCTION__, __LINE__, os_ret);
@@ -375,7 +378,7 @@ static int broadcast_tx_align_data_handler(u8 big_hdl)
                     txsync.bis_hdl = bis_hdl_info->bis_hdl;
                     broadcast_get_bis_tick_time(&txsync);
                     timestamp = (txsync.tx_ts + broadcast_hdl->big_sync_delay +
-                                 get_big_mtl_time() + get_big_sdu_period_us()) & 0xfffffff;
+                                 get_big_mtl_time() + get_big_iso_period_us()) & 0xfffffff;
                     rlen = le_audio_stream_tx_data_handler(bis_hdl_info->recorder, transmit_buf,
                                                            get_big_transmit_data_len(), timestamp, get_big_play_latency());
                 }
@@ -457,7 +460,7 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
     params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
     params.fmt.frame_dms = get_dual_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();	//发包间隔
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+    params.fmt.isoIntervalUs = get_big_iso_period_us();	//发包间隔
     params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
     //1 - 单声道解码器
@@ -466,7 +469,7 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
     params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
     params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
     params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-    params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+    params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
     params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
     params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
     //播放延时
@@ -478,7 +481,7 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     params.latency = get_big_tx_latency();
@@ -661,7 +664,7 @@ int broadcast_receiver_connect_deal(void *priv)
     params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
     params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL;
 #elif (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 3))
@@ -671,7 +674,7 @@ int broadcast_receiver_connect_deal(void *priv)
     params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
     params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL;
 #elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
@@ -683,7 +686,7 @@ int broadcast_receiver_connect_deal(void *priv)
         params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
         params.fmt.frame_dms = get_big_audio_coding_frame_duration();
         params.fmt.sdu_period = get_big_sdu_period_us();
-        params.fmt.isoIntervalUs = get_big_sdu_period_us();
+        params.fmt.isoIntervalUs = get_big_iso_period_us();
         params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
         if (role == SURROUND_SOUND_RX1_DUAL_L) {
             params.fmt.dec_ch_mode = 17;
@@ -697,7 +700,7 @@ int broadcast_receiver_connect_deal(void *priv)
         params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
         params.fmt.frame_dms = get_big_audio_coding_frame_duration();
         params.fmt.sdu_period = get_big_sdu_period_us();
-        params.fmt.isoIntervalUs = get_big_sdu_period_us();
+        params.fmt.isoIntervalUs = get_big_iso_period_us();
         params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
         params.fmt.dec_ch_mode = 37;
     } else {
@@ -711,7 +714,7 @@ int broadcast_receiver_connect_deal(void *priv)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_RX_DEC_OUTPUT_CHANNEL;
 #endif
@@ -997,10 +1000,10 @@ static void broadcast_rx_iso_callback(const void *const buf, size_t length, void
     static u8 auto_fill_enable = 0;
 
     u8 init_ok_num = 0;
-    u32 sdu_period = get_big_sdu_period_us();
-    ASSERT(sdu_period, "%d", sdu_period);
+    u32 iso_period = get_big_iso_period_us();
+    ASSERT(iso_period, "%d", iso_period);
     frame_num = get_big_transmit_data_len() / get_big_enc_output_frame_len();
-    frame_duration = get_big_sdu_period_us() / frame_num;
+    frame_duration = get_big_iso_period_us() / frame_num;
 
 #if TCFG_KBOX_1T3_MODE_EN
     struct wireless_data_callback_func *p;
@@ -1057,8 +1060,8 @@ static void broadcast_rx_iso_callback(const void *const buf, size_t length, void
                 if (auto_fill_enable && (first_flag & BIT(0)) && (first_flag & BIT(1))) {
                     extern uint32_t bb_le_clk_get_time_us(void);
                     curLeTime = bb_le_clk_get_time_us();
-                    if ((param->ts + sdu_period * 3) < curLeTime) {
-                        printf("[%d]: sdu_period:%d, param->ts: %d, curr_ts %d ", i, sdu_period, param->ts, curLeTime);
+                    if ((param->ts + iso_period * 3) < curLeTime) {
+                        printf("[%d]: iso_period:%d, param->ts: %d, curr_ts %d ", i, iso_period, param->ts, curLeTime);
                         fill_data_flag = i;
                         fill_flag_ts = curLeTime;
                         timestamp = (fill_flag_ts + get_big_play_latency()) & 0xfffffff;
@@ -1561,7 +1564,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
 
@@ -1571,7 +1574,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
             params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
             params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
             params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
             params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
 
@@ -1587,7 +1590,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
                 params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
                 params.fmt.frame_dms = get_big_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_big_sdu_period_us();
-                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_iso_period_us();
                 params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
                 params.fmt.dec_ch_mode = 37;
                 //单声道
@@ -1596,7 +1599,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
                 params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
                 params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
                 params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-                params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
                 params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
                 params.fmt2.dec_ch_mode = 37;
                 params.latency = get_big_tx_latency();
@@ -1612,7 +1615,7 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
             params.latency = get_big_tx_latency();
@@ -1669,7 +1672,7 @@ int broadcast_audio_recorder_open(u16 big_hdl)
             params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
             params.fmt.frame_dms = get_dual_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();	//发包间隔
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt.isoIntervalUs = get_big_iso_period_us();	//发包间隔
             params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
             //1 - 单声道解码器
@@ -1678,7 +1681,7 @@ int broadcast_audio_recorder_open(u16 big_hdl)
             params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
             params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
             params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
             params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
             params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
             //播放延时
@@ -1691,7 +1694,7 @@ int broadcast_audio_recorder_open(u16 big_hdl)
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
             params.latency = get_big_tx_latency();
@@ -1894,7 +1897,7 @@ int broadcast_audio_all_open(u16 big_hdl)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
     params.fmt.frame_dms = get_big_audio_coding_frame_duration();
     params.fmt.sdu_period = get_big_sdu_period_us();
-    params.fmt.isoIntervalUs = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
     params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
     params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
     params.latency = get_big_tx_latency();
@@ -1913,7 +1916,7 @@ int broadcast_audio_all_open(u16 big_hdl)
             params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL;
             //单声道
@@ -1922,7 +1925,7 @@ int broadcast_audio_all_open(u16 big_hdl)
             params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
             params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
             params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-            params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+            params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
             params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
             params.fmt2.dec_ch_mode = SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL;
 
@@ -1937,7 +1940,7 @@ int broadcast_audio_all_open(u16 big_hdl)
                 params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
                 params.fmt.frame_dms = get_big_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_big_sdu_period_us();
-                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_iso_period_us();
                 params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
                 params.fmt.dec_ch_mode = 37;
                 //单声道
@@ -1946,7 +1949,7 @@ int broadcast_audio_all_open(u16 big_hdl)
                 params.fmt2.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
                 params.fmt2.frame_dms = get_dual_big_audio_coding_frame_duration();
                 params.fmt2.sdu_period = get_big_sdu_period_us();	//发包间隔
-                params.fmt2.isoIntervalUs = get_big_sdu_period_us();	//发包间隔
+                params.fmt2.isoIntervalUs = get_big_iso_period_us();	//发包间隔
                 params.fmt2.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
                 params.fmt2.dec_ch_mode = 37;
 
@@ -1985,7 +1988,7 @@ int broadcast_audio_all_open(u16 big_hdl)
             params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL;
 #elif (SURROUND_SOUND_FIX_ROLE_EN && (SURROUND_SOUND_ROLE == 3))
@@ -1995,7 +1998,7 @@ int broadcast_audio_all_open(u16 big_hdl)
             params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
             params.fmt.frame_dms = get_big_audio_coding_frame_duration();
             params.fmt.sdu_period = get_big_sdu_period_us();
-            params.fmt.isoIntervalUs = get_big_sdu_period_us();
+            params.fmt.isoIntervalUs = get_big_iso_period_us();
             params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
             params.fmt.dec_ch_mode = SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL;
 #elif (SURROUND_SOUND_FIX_ROLE_EN == 0)
@@ -2007,7 +2010,7 @@ int broadcast_audio_all_open(u16 big_hdl)
                 params.fmt.coding_type = SURROUND_SOUND_DUAL_CODEC_TYPE;
                 params.fmt.frame_dms = get_big_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_big_sdu_period_us();
-                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_iso_period_us();
                 params.fmt.sample_rate = SURROUND_SOUND_DUAL_CODEC_SAMPLERATE;
                 if (role == SURROUND_SOUND_RX1_DUAL_L) {
                     params.fmt.dec_ch_mode = 17;
@@ -2020,7 +2023,7 @@ int broadcast_audio_all_open(u16 big_hdl)
                 params.fmt.coding_type = SURROUND_SOUND_MONO_CODEC_TYPE;
                 params.fmt.frame_dms = get_big_audio_coding_frame_duration();
                 params.fmt.sdu_period = get_big_sdu_period_us();
-                params.fmt.isoIntervalUs = get_big_sdu_period_us();
+                params.fmt.isoIntervalUs = get_big_iso_period_us();
                 params.fmt.sample_rate = SURROUND_SOUND_MONO_CODEC_SAMPLERATE;
                 params.fmt.dec_ch_mode = 37;
             } else {

@@ -11,6 +11,7 @@ void iis_key_vol_down(void);
 struct app_mode *app_enter_iis_mode(int arg);
 int iis_app_msg_handler(int *msg);
 u8 iis_get_status(void);
+int iis_volume_set(s16 vol);
 
 #endif
 

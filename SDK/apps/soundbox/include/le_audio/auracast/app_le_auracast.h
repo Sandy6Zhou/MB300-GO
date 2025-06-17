@@ -42,11 +42,6 @@ int auracast_source_media_reset();
 void app_auracast_init(void);
 void app_auracast_uninit(void);
 int app_auracast_open();
-int app_auracast_sink_start_record(void);
-int app_auracast_sink_stop_record(void);
-int app_auracast_sink_switch_source_device(u8 switch_mode); //0:切换设备后不过滤设备；1：切换设备后过滤处理只连接记录的设备
-void app_auracast_sink_discard_record(void);
-u8 get_auracast_switch_onoff(void);
 
 
 typedef enum {
@@ -88,6 +83,9 @@ int app_auracast_sink_scan_start(void);
  * @brief 手机通知设备关闭搜索auracast广播
  */
 int app_auracast_sink_scan_stop(void);
+
+u8 get_auracast_switch_onoff(void);
+
 
 
 #ifdef __cplusplus

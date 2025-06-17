@@ -19,6 +19,8 @@
 #include "uac_stream.h"
 #include "audio_cvp.h"
 #include "volume_node.h"
+#include "tone_player.h"
+#include "app_tone.h"
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 #include "le_broadcast.h"
@@ -327,7 +329,7 @@ static void pc_spk_set_volume(void)
         cfg.bypass = VOLUME_NODE_CMD_SET_VOL;
         cfg.cur_vol = (l_vol + r_vol) / 2;
         int err = jlstream_set_node_param(NODE_UUID_VOLUME_CTRLER, vol_name, (void *)&cfg, sizeof(struct volume_cfg)) ;
-        printf(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
+        log_info(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
     }
     return;
 #endif
@@ -337,7 +339,14 @@ static void pc_spk_set_volume(void)
         uac_speaker_stream_get_volume(&l_vol, &r_vol);
         if (cur_vol != ((l_vol + r_vol) / 2)) {
             app_audio_set_volume(APP_AUDIO_STATE_MUSIC, ((l_vol + r_vol) / 2), 1);
-            printf(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
+            log_info(">>> pc vol: %d", app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
+            if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == app_audio_get_max_volume()) {
+                if (tone_player_runing() == 0) {
+#if TCFG_MAX_VOL_PROMPT
+                    play_tone_file(get_tone_files()->max_vol);
+#endif
+                }
+            }
             app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
         }
     }

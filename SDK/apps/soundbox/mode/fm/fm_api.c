@@ -1068,9 +1068,7 @@ static int get_fm_play_status(void)
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN))) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
     if (__this->fm_local_audio_resume_onoff) {
         __this->fm_dev_mute = 0;
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
@@ -1078,6 +1076,22 @@ static int get_fm_play_status(void)
         __this->fm_dev_mute = 1;
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SUSPEND) {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    }
+#elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
+    if (get_auracast_status() == APP_AURACAST_STATUS_SYNC) {
+        return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+    } else {
+        return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
+    }
+#endif
 #endif
 
     if (__this->fm_dev_mute == 0) {

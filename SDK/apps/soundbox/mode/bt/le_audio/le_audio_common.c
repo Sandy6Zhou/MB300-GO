@@ -11,7 +11,6 @@
 
     *   Copyright:(c)JIELI  2011-2022  @ , All Rights Reserved.
 *********************************************************************************************/
-#include "app_config.h"
 #include "app_main.h"
 #include "audio_base.h"
 #include "wireless_trans.h"
@@ -25,6 +24,7 @@
 #include "classic/tws_event.h"
 #include "classic/tws_api.h"
 #include "bt_tws.h"
+#include "le_audio_common.h"
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
@@ -39,6 +39,13 @@ static int default_rx_le_audio_close(void *rx_audio);
 static int default_tx_le_audio_close(void *rx_audio);
 static void *default_tx_le_audio_open(void *args);
 
+static int le_audio_get_recorded_addr_num(void);
+static int adv_report_macth_addr_add_timeout(void);
+static void adv_report_macth_addr_del_timeout(void);
+static int record_ble_report_mac_addr(u8 *mac_addr);
+
+static inline void le_audio_common_mutex_pend(OS_MUTEX *mutex, u32 line);
+static inline void le_audio_common_mutex_post(OS_MUTEX *mutex, u32 line);
 /**************************************************************************************************
   Extern Global Variables
 **************************************************************************************************/
@@ -63,6 +70,22 @@ const struct le_audio_mode_ops le_audio_default_ops = {
     .rx_le_audio_close = default_rx_le_audio_close,
 };
 
+
+
+#define LE_AUDIO_MAX_RECORD_ADDR_NUM  3
+#define LE_AUDIO_RECORDED_ADDR_WIRTE_VM     0
+#define LE_AUDIO_FILTER_ADDR_TIMEOUT  0*1000L
+
+static u8 le_audio_start_record_addr_flag = 0;
+static u8 le_audio_curr_connect_mac_addr[6];
+static u8 le_audio_last_connect_mac_addr[6];
+static u8 le_audio_record_connect_mac_addr[LE_AUDIO_MAX_RECORD_ADDR_NUM][6];
+static u8 le_audio_mac_addr_filter_mode = 0;
+static u32 le_audio_addr_filter_timeout = 0;
+
+
+static OS_MUTEX mutex;
+static u8 le_audio_common_init_flag;  /*!< 广播初始化标志 */
 /**************************************************************************************************
   Function Declarations
 **************************************************************************************************/
@@ -384,6 +407,417 @@ APP_MSG_HANDLER(le_audio_tws_msg_handler) = {
 };
 #endif
 
+void le_audio_all_restart(void)
+{
+#if (TCFG_LE_AUDIO_APP_CONFIG &  LE_AUDIO_JL_BIS_RX_EN)
+    app_broadcast_close(APP_BROADCAST_STATUS_STOP);
+    app_broadcast_open_with_role(1);
+    return;
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+    app_connected_close_all(APP_CONNECTED_STATUS_STOP);
+    app_connected_open(0);
+    return;
+#endif
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+    app_auracast_sink_close(APP_AURACAST_STATUS_STOP);
+    app_auracast_sink_open();
+    return;
+#endif
+
+}
+
+
+static inline void le_audio_common_mutex_pend(OS_MUTEX *mutex, u32 line)
+{
+
+    int os_ret;
+    os_ret = os_mutex_pend(mutex, 0);
+    if (os_ret != OS_NO_ERR) {
+        printf("%s err, os_ret:0x%x", __FUNCTION__, os_ret);
+        ASSERT(os_ret != OS_ERR_PEND_ISR, "line:%d err, os_ret:0x%x", line, os_ret);
+    }
+}
+
+
+static inline void le_audio_common_mutex_post(OS_MUTEX *mutex, u32 line)
+{
+    int os_ret;
+    os_ret = os_mutex_post(mutex);
+    if (os_ret != OS_NO_ERR) {
+        printf("%s err, os_ret:0x%x", __FUNCTION__, os_ret);
+        ASSERT(os_ret != OS_ERR_PEND_ISR, "line:%d err, os_ret:0x%x", line, os_ret);
+    }
+}
+
+int le_audio_start_record_mac_addr(void)
+{
+
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if ((!get_le_audio_switch_onoff()) || get_le_audio_app_mode_exit_flag()) {
+        return -EPERM;
+    }
+
+
+    if (get_le_audio_curr_role() != BROADCAST_ROLE_RECEIVER) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    le_audio_start_record_addr_flag = 1;
+
+
+#if LE_AUDIO_RECORDED_ADDR_WIRTE_VM
+    for (int i = 0; i < LE_AUDIO_MAX_RECORD_ADDR_NUM; i++) {
+        syscfg_read(VM_WIRELESS_RECORDED_ADDR0 + i, le_audio_record_connect_mac_addr[i], 6);
+    }
+#endif
+
+    u8 temp[6] = {0};
+    if (memcmp(le_audio_curr_connect_mac_addr, temp, 6)) {
+        record_ble_report_mac_addr(le_audio_curr_connect_mac_addr);
+    }
+
+    return 0;
+}
+
+int le_audio_stop_record_mac_addr(void)
+{
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if ((!get_le_audio_switch_onoff()) || get_le_audio_app_mode_exit_flag()) {
+        return -EPERM;
+    }
+
+
+    if (get_le_audio_curr_role() != BROADCAST_ROLE_RECEIVER) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    le_audio_common_mutex_pend(&mutex, __LINE__);
+    if (le_audio_start_record_addr_flag) {
+        le_audio_start_record_addr_flag = 0;
+    }
+
+    if (le_audio_mac_addr_filter_mode) {
+        le_audio_mac_addr_filter_mode = 0;
+    }
+
+    memset(le_audio_last_connect_mac_addr, 0, 6);
+
+    le_audio_common_mutex_post(&mutex, __LINE__);
+
+    return 0;
+
+}
+
+int le_audio_switch_source_device(u8 switch_mode) //0:切换设备后不过滤设备；1：切换设备后过滤处理只连接记录的设备
+{
+    if (!g_bt_hdl.init_ok || app_var.goto_poweroff_flag) {
+        return -EPERM;
+    }
+
+    if ((!get_le_audio_switch_onoff()) || get_le_audio_app_mode_exit_flag()) {
+        return -EPERM;
+    }
+
+
+    if (get_le_audio_curr_role() != BROADCAST_ROLE_RECEIVER) {
+        return -EPERM;
+    }
+
+    struct app_mode *mode = app_get_current_mode();
+    if (mode && (mode->name == APP_MODE_BT) &&
+        (bt_get_call_status() != BT_CALL_HANGUP)) {
+        return -EPERM;
+    }
+
+    u8 temp[6] = {0};
+    u8 recorded_num = 0;
+
+    if (!le_audio_start_record_addr_flag) {
+        le_audio_start_record_mac_addr();
+    }
+
+    recorded_num = le_audio_get_recorded_addr_num();
+    if (!recorded_num) {
+        return -EPERM;
+    }
+
+    le_audio_common_mutex_pend(&mutex, __LINE__);
+    if (recorded_num >= 2 && switch_mode) {
+        le_audio_mac_addr_filter_mode = switch_mode;
+    } else if (switch_mode) {
+        printf("[error]The current number of records is insufficient");
+        le_audio_mac_addr_filter_mode = 0;
+    } else {
+        le_audio_mac_addr_filter_mode = 0;
+    }
+
+    set_curr_ble_filter_adv_addr(le_audio_curr_connect_mac_addr);
+
+    le_audio_common_mutex_post(&mutex, __LINE__);
+
+    le_audio_all_restart();
+
+    return 0;
+}
+
+int ble_resolve_adv_addr_mode(void)
+{
+    return le_audio_mac_addr_filter_mode;
+}
+
+
+void set_curr_ble_connect_addr(u8 *addr)
+{
+    if (!addr) {
+        return;
+    }
+    memcpy(le_audio_curr_connect_mac_addr, addr, 6);
+
+}
+
+
+void set_curr_ble_filter_adv_addr(u8 *filter_addr)
+{
+    if (!filter_addr) {
+        return;
+    }
+    memcpy(le_audio_last_connect_mac_addr, filter_addr, 6);
+
+}
+
+
+void get_curr_ble_filter_adv_addr(u8 *filter_addr)
+{
+    filter_addr = le_audio_last_connect_mac_addr;
+}
+
+
+int get_ble_report_addr_is_recorded(u8 *mac_addr)
+{
+
+    int ret = 0;
+    le_audio_common_mutex_pend(&mutex, __LINE__);
+    for (int i = 0; i < LE_AUDIO_MAX_RECORD_ADDR_NUM; i++) {
+        if (!(memcmp(le_audio_record_connect_mac_addr[i], mac_addr, 6))) {
+            ret = 1;
+        }
+    }
+
+    le_audio_common_mutex_post(&mutex, __LINE__);
+    return ret;
+
+}
+
+
+u8 get_adv_report_addr_filter_start_flag(void)
+{
+    return le_audio_start_record_addr_flag;
+
+}
+
+static int le_audio_get_recorded_addr_num(void)
+{
+
+    int num = 0;
+    u8 temp[6] = {0};
+
+    le_audio_common_mutex_pend(&mutex, __LINE__);
+
+    for (int i = 0; i < LE_AUDIO_MAX_RECORD_ADDR_NUM; i++) {
+        if ((memcmp(le_audio_record_connect_mac_addr[i], temp, 6))) {
+            num++;
+        }
+    }
+    le_audio_common_mutex_post(&mutex, __LINE__);
+
+    return num;
+}
+
+
+
+static int record_ble_report_mac_addr(u8 *mac_addr)
+{
+    int ret = 0;
+    u8 temp[6] = {0};
+    static u8 discard_cnt = 0;
+    int i = 0;
+    if (!mac_addr) {
+        return -EPERM;
+    }
+
+    if (!memcmp(mac_addr, temp, 6)) {
+        return -EPERM;
+    }
+
+
+    for (i = 0; i < LE_AUDIO_MAX_RECORD_ADDR_NUM; i++) {
+        if (!memcmp(mac_addr, le_audio_record_connect_mac_addr[i], 6)) {
+            ret = 1;
+            break;
+        }
+        if ((memcmp(le_audio_record_connect_mac_addr[i], temp, 6))) {
+            memcpy(le_audio_record_connect_mac_addr[i], mac_addr, 6);
+            ret = 2;
+            break;
+        }
+
+    }
+
+    if (i == LE_AUDIO_MAX_RECORD_ADDR_NUM) {
+        printf("reached maxixmum number of records, discard [%d] addr:", discard_cnt);
+        put_buf(le_audio_record_connect_mac_addr[discard_cnt], 6);
+        memcpy(le_audio_record_connect_mac_addr[discard_cnt], mac_addr, 6);
+        i =  discard_cnt;
+        discard_cnt++;
+        discard_cnt = (discard_cnt >= 3) ? 0 : discard_cnt;
+    }
+#if LE_AUDIO_RECORDED_ADDRWIRTE_VM
+    syscfg_write(VM_WIRELESS_RECORDED_ADDR0 + i, le_audio_record_connect_mac_addr[i], 6);
+#endif
+
+    memcpy(le_audio_curr_connect_mac_addr, mac_addr, 6);
+
+    return ret;
+}
+
+void le_audio_discard_recorded_addr(void)
+{
+
+    le_audio_common_mutex_pend(&mutex, __LINE__);
+
+    for (int i = 0; i < LE_AUDIO_MAX_RECORD_ADDR_NUM; i++) {
+        memset(le_audio_record_connect_mac_addr[i], 0, 6);
+#if LE_AUDIO_RECORDED_ADDR_WIRTE_VM
+        syscfg_write(VM_WIRELESS_RECORDED_ADDR0 + i, le_audio_record_connect_mac_addr[i], 6);
+#endif
+    }
+
+    le_audio_mac_addr_filter_mode = 0;
+
+    memset(le_audio_last_connect_mac_addr, 0, 6);
+
+    le_audio_common_mutex_post(&mutex, __LINE__);
+
+}
+
+static void adv_report_macth_addr_timeout(void *priv)
+{
+#if LE_AUDIO_FILTER_ADDR_TIMEOUT
+    memset(le_audio_last_connect_mac_addr, 0, 6);
+
+    le_audio_mac_addr_filter_mode = 0;
+#endif
+}
+
+
+static int adv_report_macth_addr_add_timeout(void)
+{
+#if LE_AUDIO_FILTER_ADDR_TIMEOUT
+    if (!le_audio_addr_filter_timeout) {
+        le_audio_addr_filter_timeout = sys_timeout_add(NULL, adv_report_macth_addr_timeout, LE_AUDIO_FILTER_ADDR_TIMEOUT);
+    }
+#endif
+    return le_audio_addr_filter_timeout;
+}
+
+
+static void  adv_report_macth_addr_del_timeout(void)
+{
+#if LE_AUDIO_FILTER_ADDR_TIMEOUT
+    if (le_audio_addr_filter_timeout) {
+        sys_timeout_del(le_audio_addr_filter_timeout);
+        le_audio_addr_filter_timeout = 0;
+    }
+#endif
+}
+
+
+
+bool ble_adv_report_match_by_addr(u8 *addr)
+{
+
+    bool find_remoter = 0;
+
+    u8 *last_connect_mac_addr = NULL;
+    u8 temp[6] = {0};
+
+
+    if (!get_adv_report_addr_filter_start_flag()) {
+        set_curr_ble_connect_addr(addr);
+        return TRUE;
+    }
+
+    get_curr_ble_filter_adv_addr(last_connect_mac_addr);
+
+    printf("last_connect_addr:\n");
+    put_buf((u8 *)last_connect_mac_addr, 6);
+    printf("curr_mac_addr\n");
+    put_buf(addr, 6);
+
+    if (!memcmp(last_connect_mac_addr, addr, 6)) {
+        adv_report_macth_addr_add_timeout();
+        return FALSE;
+    }
+
+
+    if (ble_resolve_adv_addr_mode()) {
+        find_remoter  = get_ble_report_addr_is_recorded(addr);
+    } else {
+        find_remoter = 1;
+    }
+
+
+
+    if (find_remoter) {
+        adv_report_macth_addr_del_timeout();
+        record_ble_report_mac_addr(addr);
+        return TRUE;
+    } else {
+        adv_report_macth_addr_add_timeout();
+        return FALSE;
+    }
+}
+
+
+void le_audio_common_init(void)
+{
+
+    printf("--func=%s", __FUNCTION__);
+    int ret;
+
+    if (le_audio_common_init_flag) {
+        return;
+    }
+
+    int os_ret = os_mutex_create(&mutex);
+    if (os_ret != OS_NO_ERR) {
+        printf("%s %d err, os_ret:0x%x", __FUNCTION__, __LINE__, os_ret);
+        ASSERT(0);
+    }
+
+    le_audio_common_init_flag = 1;
+}
 #endif
 
 int le_audio_scene_deal(int scene)
@@ -447,7 +881,7 @@ u8 get_le_audio_app_mode_exit_flag()
 }
 
 
-u8 get_le_audio_curr_role() //1:transmitter; 2:recevier
+u8 get_le_audio_curr_role(void) //1:transmitter; 2:recevier
 {
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     return get_broadcast_role();
@@ -469,7 +903,7 @@ u8 get_le_audio_curr_role() //1:transmitter; 2:recevier
 }
 
 
-u8 get_le_audio_switch_onoff() //1:on; 0:off
+u8 get_le_audio_switch_onoff(void) //1:on; 0:off
 {
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     return get_bis_switch_onoff();
@@ -485,6 +919,5 @@ u8 get_le_audio_switch_onoff() //1:on; 0:off
 
     return 0;
 }
-
 
 

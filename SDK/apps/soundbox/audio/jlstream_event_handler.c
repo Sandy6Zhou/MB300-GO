@@ -43,6 +43,7 @@
 #define PIPELINE_UUID_RECODER       0x49EC
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
 #define PIPELINE_UUID_AI_VOICE      0x5475
+#define PIPELINE_UUID_LOUDSPK       0xAD27
 
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
@@ -146,6 +147,10 @@ static int get_pipeline_uuid(const char *name)
             return PIPELINE_UUID_A2DP_DUT;
         }
 #endif
+    }
+
+    if (!strcmp(name, "loudspkiis") || !strcmp(name, "loudspkmic")) {
+        return PIPELINE_UUID_LOUDSPK;
     }
 
     if (!strcmp(name, "ai_voice")) {
@@ -440,7 +445,7 @@ static int tws_switch_get_status()
     if (mode == NULL) { //有可能此时处于模式切换临界情况
         return 0;
     }
-    if (mode->name == APP_MODE_BT || mode->name == APP_MODE_SINK) {
+    if (mode->name == APP_MODE_BT || mode->name == APP_MODE_SINK || local_tws_mode_exit()) {
         return 0;
     } else {
         if (state & TWS_STA_SIBLING_CONNECTED && tws_api_data_trans_connect() && (local_tws_get_role() == LOCAL_TWS_ROLE_SOURCE) && bt_tws_get_state()) {

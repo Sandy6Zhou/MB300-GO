@@ -32,7 +32,7 @@ int spdif_restart_by_taskq(void);
  * @return：0 表示消息发送成功
  * @node:
  */
-int spdif_open_player_by_taskq(void);
+int spdif_open_player_by_taskq(int delay_us);
 
 /*
  * @description: 返回1代表spdif数据流打开了
@@ -47,4 +47,7 @@ int spdif_file_pitch_down();
 int spdif_file_set_pitch(enum _pitch_level pitch_mode);
 
 void spdif_file_pitch_mode_init(enum _pitch_level pitch_mode);
+
+void spdif_open_player(void);
+void spdif_open_le_audio(void);
 #endif

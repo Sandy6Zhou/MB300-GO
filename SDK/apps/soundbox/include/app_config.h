@@ -101,6 +101,7 @@
 #define    HONOR_EN                 (1 << 13)
 #define    ONLINE_DEBUG_EN          (1 << 14)
 #define    CUSTOM_DEMO_EN           (1 << 15)   // 第三方协议的demo，用于示例客户开发自定义协议
+#define    MULTI_CLIENT_EN          (1 << 16)
 
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
 #define THIRD_PARTY_PROTOCOLS_SEL  TCFG_THIRD_PARTY_PROTOCOLS_SEL
@@ -312,6 +313,9 @@
 #undef  TCFG_USER_TWS_ENABLE
 #define TCFG_USER_TWS_ENABLE                      0     //tws功能使能
 
+#undef TCFG_LOCAL_TWS_ENABLE
+#define TCFG_LOCAL_TWS_ENABLE                          0
+
 #undef  TCFG_USER_BLE_ENABLE
 #define TCFG_USER_BLE_ENABLE                      1     //BLE功能使能
 
@@ -327,8 +331,8 @@
 #undef  TCFG_LOWPOWER_LOWPOWER_SEL
 #define TCFG_LOWPOWER_LOWPOWER_SEL                0
 
-#undef TCFG_AUDIO_DAC_LDO_VOLT
-#define TCFG_AUDIO_DAC_LDO_VOLT			   DUT_AUDIO_DAC_LDO_VOLT
+// #undef TCFG_AUDIO_DAC_LDO_VOLT
+// #define TCFG_AUDIO_DAC_LDO_VOLT			   DUT_AUDIO_DAC_LDO_VOLT
 
 #undef TCFG_LOWPOWER_POWER_SEL
 #define TCFG_LOWPOWER_POWER_SEL				PWR_LDO15

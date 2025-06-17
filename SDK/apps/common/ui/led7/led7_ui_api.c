@@ -93,6 +93,9 @@ static const struct ui_dis_api *const ui_dis_main[] = {
 #if TCFG_APP_IIS_EN
     &iis_main,
 #endif
+#if TCFG_APP_LOUDSPEAKER_EN
+    &loudspeaker_main,
+#endif
     &idle_main,
 };
 
@@ -288,20 +291,6 @@ static void ui_strick_loop()
 //=================================================================================//
 static void __ui_menu_reflash_action(u8 break_in)
 {
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    if (get_broadcast_role() && app_get_current_mode()->name == APP_MODE_MUSIC) {
-        if (__ui_display->ui && __ui_display->ui->ui_main) {
-            __ui_display->ui->ui_main(__ui_display->ui_api, __ui_display->private); //刷新主页
-        }
-    }
-#endif
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) && (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX)
-    if (get_auracast_role() && app_get_current_mode()->name == APP_MODE_MUSIC) {
-        if (__ui_display->ui && __ui_display->ui->ui_main) {
-            __ui_display->ui->ui_main(__ui_display->ui_api, __ui_display->private); //刷新主页
-        }
-    }
-#endif
     if (break_in && (__ui_display->this_menu != MENU_MAIN)) {//如果需要打断显示，先判断当前是否主页，不是主页
         if (__ui_display->timeout_cb) {//判断是否有打断显示回调函数，有则告诉应用，当前页面已经被打断
             __ui_display->timeout_cb(__ui_display->this_menu);

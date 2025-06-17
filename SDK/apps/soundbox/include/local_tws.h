@@ -40,6 +40,7 @@ typedef struct _local_tws_info {
     u32 timer;                           //用于音量同步
     void *priv;                          //回调给local_audio_open的参数
     volatile u8 remote_dec_status;       //对方是否开启local_tws_dec
+    u8 local_tws_mode_en;
 } local_tws_info;
 
 struct local_tws_mode_ops {
@@ -69,6 +70,7 @@ void local_tws_vol_operate(u8 operate);
 void local_tws_music_operate(u8 operate, void *arg);
 void local_tws_sync_vol(void);
 u8 local_tws_get_role(void);
+u8 local_tws_mode_exit();
 
 #endif
 

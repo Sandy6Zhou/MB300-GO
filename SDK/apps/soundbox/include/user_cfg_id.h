@@ -51,6 +51,10 @@
 
 #define     CFG_DACLDO_TRIM                  31//保存DACLDO配置参数id
 
+#define     VM_WIRELESS_RECORDED_ADDR0       32
+#define     VM_WIRELESS_RECORDED_ADDR1       33
+#define     VM_WIRELESS_RECORDED_ADDR2       34
+
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49
 #define     CFG_RCSP_ADV_HIGH_LOW_VOL        50
@@ -66,10 +70,6 @@
 //=================================================================================//
 //                             用户自定义配置项 暂时只能使用 [1 ~ 49]                            //
 //=================================================================================//
-
-#define     VM_WIRELESS_RECORDED_ADDR0        31
-#define     VM_WIRELESS_RECORDED_ADDR1        32
-#define     VM_WIRELESS_RECORDED_ADDR2        33
 
 
 #endif /* #ifndef _USER_CFG_ID_H_ */

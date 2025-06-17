@@ -569,9 +569,13 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
         aec_param->agc_en = 0;
 
         /*AEC*/
-        aec_param->EnableBit = AEC_EN;
         aec_param->AEC_DT_AggressiveFactor = 4.f;	/*范围：1~5，越大追踪越好，但会不稳定,如破音*/
         aec_param->AEC_RefEngThr = -70.f;
+
+        /*NLP*/
+        aec_param->ES_AggressFactor = -3.0f; /*-5~ -1 越小越强*/
+        aec_param->ES_MinSuppress = 4.f;/*0`10 越大越强*/
+
     }
 #endif // TCFG_SMART_VOICE_USE_AEC
 
@@ -751,13 +755,17 @@ u8 audio_aec_status(void)
 *                  Audio AEC Input
 * Description: AEC源数据输入
 * Arguments  : buf	输入源数据地址
-*			   len	输入源数据长度
+*			   len	输入源数据长度(Byte)
 * Return	 : None.
 * Note(s)    : 输入一帧数据，唤醒一次运行任务处理数据，默认帧长256点
 *********************************************************************
 */
 void audio_aec_inbuf(s16 *buf, u16 len)
 {
+    if (len != 512) {
+        printf("[error] aec point fault\n"); //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+    }
+
     if (aec_hdl && aec_hdl->start) {
         if (aec_hdl->input_clear) {
             memset(buf, 0, len);

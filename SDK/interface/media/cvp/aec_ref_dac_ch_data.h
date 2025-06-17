@@ -19,5 +19,7 @@ void aec_ref_dac_ch_data_clear(void);
 
 void set_aec_ref_dac_ch_name(char name[16]);
 u8 is_aec_ref_dac_ch(struct audio_dac_channel *dac_ch);
+u32 aec_ref_dac_ch_data_size_get(void);
+u32 aec_ref_dac_ch_data_total_size_get(void);
 
 #endif
