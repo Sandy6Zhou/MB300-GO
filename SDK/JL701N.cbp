@@ -169,7 +169,6 @@
 <Add directory="apps/common/third_party_profile/swift_pair" />
 <Add directory="apps/common/third_party_profile/gfps_protocol" />
 <Add directory="apps/common/third_party_profile/custom_protocol_demo" />
-<Add directory="apps/common/third_party_profile/multi_ble_clinet" />
 <Add directory="interface/utils/apple_dock" />
 <Add directory="apps/common/cJSON" />
 <Add directory="interface/btstack" />
@@ -818,8 +817,6 @@
 <Unit filename="apps/common/third_party_profile/jieli/trans_data_demo/le_trans_data.h" />
 <Unit filename="apps/common/third_party_profile/jieli/trans_data_demo/spp_trans_data.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/jieli/trans_data_demo/spp_trans_data.h" />
-<Unit filename="apps/common/third_party_profile/multi_ble_client/ble_multi_client.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/common/third_party_profile/multi_ble_client/ble_multi_client.h" />
 <Unit filename="apps/common/third_party_profile/multi_protocol_common.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/multi_protocol_event.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/multi_protocol_main.c"><Option compilerVer="CC"/></Unit>
@@ -919,7 +916,6 @@
 <Unit filename="apps/soundbox/include/linein.h" />
 <Unit filename="apps/soundbox/include/linein_dev.h" />
 <Unit filename="apps/soundbox/include/local_tws.h" />
-<Unit filename="apps/soundbox/include/loudspeaker.h" />
 <Unit filename="apps/soundbox/include/low_latency.h" />
 <Unit filename="apps/soundbox/include/mic.h" />
 <Unit filename="apps/soundbox/include/mic_effect.h" />
@@ -983,8 +979,6 @@
 <Unit filename="apps/soundbox/mode/bt/dual_conn.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/kws_voice_event_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/bt/le_audio/auracast/le_auracast_config.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/bt/le_audio/auracast/le_auracast_config.h" />
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c"><Option compilerVer="CC"/></Unit>
@@ -1027,11 +1021,6 @@
 <Unit filename="apps/soundbox/mode/local_tws/local_tws.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/local_tws/sink.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/local_tws/sink_key_msg_table.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/loudspeaker/loudspeaker.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/loudspeaker/loudspeaker_api.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/loudspeaker/loudspeaker_app_msg_handler.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/loudspeaker/loudspeaker_key_msg_table.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/soundbox/mode/loudspeaker/ui_loudspeaker.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/mic/mic.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/mic/mic_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/soundbox/mode/mic/mic_app_msg_handler.c"><Option compilerVer="CC"/></Unit>
@@ -1338,8 +1327,6 @@
 <Unit filename="audio/interface/include/le_audio_recorder.h" />
 <Unit filename="audio/interface/include/linein_player.h" />
 <Unit filename="audio/interface/include/local_tws_player.h" />
-<Unit filename="audio/interface/include/loudspeaker_iis_player.h" />
-<Unit filename="audio/interface/include/loudspeaker_mic_player.h" />
 <Unit filename="audio/interface/include/mic_player.h" />
 <Unit filename="audio/interface/include/pc_mic_recoder.h" />
 <Unit filename="audio/interface/include/pc_spk_player.h" />
@@ -1358,8 +1345,6 @@
 <Unit filename="audio/interface/player/le_audio_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/linein_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/local_tws_player.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="audio/interface/player/loudspeaker_iis_player.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="audio/interface/player/loudspeaker_mic_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/mic_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/pc_spk_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/reference_time.c"><Option compilerVer="CC"/></Unit>
@@ -1416,6 +1401,8 @@
 <Unit filename="cpu/br28/periph/mcpwm.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br28/periph/rdec.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br28/periph/touch/lp_touch_key.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="cpu/br28/periph/touch/lp_touch_key_range_algo.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="cpu/br28/periph/touch/lp_touch_key_tool.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br28/periph/touch/lpctmu_hw.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br28/periph/touch/plcnt.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br28/power/key_wakeup.c"><Option compilerVer="CC"/></Unit>
@@ -1511,10 +1498,12 @@
 <Unit filename="interface/driver/cpu/br28/asm/gpio_hw.h" />
 <Unit filename="interface/driver/cpu/br28/asm/gptimer_hw.h" />
 <Unit filename="interface/driver/cpu/br28/asm/hwi.h" />
+<Unit filename="interface/driver/cpu/br28/asm/includes.h" />
 <Unit filename="interface/driver/cpu/br28/asm/io_imap.h" />
 <Unit filename="interface/driver/cpu/br28/asm/io_omap.h" />
 <Unit filename="interface/driver/cpu/br28/asm/irq.h" />
 <Unit filename="interface/driver/cpu/br28/asm/lp_touch_key_api.h" />
+<Unit filename="interface/driver/cpu/br28/asm/lp_touch_key_range_algo.h" />
 <Unit filename="interface/driver/cpu/br28/asm/lp_touch_key_tool.h" />
 <Unit filename="interface/driver/cpu/br28/asm/lpctmu_hw.h" />
 <Unit filename="interface/driver/cpu/br28/asm/mcpwm.h" />
@@ -1538,6 +1527,7 @@
 <Unit filename="interface/driver/cpu/br28/asm/power_interface.h" />
 <Unit filename="interface/driver/cpu/br28/asm/psram_api.h" />
 <Unit filename="interface/driver/cpu/br28/asm/rdec.h" />
+<Unit filename="interface/driver/cpu/br28/asm/rtc.h" />
 <Unit filename="interface/driver/cpu/br28/asm/sdmmc.h" />
 <Unit filename="interface/driver/cpu/br28/asm/sfc_norflash_api.h" />
 <Unit filename="interface/driver/cpu/br28/asm/sfc_spi.h" />
@@ -1560,8 +1550,6 @@
 <Unit filename="interface/driver/cpu/periph/ir_decoder.h" />
 <Unit filename="interface/driver/cpu/periph/ir_encoder.h" />
 <Unit filename="interface/driver/cpu/periph/led_api.h" />
-<Unit filename="interface/driver/cpu/periph/lp_touch_key_common.h" />
-<Unit filename="interface/driver/cpu/periph/lp_touch_key_range_algo.h" />
 <Unit filename="interface/driver/cpu/periph/pwm_led.h" />
 <Unit filename="interface/driver/cpu/periph/pwm_led_debug.h" />
 <Unit filename="interface/driver/cpu/periph/rdec_soft.h" />

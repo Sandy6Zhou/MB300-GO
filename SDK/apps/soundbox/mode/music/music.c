@@ -375,7 +375,7 @@ static void music_player_play_success(void *priv, int parm)
     if (music_file_name) {
         free(music_file_name);
     }
-    music_save_breakpoint(1);
+    music_save_breakpoint(0);
     app_send_message2(APP_MSG_MUSIC_FILE_NUM_CHANGED, __this->player_hd->fsn->file_counter, __this->player_hd->fsn->file_number);
     app_send_message(APP_MSG_MUSIC_PLAY_SUCCESS, 0);
 
@@ -437,28 +437,16 @@ void scandisk_msg_push(int *msg, u32 len)
 int scandisk_msg_pop(int *msg, int len)
 {
     scandisk_msg *pop;
-    while (1) {
-        if (music_idle_flag || list_empty(&scandisk_msg_head)) {
-            return 0;
-        } else {
-            pop = list_first_entry(&scandisk_msg_head,
-                                   scandisk_msg, entry);
-            list_del(&pop->entry);
-            memcpy(msg, pop->msg, len);
-            free(pop);
-            g_printf("scandisk msg pop! %x\n", msg[0]);
-            const struct app_msg_handler *handler;
-            int abandon = 0;
-            for_each_app_msg_prob_handler(handler) {
-                if (handler->from == msg[0]) {
-                    abandon = handler->handler(msg + 1);
-                    if (abandon) {
-                        continue;
-                    }
-                }
-            }
-            return 1;
-        }
+    if (music_idle_flag || list_empty(&scandisk_msg_head)) {
+        return 0;
+    } else {
+        pop = list_first_entry(&scandisk_msg_head,
+                               scandisk_msg, entry);
+        list_del(&pop->entry);
+        memcpy(msg, pop->msg, len);
+        free(pop);
+        g_printf("scandisk msg pop! %x\n", msg[0]);
+        return 1;
     }
 }
 //*----------------------------------------------------------------------------*/
@@ -859,14 +847,11 @@ int music_device_msg_handler(int *msg)
 
 struct app_mode *app_enter_music_mode(int arg)
 {
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-    int msg[32];
-#else
     int msg[16];
-#endif
     struct app_mode *next_mode;
 
     app_music_init();
+
     while (1) {
         if (scandisk_msg_pop(msg, ARRAY_SIZE(msg)) == 0) {       /*先从扫盘记录消息中获取msg*/
             if (!app_get_message(msg, ARRAY_SIZE(msg), music_mode_key_table)) {

@@ -47,7 +47,4 @@ int spdif_file_pitch_down();
 int spdif_file_set_pitch(enum _pitch_level pitch_mode);
 
 void spdif_file_pitch_mode_init(enum _pitch_level pitch_mode);
-
-void spdif_open_player(void);
-void spdif_open_le_audio(void);
 #endif

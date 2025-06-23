@@ -46,9 +46,6 @@ enum CTMU_M2P_CMD {
     REQUEST_LPCTMU_IRQ = 0x50,
     REQUEST_LPTMR_IRQ,
     RESET_IDENTIFY_ALGO,
-    RESET_IDENTIFY_ALGO_WITH_TRIM,
-    REQUEST_LPCTMU_RES_TRIM,
-    RESET_EARTCH_STATE,
 };
 
 enum lpctmu_wakeup_cfg {
@@ -70,7 +67,6 @@ struct lpctmu_platform_data {
 struct lpctmu_config_data {
     u8 ch_num;
     u8 ch_list[LPCTMU_CHANNEL_SIZE];
-    u8 ch_fixed_isel[LPCTMU_CHANNEL_SIZE];
     u8 ch_en;
     u8 ch_wkp_en;
     u8 softoff_wakeup_cfg;

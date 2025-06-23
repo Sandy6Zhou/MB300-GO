@@ -62,7 +62,7 @@ static int app_iis_init(void)
 
     tone_player_stop();
 
-    iis_volume_set(app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
+    iis_volume_set(app_audio_get_volume(APP_AUDIO_CURRENT_STATE));
 #if TCFG_LOCAL_TWS_ENABLE
     ret = local_tws_enter_mode(get_tone_files()->iis_mode, NULL);
 #endif //TCFG_LOCAL_TWS_ENABLE
@@ -93,11 +93,7 @@ static int app_iis_init(void)
 
 struct app_mode *app_enter_iis_mode(int arg)
 {
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-    int msg[32];
-#else
     int msg[16];
-#endif
     struct app_mode *next_mode;
 
     app_iis_init();

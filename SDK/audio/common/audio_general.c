@@ -410,12 +410,6 @@ const int audio_crossover_3band_enable       = 1;
 const int const_audio_howling_ahs_ref_src_type = 1; //0:不使能参考数据变采样，1:软件src，2:硬件src
 const int const_audio_howling_ahs_data_export = 0;  //数据写卡导出，需要使能AUDIO_DATA_EXPORT_VIA_UART，串口写卡工具配置3通道，每通道512byte
 /*
- * ahs算法所处的数据流输入为iis，输出为dac时需要使能。
- * 由于src输入输出buffer复用问题，建议采样率配置:iis(16k)->dac(32k/48k)。
- */
-const int const_audio_howling_ahs_iis_in_dac_out = 0;
-
-/*
  * 某些算法参数更新需要重新申请buffer，
  * 为防止重新申请时内存不足导致异常，
  * 此处设置需要保留的内存大小，

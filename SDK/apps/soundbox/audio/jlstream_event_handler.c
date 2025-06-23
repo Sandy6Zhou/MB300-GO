@@ -43,7 +43,6 @@
 #define PIPELINE_UUID_RECODER       0x49EC
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
 #define PIPELINE_UUID_AI_VOICE      0x5475
-#define PIPELINE_UUID_LOUDSPK       0xAD27
 
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
@@ -147,10 +146,6 @@ static int get_pipeline_uuid(const char *name)
             return PIPELINE_UUID_A2DP_DUT;
         }
 #endif
-    }
-
-    if (!strcmp(name, "loudspkiis") || !strcmp(name, "loudspkmic")) {
-        return PIPELINE_UUID_LOUDSPK;
     }
 
     if (!strcmp(name, "ai_voice")) {

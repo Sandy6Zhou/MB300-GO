@@ -243,7 +243,6 @@ INCLUDES := \
 	-Iapps/common/third_party_profile/swift_pair \
 	-Iapps/common/third_party_profile/gfps_protocol \
 	-Iapps/common/third_party_profile/custom_protocol_demo \
-	-Iapps/common/third_party_profile/multi_ble_clinet \
 	-Iinterface/utils/apple_dock \
 	-Iapps/common/cJSON \
 	-Iinterface/btstack \
@@ -540,7 +539,6 @@ c_SRC_FILES := \
 	apps/common/third_party_profile/jieli/rcsp/server/rcsp_data_respone.c \
 	apps/common/third_party_profile/jieli/trans_data_demo/le_trans_data.c \
 	apps/common/third_party_profile/jieli/trans_data_demo/spp_trans_data.c \
-	apps/common/third_party_profile/multi_ble_client/ble_multi_client.c \
 	apps/common/third_party_profile/multi_protocol_common.c \
 	apps/common/third_party_profile/multi_protocol_event.c \
 	apps/common/third_party_profile/multi_protocol_main.c \
@@ -607,7 +605,6 @@ c_SRC_FILES := \
 	apps/soundbox/mode/bt/dual_conn.c \
 	apps/soundbox/mode/bt/kws_voice_event_deal.c \
 	apps/soundbox/mode/bt/le_audio/auracast/app_le_auracast.c \
-	apps/soundbox/mode/bt/le_audio/auracast/le_auracast_config.c \
 	apps/soundbox/mode/bt/le_audio/big/app_le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast.c \
 	apps/soundbox/mode/bt/le_audio/big/le_broadcast_config.c \
@@ -650,11 +647,6 @@ c_SRC_FILES := \
 	apps/soundbox/mode/local_tws/local_tws.c \
 	apps/soundbox/mode/local_tws/sink.c \
 	apps/soundbox/mode/local_tws/sink_key_msg_table.c \
-	apps/soundbox/mode/loudspeaker/loudspeaker.c \
-	apps/soundbox/mode/loudspeaker/loudspeaker_api.c \
-	apps/soundbox/mode/loudspeaker/loudspeaker_app_msg_handler.c \
-	apps/soundbox/mode/loudspeaker/loudspeaker_key_msg_table.c \
-	apps/soundbox/mode/loudspeaker/ui_loudspeaker.c \
 	apps/soundbox/mode/mic/mic.c \
 	apps/soundbox/mode/mic/mic_api.c \
 	apps/soundbox/mode/mic/mic_app_msg_handler.c \
@@ -886,8 +878,6 @@ c_SRC_FILES := \
 	audio/interface/player/le_audio_player.c \
 	audio/interface/player/linein_player.c \
 	audio/interface/player/local_tws_player.c \
-	audio/interface/player/loudspeaker_iis_player.c \
-	audio/interface/player/loudspeaker_mic_player.c \
 	audio/interface/player/mic_player.c \
 	audio/interface/player/pc_spk_player.c \
 	audio/interface/player/reference_time.c \
@@ -931,6 +921,8 @@ c_SRC_FILES := \
 	cpu/br28/periph/mcpwm.c \
 	cpu/br28/periph/rdec.c \
 	cpu/br28/periph/touch/lp_touch_key.c \
+	cpu/br28/periph/touch/lp_touch_key_range_algo.c \
+	cpu/br28/periph/touch/lp_touch_key_tool.c \
 	cpu/br28/periph/touch/lpctmu_hw.c \
 	cpu/br28/periph/touch/plcnt.c \
 	cpu/br28/power/key_wakeup.c \

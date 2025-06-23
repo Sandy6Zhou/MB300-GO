@@ -520,7 +520,7 @@ int music_app_msg_handler(int *msg)
             break;
         }
 
-        if (!get_le_audio_curr_role() || dev_manager_get_total(1)) {
+        if (!get_le_audio_curr_role()) {
             if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
                 err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
             } else {

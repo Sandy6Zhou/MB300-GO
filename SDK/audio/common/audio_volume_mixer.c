@@ -45,7 +45,7 @@
 #endif
 
 #include "le_audio_player.h"
-#include "loudspeaker_iis_player.h"
+
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
@@ -789,17 +789,7 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
                 printf("vol_name:%d,%s\n", __LINE__, node_name);
                 break;
 #endif
-#if TCFG_APP_LOUDSPEAKER_EN
-            case APP_MODE_LOUDSPEAKER:
-                if (loudspeaker_iis_player_runing()) {
-                    sprintf(node_name, "%s", "Vol_SPK_IIS");
-                } else {
-                    sprintf(node_name, "%s", "Vol_SPK_MIC");
-                }
 
-                printf("vol_name:%d,%s\n", __LINE__, node_name);
-                break;
-#endif
 
             case APP_MODE_IDLE:
                 sprintf(node_name, "%s%s", "Vol_Sys", dvol_type[i]);

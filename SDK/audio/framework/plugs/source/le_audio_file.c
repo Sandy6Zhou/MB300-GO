@@ -25,7 +25,8 @@ struct le_audio_file_handle {
     int play_latency;
     u16 timer;
     u8 ble_to_local_time;
-    u8 ble_to_local_id;
+    u32 le_audio_time;
+    u32 local_time;
 };
 
 struct le_audio_file_params {
@@ -88,7 +89,11 @@ static enum stream_node_state le_audio_get_frame(void *file, struct stream_frame
 
     memcpy(frame->data, le_audio_frame->data, le_audio_frame->len);
     if (hdl->ble_to_local_time) {
-        le_audio_frame->timestamp = le_audio_ble_to_local_time(hdl->ble_to_local_id, le_audio_frame->timestamp);
+        u32 rx_local_timestamp = hdl->local_time + ((le_audio_frame->timestamp - hdl->le_audio_time) & 0xfffffff);
+        hdl->local_time = rx_local_timestamp;
+        hdl->le_audio_time = le_audio_frame->timestamp;
+        le_audio_frame->timestamp = rx_local_timestamp;
+        /* printf("=%u %u %u=\n",hdl->local_time,hdl->le_audio_time,rx_local_timestamp); */
     }
     /*put_buf(frame->data, 16);*/
     frame->len = le_audio_frame->len;
@@ -166,17 +171,17 @@ static int le_audio_file_start(struct le_audio_file_handle *hdl)
     hdl->start = 1;
     int err = stream_node_ioctl(hdl->node, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SYNCTS, 0);
     if (err) {
-        err = stream_node_ioctl(hdl->node, NODE_UUID_PLAY_SYNC, NODE_IOC_SYNCTS, 0);
-        if (err) {
-            return 0;
-        }
+        return 0;
     }
     hdl->timestamp_enable = 1;
     if (!hdl->reference) {
         hdl->reference = audio_reference_clock_select(hdl->file, 2);
     }
     if (hdl->ble_to_local_time) {
-        hdl->ble_to_local_id = le_audio_ble_to_local_time_init();
+        local_irq_disable();
+        hdl->local_time = audio_jiffies_usec();
+        hdl->le_audio_time = bb_le_clk_get_time_us();
+        local_irq_enable();
     }
 
 
@@ -218,9 +223,6 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
     case NODE_IOC_STOP:
         if (hdl->reference) {
             audio_reference_clock_exit(hdl->reference);
-        }
-        if (hdl->ble_to_local_time) {
-            le_audio_ble_to_local_time_close(hdl->ble_to_local_id);
         }
         hdl->reference = 0;
         le_audio_file_stop(hdl);

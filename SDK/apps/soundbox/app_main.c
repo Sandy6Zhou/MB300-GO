@@ -42,7 +42,6 @@
 #include "trim.h"
 #include "iis.h"
 #include "mic.h"
-#include "loudspeaker.h"
 #include "dev_manager.h"
 #include "app_mode_update.h"
 #include "sdfile.h"
@@ -759,13 +758,6 @@ static void app_task_loop(void *p)
             mode = app_enter_sink_mode(g_mode_switch_arg);
 #endif
             break;
-
-#if TCFG_APP_LOUDSPEAKER_EN
-        case APP_MODE_LOUDSPEAKER:
-            mode = app_enter_loudspeaker_mode(g_mode_switch_arg);
-            break;
-
-#endif
         default:
             break;
         }

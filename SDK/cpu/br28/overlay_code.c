@@ -4,7 +4,7 @@
 #pragma const_seg(".overlay_code.text.const")
 #pragma code_seg(".overlay_code.text")
 #endif
-#include "cpu/includes.h"
+#include "asm/includes.h"
 #include "media/includes.h"
 #include "overlay_code.h"
 

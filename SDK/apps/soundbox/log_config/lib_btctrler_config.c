@@ -389,9 +389,8 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_hw_nums = 5;
 #endif
 #endif
-
     const int config_btctler_le_roles    = (LE_MASTER | LE_SLAVE | LE_ADV | LE_SCAN);
-    const uint64_t config_btctler_le_features = LE_ENCRYPTION | LL_FEAT_ISO_BROADCASTER | LE_DATA_PACKET_LENGTH_EXTENSION| LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING |  LL_FEAT_LE_EXT_ADV;
+    const uint64_t config_btctler_le_features = LL_FEAT_ISO_BROADCASTER | LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING;
     const int config_btctler_le_rx_nums = 20;
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
@@ -423,9 +422,6 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_roles    = (LE_MASTER | LE_SCAN);
         const uint64_t config_btctler_le_features = LE_FEATURES_BIS|LE_CORE_V50_FEATURES;
-    #elif (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
-        const int config_btctler_le_roles    = (LE_MASTER | LE_INIT| LE_SCAN | LE_SLAVE  | LE_ADV);
-        const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES;
     #else
         const int config_btctler_le_roles    = (LE_SLAVE  | LE_ADV);
         const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES;

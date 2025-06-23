@@ -3,8 +3,6 @@
 
 #include "typedef.h"
 
-#define AURACAST_SOURCE_API_VERSION    (20250530)
-
 /****
 | sampling_frequency| variant  | 采样率 | 帧间隔(us) | 包长(字节) | 码率(kbps) | 重发次数 |
 | ----------------- | -------- | ------ | ---------- | -----------| -----------| -------- |
@@ -30,7 +28,6 @@ typedef struct {
     uint8_t broadcast_code[16];
     char    broadcast_name[33];         // 长度要求 4 byte 到 32 byte
     uint32_t broadcast_id;              // 24 bits
-    uint32_t presentation_delay_us;     // us
     uint8_t PBP_adv_en;                 // 拓展广播 UUID 0x1856 字段使能
 } auracast_user_config_t;
 
@@ -56,7 +53,7 @@ typedef struct {
 
 typedef void (*auracast_source_event_callback_t)(uint16_t event, uint8_t *packet, uint16_t length);
 
-extern int auracast_source_init(u32 version);
+extern int auracast_source_init();
 extern void auracast_source_config(auracast_user_config_t *param);      // 用户配置一定要设置才能正常工作
 extern void auracast_source_advanced_config(auracast_advanced_config_t *param);   // 高级配置只有特殊需求才需要配置，默认不需要配置
 extern void auracast_source_event_callback_register(auracast_source_event_callback_t callback);

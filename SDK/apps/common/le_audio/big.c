@@ -68,14 +68,6 @@ static int big_tx_ioctrl(int op, ...)
         big_tx_ops.exit_pair((uint8_t)va_arg(argptr, int));
         break;
 
-    case WIRELESS_DEV_OP_GET_PAIR_CODE:
-        big_tx_ops.get_pair_code((uint8_t *)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
-        break;
-
-    case WIRELESS_DEV_OP_SET_PAIR_CODE:
-        big_tx_ops.set_pair_code((uint8_t *)va_arg(argptr, int));
-        break;
-
     default :
         break;
     }

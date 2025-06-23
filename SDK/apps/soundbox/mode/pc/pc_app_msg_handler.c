@@ -216,15 +216,11 @@ static int get_pc_play_status(void)
     }
 #endif
 #endif
-#if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
     if (pc_get_status()) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
-#else
-    return LOCAL_AUDIO_PLAYER_STATUS_STOP;
-#endif
 }
 
 static int pc_local_audio_open(void)

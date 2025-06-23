@@ -308,9 +308,7 @@ void uac_mute_volume(u32 type, u32 l_vol, u32 r_vol)
             return;
         }
         last_mic_vol = l_vol;
-#if TCFG_USB_SLAVE_AUDIO_MIC_ENABLE
         pc_mic_set_volume_by_taskq(l_vol);
-#endif
         break;
     case SPK_FEATURE_UNIT_ID: //SPK
         /* if (speaker_stream_is_open == 0) { */
@@ -324,7 +322,7 @@ void uac_mute_volume(u32 type, u32 l_vol, u32 r_vol)
 
         //TODO
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        log_info(">> PC, r_vol:%d, l_vol:%d\n", r_vol, l_vol);
+        printf(">> PC, r_vol:%d, l_vol:%d\n", r_vol, l_vol);
         /* app_audio_set_volume(APP_AUDIO_STATE_MUSIC, (r_vol + l_vol) / 2, 1); */
         pcspk_set_volume_by_taskq();
 #endif

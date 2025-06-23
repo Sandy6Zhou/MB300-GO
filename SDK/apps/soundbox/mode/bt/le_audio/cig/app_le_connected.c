@@ -1181,10 +1181,6 @@ int app_connected_deal(int scene)
 
     switch (scene) {
     case LE_AUDIO_APP_MODE_ENTER:
-        if (!connected_app_mode_exit) {
-            log_error("app_connected_deal,scene has entered");
-            break;
-        }
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
         connected_app_mode_exit = 0;
@@ -1200,10 +1196,6 @@ int app_connected_deal(int scene)
         }
         break;
     case LE_AUDIO_APP_MODE_EXIT:
-        if (connected_app_mode_exit) {
-            log_error("app_connected_deal,scene has exited");
-            break;
-        }
         log_info("LE_AUDIO_APP_MODE_EXIT");
         //退出当前模式
         connected_app_mode_exit = 1;

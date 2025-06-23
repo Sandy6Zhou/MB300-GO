@@ -3,8 +3,6 @@
 
 #include "typedef.h"
 
-#define AURACAST_SINK_API_VERSION    (20250605)
-
 // max config
 #define MAX_NUM_BIS 2
 #define NO_PAST_MAX_BASS_NUM_SOURCES 5
@@ -36,9 +34,6 @@ typedef struct {
     uint8_t Num_BIS;
     uint8_t BIS[8];
     uint16_t Connection_Handle[2];
-    uint32_t presentation_delay_us;
-    uint8_t *adv_data;
-    uint16_t adv_data_len;
     uint8_t bn;
 } auracast_sink_source_info_t;
 
@@ -80,7 +75,7 @@ enum {
 
 typedef void (*auracast_sink_event_callback_t)(uint16_t event, uint8_t *packet, uint16_t length);
 
-extern int auracast_sink_init(u32 version);
+extern int auracast_sink_init(void);
 extern int auracast_sink_uninit(void);
 extern int auracast_sink_scan_start(void);
 extern int auracast_sink_scan_stop(void);
@@ -99,7 +94,6 @@ typedef enum {
     BASS_SERVER_EVENT_SOURCE_ADDED,
     BASS_SERVER_EVENT_SOURCE_MODIFIED,
     BASS_SERVER_EVENT_SOURCE_DELETED,
-    BASS_SERVER_EVENT_BROADCAST_CODE,
 } bass_server_event_t;
 
 // pa_sync_state
@@ -131,7 +125,6 @@ struct le_audio_bass_add_source_info_t {
 typedef int (*le_audio_bass_server_event_callback_t)(uint8_t event, uint8_t *packet, uint16_t size);
 extern void le_audio_bass_event_callback_register(le_audio_bass_server_event_callback_t callback);
 
-
 typedef enum {
     BASS_PA_SYNC_STATE_NOT_SYNCHRONIZED_TO_PA = 0x00,
     BASS_PA_SYNC_STATE_SYNCINFO_REQUEST,
@@ -141,15 +134,7 @@ typedef enum {
     BASS_PA_SYNC_STATE_RFU
 } bass_pa_sync_state_t;
 
-typedef enum {
-    BASS_BIG_ENCRYPTION_NOT_ENCRYPTED = 0x00,
-    BASS_BIG_ENCRYPTION_BROADCAST_CODE_REQUIRED,
-    BASS_BIG_ENCRYPTION_DECRYPTING,
-    BASS_BIG_ENCRYPTION_BAD_CODE,
-    BASS_BIG_ENCRYPTION_RFU
-} bass_big_encryption_t;
-
-extern void le_audio_bass_notify_pa_sync_state(u8 id, u8 pa_sync_state, u8 big_encryption, u32 bis_sync_state);
+extern void le_audio_bass_notify_pa_sync_state(u8 id, u8 pa_sync_state);
 
 
 #endif /* __AURACAST_SINK_API_H__ */

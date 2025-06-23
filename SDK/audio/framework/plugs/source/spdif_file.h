@@ -135,7 +135,6 @@ extern int spdif_le_audio_music_stop_by_taskq(void);
 
 void spdif_stream_start(void);
 void spdif_stream_stop(void);
-void spdif_stream_run_open_player(void);
 
 #endif
 

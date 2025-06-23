@@ -109,7 +109,6 @@ extern const int virtual_bass_pro_soft_crossover;
 extern const int audio_effect_realloc_reserve_mem;
 extern const int const_audio_howling_ahs_ref_src_type;
 extern const int const_audio_howling_ahs_data_export;
-extern const int const_audio_howling_ahs_iis_in_dac_out;
 
 /*
  *******************************************************************

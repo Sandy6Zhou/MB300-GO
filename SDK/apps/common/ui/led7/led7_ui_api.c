@@ -93,9 +93,6 @@ static const struct ui_dis_api *const ui_dis_main[] = {
 #if TCFG_APP_IIS_EN
     &iis_main,
 #endif
-#if TCFG_APP_LOUDSPEAKER_EN
-    &loudspeaker_main,
-#endif
     &idle_main,
 };
 

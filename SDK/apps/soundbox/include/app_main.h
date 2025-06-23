@@ -129,7 +129,6 @@ enum app_mode_t {
     APP_MODE_MIC,
     APP_MODE_SINK,
     APP_MODE_SURROUND_SOUND,
-    APP_MODE_LOUDSPEAKER,
     APP_MODE_NULL,
 };
 
@@ -145,7 +144,6 @@ enum app_mode_index {
     APP_MODE_IIS_INDEX,
     APP_MODE_SURROUND_SOUND_INDEX,
     APP_MODE_MIC_INDEX,
-    APP_MODE_LOUDSPEAKER_INDEX,
 };
 
 #define earphone (&bt_user_priv_var)

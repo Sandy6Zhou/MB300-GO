@@ -503,7 +503,7 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
 #endif
     }
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
-    if (hdl->scene == STREAM_SCENE_MIC_EFFECT || hdl->scene == STREAM_SCENE_LOUDSPEAKER_MIC) {
+    if (hdl->scene == STREAM_SCENE_MIC_EFFECT) {
         if (audio_ahs_status()) {
             howling_ahs_read_ref_data();
         }
@@ -661,7 +661,6 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #endif
         break;
 #endif/*WIRELESS_MIC_PRODUCT_MODE*/
-    case STREAM_SCENE_LOUDSPEAKER_MIC:
     case STREAM_SCENE_MIC_EFFECT:
         u32 mic_eff_sr = 44100;
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)

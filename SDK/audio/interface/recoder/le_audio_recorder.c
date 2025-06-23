@@ -1069,26 +1069,14 @@ int le_audio_wireless_mic_tx_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_dvol_mute(bool mute)
 {
-    static u8 volume_before_muting = 0;
-
     if (mute) {
         //mute
         g_le_audio_tx_vol.mute = 1;
-        volume_before_muting = g_le_audio_tx_vol.dvol;
-        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
-            printf("volume_before_muting %d record error", volume_before_muting);
-            volume_before_muting = g_le_audio_tx_vol.max_dvol;
-        }
         le_audio_wireless_mic_tx_set_dvol(0, mute);
     } else {
         //unmute
+        le_audio_wireless_mic_tx_set_dvol(0, mute);
         g_le_audio_tx_vol.mute = 0;
-        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
-            printf("volume_before_muting %d record error", volume_before_muting);
-            volume_before_muting = g_le_audio_tx_vol.max_dvol;
-        }
-
-        le_audio_wireless_mic_tx_set_dvol(volume_before_muting, mute);
     }
 }
 
@@ -1158,26 +1146,14 @@ int le_audio_wireless_mic_tx_monitor_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_monitor_dvol_mute(bool mute)
 {
-    static u8 volume_before_muting = 0;
-
     if (mute) {
         //mute
         g_le_audio_tx_monitor_vol.mute = 1;
-        volume_before_muting = g_le_audio_tx_monitor_vol.dvol;
-        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
-            printf("volume_before_muting %d record error", volume_before_muting);
-            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
-        }
         le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
     } else {
         //unmute
+        le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
         g_le_audio_tx_monitor_vol.mute = 0;
-        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
-            printf("volume_before_muting %d record error", volume_before_muting);
-            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
-        }
-
-        le_audio_wireless_mic_tx_monitor_set_dvol(volume_before_muting, mute);
     }
 }
 
