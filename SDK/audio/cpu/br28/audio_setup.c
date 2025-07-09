@@ -147,7 +147,6 @@ void audio_dac_initcall(void)
 #endif
 
 #if TCFG_SUPPORT_MIC_CAPLESS
-    audio_dac_set_capless_DTB(&dac_hdl, read_capless_DTB());
     mic_capless_trim_run();
 #endif
     audio_dac_set_fade_handler(&dac_hdl, NULL, audio_fade_in_fade_out);

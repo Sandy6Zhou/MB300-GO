@@ -157,6 +157,10 @@ SDP_RECORD_HANDLER_REGISTER(pan_sdp_record_item) = {
 };
 #endif
 
+#if (defined TCFG_BT_SUPPORT_BIP && (TCFG_BT_SUPPORT_BIP==1))
+u8 bip_profile_support = 1;
+#endif
+
 /*注意hid_conn_depend_on_dev_company置1之后，安卓手机会默认断开HID连接 */
 /*注意hid_conn_depend_on_dev_company置2之后，默认不断开HID连接 */
 const u8 hid_conn_depend_on_dev_company = 1;

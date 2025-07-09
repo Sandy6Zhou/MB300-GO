@@ -251,6 +251,8 @@
 // ------------蓝牙配置.json------------
 #define TCFG_BT_NAME_SEL_BY_AD_ENABLE 0 // 蓝牙名(AD采样)
 
+#define TCFG_USER_EMITTER_ENABLE 0 //EDR发射器
+#define TCFG_BT_SUPPORT_PROFILE_HFP_AG 1
 #define TCFG_BT_PAGE_TIMEOUT 8 // 单次回连时间(s)
 #define TCFG_BT_POWERON_PAGE_TIME 30 // 开机回连超时(s)
 #define TCFG_BT_TIMEOUT_PAGE_TIME 120 // 超距断开回连超时(s)

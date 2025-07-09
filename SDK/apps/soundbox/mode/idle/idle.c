@@ -482,7 +482,11 @@ static void app_idle_enter_softoff(void)
 
 struct app_mode *app_enter_idle_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     app_idle_init(arg);

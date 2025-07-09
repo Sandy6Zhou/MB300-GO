@@ -189,10 +189,10 @@ void mix_recorder_start()
 
 void mix_recorder_stop()
 {
+    //status先置零，switch 节点要先close，否则可能会触发close文件后还去写的临界异常
+    g_rec_hdl.status = 0;
     // 先停掉录音，会有淡出操作
     file_recorder_stop(g_rec_hdl.recorder, 1);
-    // 再关闭音源
-    g_rec_hdl.status = 0;
     os_time_dly(1);
 
     if (g_rec_hdl.old_file) {

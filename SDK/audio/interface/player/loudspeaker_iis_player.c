@@ -7,6 +7,7 @@
 #include "asm/dac.h"
 #include "audio_cvp.h"
 #include "cvp/aec_ref_dac_ch_data.h"
+#include "effects/audio_howling_ahs.h"
 
 #if TCFG_APP_LOUDSPEAKER_EN
 
@@ -67,7 +68,9 @@ int loudspeaker_iis_player_open(void)
     jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_FMT, (int)ref_sr);
     u8 iis_in_dac_out = 1; //loudspeaker_iis模式自动使能，其他模式需要手动使能const_audio_howling_ahs_iis_in_dac_out变量
     //高16bit传递iis_in_dac_out使能位，低16bit传递帧长
-    jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, (iis_in_dac_out << 16) | AUDIO_ADC_IRQ_POINTS);
+    jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, (iis_in_dac_out << 16) | AHS_NN_FRAME_POINTS);
+    jlstream_add_thread(player->stream, "mic_effect1");
+    jlstream_add_thread(player->stream, "mic_effect2");
 #endif
     err = jlstream_start(player->stream);
     if (err) {
@@ -99,6 +102,9 @@ void loudspeaker_iis_player_close()
     }
 
     printf("loudspeaker_iis_player_close\n");
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+    audio_ahs_sem_post();
+#endif
     jlstream_stop(player->stream, 50);
     jlstream_release(player->stream);
 

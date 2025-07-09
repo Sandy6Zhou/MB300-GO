@@ -40,6 +40,7 @@ extern const int config_audio_dac_mute_timeout;
 extern const int config_audio_dac_pa_mode;
 extern const int config_audio_dac_power_mode;
 extern const int config_audio_dac_underrun_time_lea;
+extern const int config_audio_dac_ng_debug;
 
 /*
  *******************************************************************
@@ -109,6 +110,7 @@ extern const int virtual_bass_pro_soft_crossover;
 extern const int audio_effect_realloc_reserve_mem;
 extern const int const_audio_howling_ahs_ref_src_type;
 extern const int const_audio_howling_ahs_data_export;
+extern const int const_audio_howling_ahs_iis_in_dac_out;
 
 /*
  *******************************************************************

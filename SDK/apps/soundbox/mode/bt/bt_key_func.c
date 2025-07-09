@@ -230,7 +230,8 @@ void bt_key_music_pp(void)
     } else if (bt_get_call_status() == BT_CALL_ACTIVE) {
         bt_cmd_prepare(USER_CTRL_HFP_CALL_HANGUP, 0, NULL);
     } else {
-        bt_cmd_prepare(USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);
+        u8 addr[6];
+        bt_cmd_prepare_for_addr(a2dp_player_get_btaddr(addr) ? addr : NULL, USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);
     }
 }
 
@@ -247,7 +248,8 @@ void bt_key_music_pp(void)
 /*************************************************************************************************/
 void bt_key_music_prev(void)
 {
-    bt_cmd_prepare(USER_CTRL_AVCTP_OPID_PREV, 0, NULL);
+    u8 addr[6];
+    bt_cmd_prepare_for_addr(a2dp_player_get_btaddr(addr) ? addr : NULL, USER_CTRL_AVCTP_OPID_PREV, 0, NULL);
 }
 
 /*************************************************************************************************/
@@ -263,11 +265,12 @@ void bt_key_music_prev(void)
 /*************************************************************************************************/
 void bt_key_music_next(void)
 {
+    u8 addr[6];
     if (bt_get_call_status() == BT_CALL_INCOMING) {
         bt_cmd_prepare(USER_CTRL_HFP_CALL_HANGUP, 0, NULL);
         return;
     }
-    bt_cmd_prepare(USER_CTRL_AVCTP_OPID_NEXT, 0, NULL);
+    bt_cmd_prepare_for_addr(a2dp_player_get_btaddr(addr) ? addr : NULL, USER_CTRL_AVCTP_OPID_NEXT, 0, NULL);
 }
 
 /*************************************************************************************************/

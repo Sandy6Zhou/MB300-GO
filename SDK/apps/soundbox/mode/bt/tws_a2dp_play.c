@@ -34,23 +34,84 @@
 #if(TCFG_USER_TWS_ENABLE)
 
 
-static u8 g_play_addr[6];
+static u8 g_play_addr[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static u8 g_slience_addr[6];
+
+#if TCFG_BT_DUAL_CONN_ENABLE
+struct app_a2dp_st {
+    u8 st;
+    u8 addr[6];
+};
+struct app_a2dp_st a2dp_play_status[2] = {
+    {.addr = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+    {.addr = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+};
+u8 app_get_a2dp_play_status_with_addr(u8 *bt_addr)
+{
+    for (int i = 0; i < 2; i++) {
+        if (memcmp(bt_addr, a2dp_play_status[i].addr, 6) == 0) {
+            return a2dp_play_status[i].st;
+        }
+    }
+    return 0;
+}
+static void app_a2dp_addr_push(u8 *bt_addr)
+{
+    u8 addr_unset[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    for (int i = 0; i < 2; i++) {
+        if (memcmp(addr_unset, a2dp_play_status[i].addr, 6) == 0) {
+            memcpy(a2dp_play_status[i].addr, bt_addr, 6);
+            break;
+        }
+    }
+}
+
+static void app_a2dp_addr_pop(u8 *bt_addr)
+{
+    for (int i = 0; i < 2; i++) {
+        if (memcmp(bt_addr, a2dp_play_status[i].addr, 6) == 0) {
+            memset(a2dp_play_status[i].addr, 0xff, 6);
+            a2dp_play_status[i].st = 0;
+            break;
+        }
+    }
+}
+#else
 static u8 a2dp_play_status = 0;
+#endif
 static u16 wait_enter_bt_timer = 0;
 static u8 SEND_A2DP_PLAY_REQ_FLAG = 0;
+
 void app_set_a2dp_play_status(u8 *bt_addr, u8 st)
 {
+#if TCFG_BT_DUAL_CONN_ENABLE == 0
     u8 addr_unset[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};        //处理后台情况下手机提示音或者快速播放暂停操作，小机打开能量检测，只设置了a2dp_play_status但是未开始播放, 导致状态设置之后无法清除
     if ((st == 0) && (memcmp(bt_addr, g_play_addr, 6) != 0) && (memcmp(g_play_addr, addr_unset, 6) != 0)) {
         return;
     }
     a2dp_play_status = st;
+#else
+    u8 i = 0;
+    for (i = 0; i < 2; i++) {
+        if (memcmp(bt_addr, a2dp_play_status[i].addr, 6) == 0) {
+            a2dp_play_status[i].st = st;
+        }
+    }
+#endif
 }
 
 u8 app_get_a2dp_play_status(void)
 {
+#if TCFG_BT_DUAL_CONN_ENABLE == 0
     return a2dp_play_status;
+#else
+    for (int i = 0; i < 2; i++) {
+        if (a2dp_play_status[i].st) {
+            return 1;
+        }
+    }
+    return 0;
+#endif
 }
 
 void set_g_play_addr(u8 *addr)
@@ -63,6 +124,15 @@ u8 *get_g_play_addr(void)
     return g_play_addr;
 }
 
+bool g_play_addr_vaild(void)
+{
+    u8 invaild_addr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    if (memcmp(g_play_addr, invaild_addr, 6) == 0) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 void tws_a2dp_player_close(u8 *bt_addr)
 {
@@ -145,10 +215,11 @@ static void tws_a2dp_play_in_task(u8 *data)
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
         u8 *addr = le_audio_a2dp_recorder_get_btaddr();
-        if (addr && memcmp(addr, bt_addr, 6) == 0)  {
+        if ((addr && memcmp(addr, bt_addr, 6) == 0) || (addr == NULL))  {       //addr == NULL，处理打开广播但recorder未创建的情况
             //当前正在进行广播的设备地址跟蓝牙音频暂停地址一致时才处理（1T2逻辑）
             if (le_audio_scene_deal(LE_AUDIO_A2DP_STOP) > 0) {
                 memset(g_play_addr, 0xff, 6);
+                a2dp_player_close(bt_addr);     //防止a2dp_player没关闭
                 a2dp_media_close(bt_addr);
                 break;
             }
@@ -332,6 +403,17 @@ static int a2dp_bt_status_event_handler(int *event)
             tws_a2dp_play_send_cmd(CMD_SET_A2DP_VOL, data, 7, 1);
         }
         break;
+
+#if TCFG_BT_DUAL_CONN_ENABLE
+    case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_SECOND_CONNECTED:
+        app_a2dp_addr_push(bt->args);
+        break;
+    case BT_STATUS_FIRST_DISCONNECT:
+    case BT_STATUS_SECOND_DISCONNECT:
+        app_a2dp_addr_pop(bt->args);
+        break;
+#endif
     }
     return 0;
 }
@@ -362,7 +444,6 @@ APP_MSG_HANDLER(a2dp_hci_msg_handler) = {
     .from       = MSG_FROM_BT_HCI,
     .handler    = a2dp_bt_hci_event_handler,
 };
-
 static int a2dp_app_msg_handler(int *msg)
 {
     u8 *bt_addr = (u8 *)(msg +  1);
@@ -373,6 +454,8 @@ static int a2dp_app_msg_handler(int *msg)
         u8 is_play = a2dp_player_is_playing(bt_addr);
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_close_transmitter();
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        auracast_source_close_media_stream();
 #endif
         if (is_play) {      //先关了recorder地址会被清除状态要提前读出来
             tws_a2dp_slience_detect(bt_addr, 1);
@@ -385,6 +468,10 @@ static int a2dp_app_msg_handler(int *msg)
         bt_stop_a2dp_slience_detect(bt_addr);
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         if (!app_broadcast_open_transmitter()) {
+            tws_a2dp_sync_play(bt_addr, 1);
+        }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (auracast_source_open_media_stream() != 0) {
             tws_a2dp_sync_play(bt_addr, 1);
         }
 #else
@@ -546,7 +633,12 @@ int bt_get_low_latency_mode()
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 static int get_a2dp_play_status(void)
 {
+#if TCFG_BT_DUAL_CONN_ENABLE == 0
     r_printf("a2dp_play_status:%d %d %d %d\n", get_le_audio_app_mode_exit_flag(), a2dp_play_status, get_a2dp_decoder_status(), a2dp_player_runing());
+#else
+    r_printf("a2dp_play_status:%d %d %d %d\n", get_le_audio_app_mode_exit_flag(), app_get_a2dp_play_status_with_addr(get_g_play_addr()), get_a2dp_decoder_status(), a2dp_player_runing());
+#endif
+    put_buf(get_g_play_addr(), 6);
     if (get_le_audio_app_mode_exit_flag()) {
         return LOCAL_AUDIO_PLAYER_STATUS_ERR;
     }
@@ -554,7 +646,13 @@ static int get_a2dp_play_status(void)
     if (bt_get_call_status() != BT_CALL_HANGUP) {
         return LOCAL_AUDIO_PLAYER_STATUS_ERR;
     }
-    if (a2dp_play_status || a2dp_player_runing()) {
+
+#if TCFG_BT_DUAL_CONN_ENABLE == 0
+    if (a2dp_play_status)
+#else
+    if (app_get_a2dp_play_status_with_addr(get_g_play_addr()))
+#endif
+    {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_ERR;
@@ -593,6 +691,15 @@ static void *a2dp_tx_le_audio_open(void *args)
         //打开广播音频播放
         struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
+        //处理固定接收端后台播歌能量检测过程，直接切模式回蓝牙地址未赋值的情况
+        u8 detect_addr[6];
+        if (g_play_addr_vaild() == FALSE) {
+            if (bt_slience_get_detect_addr(detect_addr)) {
+                bt_stop_a2dp_slience_detect(detect_addr);
+                a2dp_media_close(detect_addr);
+                set_g_play_addr(detect_addr);
+            }
+        }
         err = le_audio_a2dp_recorder_open(get_g_play_addr(), (void *)&params->fmt, le_audio);
         if (err != 0) {
             ASSERT(0, "recorder open fail");

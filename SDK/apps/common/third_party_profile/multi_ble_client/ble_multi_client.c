@@ -48,16 +48,24 @@ static u8 search_ram_buffer[SEARCH_PROFILE_BUFSIZE] __attribute__((aligned(4)));
 //搜索类型
 #define SET_SCAN_TYPE       SCAN_ACTIVE
 
+#if TCFG_AURACAST_PAWR_ENABLE
+//搜索 周期大小
+#define SET_SCAN_INTERVAL   ADV_SCAN_MS(120) // unit: ms
+#define SET_SCAN_WINDOW     ADV_SCAN_MS(1) // unit: ms
+//连接周期
+#define SET_CONN_INTERVAL   (16) // 20ms和big iso interval一致(unit:1.25ms)
+#else
 //搜索 周期大小
 #define SET_SCAN_INTERVAL   ADV_SCAN_MS(10) // unit: ms
 #define SET_SCAN_WINDOW     ADV_SCAN_MS(10) // unit: ms
 //连接周期
 #define SET_CONN_INTERVAL   (BASE_INTERVAL_MIN*8) //(unit:1.25ms)
+#endif
+
 //连接latency
 #define SET_CONN_LATENCY    0  //(unit:conn_interval)
 //连接超时
 #define SET_CONN_TIMEOUT    60 //(unit:10ms)
-
 
 u16 client_con_handle[SUPPORT_MAX_CLIENT];
 //----------------------------------------------------------------------------
@@ -95,6 +103,18 @@ struct conn_info_t {
     u16 conn_latency;
     u16 conn_timeout;
 };
+#if TCFG_AURACAST_PAWR_ENABLE
+#define MULTI_TEST_WRITE_UUID                 0xae01
+typedef struct {
+    uint8_t is_full;
+    uint8_t subevent;
+    uint8_t response_slot;
+} pawr_timing_coord_t;
+static uint16_t multi_client_write_handle;
+static u8 pawr_master_slot_is_full;
+void ble_pawr_get_sync_coord(pawr_timing_coord_t *coord);
+void ble_pawr_tx_acl_scan_hw_reg(u8 en);
+#endif
 
 static u16 timer_add_delete_connection = 0;
 static struct conn_info_t  reconnect_info;
@@ -134,8 +154,12 @@ int ble_enable_new_dev_scan(void);
 static  client_conn_cfg_t *client_config = NULL;
 
 //指定索索名字
+#if TCFG_AURACAST_PAWR_ENABLE
+static const u8 test_remoter_name1[] = "pawr_slave";//
+#else
 static const u8 test_remoter_name1[] = "ad19_rq";//
 /* static const u8 test_remoter_name2[] = "AC630N_HID567(BLE)";// */
+#endif
 static u16 ble_client_write_handle;
 static u16 ble_client_timer = 0;
 
@@ -219,6 +243,10 @@ static void ble_report_data_deal(att_data_report_t *report_data, target_uuid_t *
 
 static void client_event_callback(le_client_event_e event, u8 *packet, int size)
 {
+
+#if TCFG_AURACAST_PAWR_ENABLE
+    pawr_timing_coord_t coord_data;
+#endif
     switch (event) {
     case CLI_EVENT_MATCH_DEV: {
         client_match_cfg_t *match_dev = (client_match_cfg_t *)packet;
@@ -238,6 +266,11 @@ static void client_event_callback(le_client_event_e event, u8 *packet, int size)
     case CLI_EVENT_SEARCH_PROFILE_COMPLETE:
         log_info("CLI_EVENT_SEARCH_PROFILE_COMPLETE_client_event_callback\n");
         is_mode_active = 0;
+#if TCFG_AURACAST_PAWR_ENABLE
+        ble_pawr_get_sync_coord(&coord_data);
+        client_operation_send(multi_client_write_handle, (u8 *)&coord_data, sizeof(pawr_timing_coord_t), ATT_OP_WRITE_WITHOUT_RESPOND);
+        pawr_master_slot_is_full = coord_data.is_full;
+#endif
         /* if ((!ble_client_timer) && ble_client_write_handle) { */
         /*     log_info("test timer_add\n"); */
         /*     ble_client_timer = sys_timer_add(0, client_test_write, 500); */
@@ -572,6 +605,13 @@ static void do_operate_search_handle(void)
     for (i = 0; i < opt_handle_used_cnt; i++) {
         opt_hdl_pt = &opt_handle_table[i];
         log_info("do opt:service_uuid16:%04x,charactc_uuid16:%04x\n", opt_hdl_pt->search_uuid->services_uuid16, opt_hdl_pt->search_uuid->characteristic_uuid16);
+
+#if TCFG_AURACAST_PAWR_ENABLE
+        //for test
+        if (opt_hdl_pt->search_uuid->characteristic_uuid16 == MULTI_TEST_WRITE_UUID) {
+            multi_client_write_handle = opt_hdl_pt->value_handle;
+        }
+#endif
         cur_opt_type = opt_hdl_pt->search_uuid->opt_type;
         switch ((u8)cur_opt_type) {
         case ATT_PROPERTY_READ:
@@ -675,6 +715,12 @@ void user_client_multi_report_search_result(search_result_t *result_info)
     check_target_uuid_match(result_info);
 }
 #endif
+
+static u8 ble_multi_client_report_search_close(u16 hci_handle)
+{
+    return 0;
+}
+
 
 #if SHOW_RX_DATA_RATE
 
@@ -1237,7 +1283,7 @@ int ble_enable_new_dev_scan(void)
 {
     log_info("%s\n", __FUNCTION__);
 
-    if (!client_con_handle[cur_dev_cid]) {
+    if (client_con_handle[cur_dev_cid]) {
         log_info("dev_doing\n");
         return -1;
     }
@@ -1247,6 +1293,12 @@ int ble_enable_new_dev_scan(void)
         log_info("no idle dev to do!!!\n");
         return -2;
     }
+#if TCFG_AURACAST_PAWR_ENABLE
+    if (pawr_master_slot_is_full) {
+        log_info("pawr slot is full! close scan");
+        return -3;
+    }
+#endif
 
     log_info("new_dev_scan\n");
     cur_dev_cid = tmp_cid;
@@ -1465,6 +1517,7 @@ static void cbk_packet_handler(void *ble_hdl, uint8_t packet_type, uint16_t chan
             //配设备开scan
             cur_dev_cid = tmp_index;
             /* app_ble_hdl_free(le_multi_client_hdl[cur_dev_cid]); */
+            ble_enable_new_dev_scan();
 
         }
         break;
@@ -1697,6 +1750,9 @@ static int bt_ble_scan_enable(void *priv, u32 en)
     }
 #else
     if (en) {
+#if TCFG_AURACAST_PAWR_ENABLE
+        ble_pawr_tx_acl_scan_hw_reg(1);
+#endif
         scanning_setup_init();
     }
     ble_op_scan_enable2(en, 0);
@@ -1934,10 +1990,13 @@ int le_multi_client_hdl_init(u8 cid)
 void ble_multi_client_init()
 {
     log_info("%s\n", __FUNCTION__);
+    user_client_add_callback(user_client_multi_report_search_result, ble_multi_client_report_search_close);
     client_profile_init();
     smbox_bt_multi_client_init();
     le_multi_client_hdl_init(cur_dev_cid);
+#if (TCFG_AURACAST_PAWR_ENABLE == 0)
     ble_client_module_enable(1);
+#endif
 }
 
 void ble_multi_client_exit(void)

@@ -195,7 +195,11 @@
 #define NODE_UUID_DISTORTION_CLIPPING      0x97AA
 #define NODE_UUID_FREQUENCY_COMPRESSOR     0xBFE4
 #define NODE_UUID_SPATIAL_ADV              0xA64E//空间音频封装
-#define NODE_UUID_HOWLING_AHS              0x872A//神经网络啸叫抑制
+#define NODE_UUID_HOWLING_AHS              0x872A//神经网络啸叫抑制 part1
+#define NODE_UUID_HOWLING_AHS_POST         0X197D//神经网络啸叫抑制 part2
 #define NODE_UUID_LHDC_X                   0x65C5//LHDC-X空间音效
 #define NODE_UUID_VIRTUAL_BASS_PRO         0x02E6//虚拟低音pro算法内部集成，封装节点换成普通节点
+#define NODE_UUID_VOCAL_TRACK_SEPARATION_6TO2  0xB816//声道拆分6转2
+#define NODE_UUID_VOCAL_TRACK_SEPARATION_8TO2  0x3198//声道拆分8转2
+
 #endif

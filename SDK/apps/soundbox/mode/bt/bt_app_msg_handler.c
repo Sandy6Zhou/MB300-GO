@@ -41,9 +41,6 @@ int bt_app_msg_handler(int *msg)
 #endif
         (msg_type == APP_MSG_MUSIC_PP  \
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
         )) {
 
         printf("BIS receiving state does not support the event %d", msg_type);
@@ -200,6 +197,7 @@ int bt_app_msg_handler(int *msg)
             dev_vol = app_audio_bt_volume_update(bt_addr, APP_AUDIO_STATE_MUSIC);
         }
         set_music_device_volume(dev_vol);
+        set_g_play_addr(bt_addr);
         if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
             break;
         }

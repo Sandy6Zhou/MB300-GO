@@ -12,6 +12,7 @@ void linein_key_vol_up();
 void linein_key_vol_down();
 u8   linein_get_status(void);
 int  linein_volume_pp(void);
+int linein_volume_set(s16 vol);
 
 struct app_mode *app_enter_linein_mode(int arg);
 int linein_app_msg_handler(int *msg);

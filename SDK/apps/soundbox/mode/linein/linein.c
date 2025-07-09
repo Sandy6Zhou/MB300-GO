@@ -17,6 +17,8 @@
 #include "ui_manage.h"
 #include "linein_player.h"
 #include "local_tws.h"
+#include "audio_config_def.h"
+#include "audio_config.h"
 #include "app_le_broadcast.h"
 #include "app_le_connected.h"
 #include "app_le_auracast.h"
@@ -54,6 +56,7 @@ static int app_linein_init()
     //开启ui
 
     /* ui_update_status(STATUS_LINEIN_MODE); */
+    linein_volume_set(app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
 
 #if TCFG_LOCAL_TWS_ENABLE
     ret = local_tws_enter_mode(get_tone_files()->linein_mode, NULL);
@@ -96,7 +99,11 @@ void app_linein_exit()
 
 struct app_mode *app_enter_linein_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     app_linein_init();

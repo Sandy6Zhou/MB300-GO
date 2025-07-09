@@ -4,7 +4,7 @@
 #pragma const_seg(".rdec.text.const")
 #pragma code_seg(".rdec.text")
 #endif
-#include "asm/includes.h"
+#include "cpu/includes.h"
 #include "gpio.h"
 #include "asm/rdec.h"
 #include "spinlock.h"

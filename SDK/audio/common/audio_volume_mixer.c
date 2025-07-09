@@ -45,7 +45,7 @@
 #endif
 
 #include "le_audio_player.h"
-
+#include "loudspeaker_iis_player.h"
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
@@ -789,7 +789,17 @@ int audio_digital_vol_node_name_get(u8 dvol_idx, char *node_name)
                 printf("vol_name:%d,%s\n", __LINE__, node_name);
                 break;
 #endif
+#if TCFG_APP_LOUDSPEAKER_EN
+            case APP_MODE_LOUDSPEAKER:
+                if (loudspeaker_iis_player_runing()) {
+                    sprintf(node_name, "%s", "Vol_SPK_IIS");
+                } else {
+                    sprintf(node_name, "%s", "Vol_SPK_MIC");
+                }
 
+                printf("vol_name:%d,%s\n", __LINE__, node_name);
+                break;
+#endif
 
             case APP_MODE_IDLE:
                 sprintf(node_name, "%s%s", "Vol_Sys", dvol_type[i]);
@@ -920,6 +930,7 @@ void audio_app_volume_set(u8 state, s16 volume, u8 fade)
         u32 param = dvol_idx << 16 | volume;
         sys_timeout_add((void *)param, app_audio_set_vol_timer_func, 5); //5ms后更新音量
 #endif/*SYS_VOL_TYPE == VOL_TYPE_DIGITAL*/
+#if TCFG_DAC_NODE_ENABLE
         if ((state == __this->state) && !app_audio_get_dac_digital_mute()) {
             if ((__this->state == APP_AUDIO_STATE_CALL) && (volume == 0)) {
                 //来电报号发下来通话音量为0的时候不设置模拟音量,避免来电报号音量突然变成0导致提示音不完整
@@ -938,6 +949,7 @@ void audio_app_volume_set(u8 state, s16 volume, u8 fade)
 #endif
             }
         }
+#endif
     }
 }
 
@@ -1298,6 +1310,7 @@ void app_audio_init_dig_vol(u8 state, s16 volume, u8 fade, dvol_handle *dvol_hdl
     audio_digital_vol_set(dvol_hdl, volume);
 #endif/*SYS_VOL_TYPE == VOL_TYPE_DIGITAL*/
 
+#if TCFG_DAC_NODE_ENABLE
     if (state == __this->state && (!app_audio_get_dac_digital_mute())) {
         if ((__this->state == APP_AUDIO_STATE_CALL) && (volume == 0)) {
             //来电报号发下来通话音量为0的时候不设置模拟音量,避免来电报号音量突然变成0导致提示音不完整
@@ -1310,6 +1323,7 @@ void app_audio_init_dig_vol(u8 state, s16 volume, u8 fade, dvol_handle *dvol_hdl
             audio_dac_set_analog_vol(&dac_hdl, volume);
         }
     }
+#endif
     app_audio_volume_change();
 }
 

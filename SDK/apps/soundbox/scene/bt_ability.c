@@ -851,7 +851,7 @@ static void add_addr_to_a2dp_detach_list(u8 *bt_addr)
     return ret;
 }*/
 
-static void bt_action_a2dp_detach(void *device, u8 *bt_addr)
+void bt_action_a2dp_detach(void *device, u8 *bt_addr)
 {
     //A播歌，A打电话，B再打电话,这样操作在断开的位置记录不了。每次开始的时候记录,暂不处理
     u8 pause_music = 1;
@@ -861,7 +861,7 @@ static void bt_action_a2dp_detach(void *device, u8 *bt_addr)
     btstack_device_control(device, USER_CTRL_DISCONN_A2DP);
 }
 
-static void bt_action_a2dp_reconn(void *device, u8 *bt_addr)
+void bt_action_a2dp_reconn(void *device, u8 *bt_addr)
 {
     int ret = 0;
 

@@ -485,7 +485,9 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
         return 0;
     }
     int err = 0;
-    struct le_audio_stream_format *le_audio_fmt = (struct le_audio_stream_format *)params;
+    struct le_audio_stream_params *lea_params = params;
+    struct le_audio_stream_format *le_audio_fmt = &lea_params->fmt;
+
 #ifdef CONFIG_WIRELESS_MIC_ENABLE
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
 #else
@@ -513,17 +515,40 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
     jlstream_set_callback(g_iis_recorder->stream, NULL, iis_recorder_callback);
     jlstream_set_scene(g_iis_recorder->stream, STREAM_SCENE_IIS);
 
+    if (lea_params->service_type == LEA_SERVICE_WL_MIC) {
+        //printf("LEA Recoder:WL_MIC_IIS\n");
+        jlstream_set_scene(g_iis_recorder->stream, STREAM_SCENE_WIRELESS_MIC);
+        u16 irq_point = 0;
+#if (defined(TCFG_ADC_IRQ_INTERVAL) &&  TCFG_ADC_IRQ_INTERVAL) //根据配置设置中断点数
+#if (defined(TCFG_AUDIO_ADC_SAMPLE_RATE) &&  TCFG_AUDIO_ADC_SAMPLE_RATE)
+        irq_point =  TCFG_AUDIO_ADC_SAMPLE_RATE * TCFG_ADC_IRQ_INTERVAL / 1000000;  //sr * interval(us) / 1000000
+#else
+        irq_point =  fmt.sample_rate * TCFG_ADC_IRQ_INTERVAL / 1000000; //sr * interval(us) / 1000000
+#endif
+#else
+        irq_point =  AUDIO_IIS_IRQ_POINTS;//fmt.sample_rate * 1000 / 1000000; //默认1ms 的中断,//sr * interval(us) / 1000000
+#endif
 
-    jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS0_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
-    jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS1_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+#if TCFG_LLNS_DNS_NODE_ENABLE
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LLNS_DNS, NODE_IOC_SET_PRIV_FMT, 32000); //当前LLNS_DNS降噪节点只支持32k
+#endif
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, irq_point);
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS0_RX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS0_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        err = jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio);
+    } else {
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS0_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS1_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        err = jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio);
 
-    err = jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio);
+        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);
+
+    }
     if (latency == 0) {
         latency = 100000;
     }
     jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_CAPTURE_SYNC, NODE_IOC_SET_PARAM, latency);
     //设置中断点数
-    jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);
 
     err = jlstream_ioctl(g_iis_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
     if (err == 0) {
@@ -1060,7 +1085,7 @@ int le_audio_wireless_mic_tx_set_dvol(u8 vol, s16 mute_en)
         return -1;
     }
     printf("le audo tx dvol name: %s, le audo tx dvol:%d\n", vol_name, vol);
-    if (vol != g_le_audio_tx_vol.dvol) {
+    if ((0xff == mute_en) && (vol != g_le_audio_tx_vol.dvol)) {
         g_le_audio_tx_vol.dvol = vol;
         le_audio_tx_volume_change();
     }
@@ -1069,14 +1094,26 @@ int le_audio_wireless_mic_tx_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_dvol_mute(bool mute)
 {
+    static u8 volume_before_muting = 0;
+
     if (mute) {
         //mute
         g_le_audio_tx_vol.mute = 1;
+        volume_before_muting = g_le_audio_tx_vol.dvol;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_vol.max_dvol;
+        }
         le_audio_wireless_mic_tx_set_dvol(0, mute);
     } else {
         //unmute
-        le_audio_wireless_mic_tx_set_dvol(0, mute);
         g_le_audio_tx_vol.mute = 0;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_vol.max_dvol;
+        }
+
+        le_audio_wireless_mic_tx_set_dvol(volume_before_muting, mute);
     }
 }
 
@@ -1137,7 +1174,7 @@ int le_audio_wireless_mic_tx_monitor_set_dvol(u8 vol, s16 mute_en)
         return -1;
     }
     printf("le audo tx monitor dvol name: %s, le audo tx dvol:%d\n", vol_name, vol);
-    if (vol != g_le_audio_tx_monitor_vol.dvol) {
+    if ((0xff == mute_en) && (vol != g_le_audio_tx_monitor_vol.dvol)) {
         g_le_audio_tx_monitor_vol.dvol = vol;
         le_audio_tx_volume_change();
     }
@@ -1146,14 +1183,26 @@ int le_audio_wireless_mic_tx_monitor_set_dvol(u8 vol, s16 mute_en)
 
 void le_audio_wireless_mic_tx_monitor_dvol_mute(bool mute)
 {
+    static u8 volume_before_muting = 0;
+
     if (mute) {
         //mute
         g_le_audio_tx_monitor_vol.mute = 1;
+        volume_before_muting = g_le_audio_tx_monitor_vol.dvol;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
+        }
         le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
     } else {
         //unmute
-        le_audio_wireless_mic_tx_monitor_set_dvol(0, mute);
         g_le_audio_tx_monitor_vol.mute = 0;
+        if (!volume_before_muting || volume_before_muting > g_le_audio_tx_monitor_vol.max_dvol) {
+            printf("volume_before_muting %d record error", volume_before_muting);
+            volume_before_muting = g_le_audio_tx_monitor_vol.max_dvol;
+        }
+
+        le_audio_wireless_mic_tx_monitor_set_dvol(volume_before_muting, mute);
     }
 }
 

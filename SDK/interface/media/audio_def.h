@@ -15,6 +15,11 @@
  *						Audio Common Definitions
  *******************************************************************
  */
+#define INT16MAX_P						(32767)		//16bit正最大值
+#define INT16MAX_N						(-32768)	//16bit负最大值
+#define INT24MAX_P						(8388607)	//24bit正最大值
+#define INT24MAX_N						(-8388608)	//24bit负最大值
+
 //Audio I/O Mode
 #define AUDIO_IO_SINGLE_ENDED			0	//单端:Single-Ended
 #define AUDIO_IO_DIFFERENTIAL			1	//差分:Differential

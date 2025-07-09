@@ -43,9 +43,6 @@ int linein_app_msg_handler(int *msg)
 #endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
          || msg_type == APP_MSG_LINEIN_START
         )) {
 
@@ -90,8 +87,6 @@ int linein_app_msg_handler(int *msg)
                 break;
             }
         }
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
 #elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
         //固定为接收端
         u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
@@ -107,13 +102,10 @@ int linein_app_msg_handler(int *msg)
                 break;
             }
         }
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
-#else
-        linein_last_onoff = linein_volume_pp();
-        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
 #endif
 #endif
+        linein_last_onoff = linein_volume_pp();
+        app_send_message(APP_MSG_LINEIN_PLAY_STATUS, linein_last_onoff);
         break;
     case APP_MSG_VOL_UP:
         linein_key_vol_up();

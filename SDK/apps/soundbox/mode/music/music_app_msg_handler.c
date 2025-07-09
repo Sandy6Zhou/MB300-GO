@@ -192,9 +192,6 @@ int music_app_msg_handler(int *msg)
 #endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
          || msg_type == APP_MSG_MUSIC_MOUNT_PLAY_START || msg_type == APP_MSG_MUSIC_PLAY_START
          || msg_type == APP_MSG_MUSIC_PLAY_START_BY_SCLUST || msg_type == APP_MSG_MUSIC_PLAY_START_BY_DEV  //只屏蔽主动开启音乐播放的事件
          || msg_type == APP_MSG_MUSIC_CHANGE_DEV
@@ -520,7 +517,7 @@ int music_app_msg_handler(int *msg)
             break;
         }
 
-        if (!get_le_audio_curr_role()) {
+        if (!get_le_audio_curr_role() || dev_manager_get_total(1)) {
             if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
                 err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
             } else {

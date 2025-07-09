@@ -695,7 +695,7 @@ int bt_tws_start_pair(void)
         if (bt_get_total_connect_dev()) {
             tws_api_wait_pair_when_phone_connect(0);
         } else {
-            tws_api_auto_pair(TCFG_TWS_PAIR_TIMEOUT * 1000);
+            tws_api_auto_pair(0);
         }
     }
 #else

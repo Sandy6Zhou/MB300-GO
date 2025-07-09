@@ -22,6 +22,8 @@ const int config_media_tws_en = 1;
 const int config_media_tws_en = 0;
 #endif
 
+const int config_audio_dac_ng_debug = 0;
+
 /* 16bit数据流中也存在32bit位宽数据的处理 */
 const int config_ch_adapter_32bit_enable = 1;
 const int config_mixer_32bit_enable = 1;
@@ -199,7 +201,8 @@ const int limiter_run_mode = EFx_PRECISION_PRO
                              | TCFG_AUDIO_EFX_4E5B_RUN_MODE
 #endif
 #if defined(TCFG_AUDIO_EFX_F58A_RUN_MODE)
-                             | TCFG_AUDIO_EFX_F58A_RUN_MODE
+                             | ((TCFG_AUDIO_EFX_F58A_RUN_MODE & (EFx_BW_32t16 | EFx_BW_32t32)) ? EFx_BW_32t32 : 0)
+                             | ((TCFG_AUDIO_EFX_F58A_RUN_MODE &EFx_BW_16t16) ? EFx_BW_16t16 : 0)
 #endif
 #if !defined(TCFG_AUDIO_EFX_4E5B_RUN_MODE) && !defined(TCFG_AUDIO_EFX_F58A_RUN_MODE)
                              | 0xFFFF
@@ -288,7 +291,8 @@ const  int drc_advance_run_mode          = EFx_PRECISION_NOR
         | TCFG_AUDIO_EFX_4250_RUN_MODE
 #endif
 #if defined(TCFG_AUDIO_EFX_74CB_RUN_MODE)
-        | TCFG_AUDIO_EFX_74CB_RUN_MODE
+        | ((TCFG_AUDIO_EFX_74CB_RUN_MODE & (EFx_BW_32t16 | EFx_BW_32t32)) ? EFx_BW_32t32 : 0)
+        | ((TCFG_AUDIO_EFX_74CB_RUN_MODE &EFx_BW_16t16) ? EFx_BW_16t16 : 0)
 #endif
 #if defined(TCFG_AUDIO_EFX_02E6_RUN_MODE)
         | TCFG_AUDIO_EFX_02E6_RUN_MODE
@@ -409,6 +413,12 @@ const int audio_crossover_3band_enable       = 1;
 //howling_ahs配置
 const int const_audio_howling_ahs_ref_src_type = 1; //0:不使能参考数据变采样，1:软件src，2:硬件src
 const int const_audio_howling_ahs_data_export = 0;  //数据写卡导出，需要使能AUDIO_DATA_EXPORT_VIA_UART，串口写卡工具配置3通道，每通道512byte
+/*
+ * ahs算法所处的数据流输入为iis，输出为dac时需要使能。
+ * 由于src输入输出buffer复用问题，建议采样率配置:iis(16k)->dac(32k/48k)。
+ */
+const int const_audio_howling_ahs_iis_in_dac_out = 0;
+
 /*
  * 某些算法参数更新需要重新申请buffer，
  * 为防止重新申请时内存不足导致异常，

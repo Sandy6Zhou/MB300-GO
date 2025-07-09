@@ -6,7 +6,7 @@
 #endif
 #include "audio_pdm.h"
 #include "includes.h"
-#include "asm/includes.h"
+#include "cpu/includes.h"
 #include "asm/dac.h"
 #include "media/includes.h"
 

@@ -41,9 +41,6 @@ int pc_app_msg_handler(int *msg)
 #endif
         (msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_MUSIC_NEXT || msg_type == APP_MSG_MUSIC_PREV
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
          || msg_type == APP_MSG_PC_START
         )) {
 
@@ -216,11 +213,15 @@ static int get_pc_play_status(void)
     }
 #endif
 #endif
+#if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
     if (pc_get_status()) {
         return LOCAL_AUDIO_PLAYER_STATUS_PLAY;
     } else {
         return LOCAL_AUDIO_PLAYER_STATUS_STOP;
     }
+#else
+    return LOCAL_AUDIO_PLAYER_STATUS_STOP;
+#endif
 }
 
 static int pc_local_audio_open(void)

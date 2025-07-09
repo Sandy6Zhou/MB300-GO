@@ -68,6 +68,11 @@
 #define LL_FEAT_CONN_SUBRATE_HOST_SUPPORT           (UINT64_C(1) << (38))   /*!< Connection subratingHost supported. */
 #define LL_FEAT_CHANNEL_CLASSIFICATION              (UINT64_C(1) << (39))   /*!< Channel classification supported. */
 
+
+/* --- Core Spec 5.4 --- */
+#define LL_FEAT_PAWR_ADVERTISER                    (UINT64_C(1) << 43)   /*!< Periodic Advertising with Responses - Advertiser role supported. */
+#define LL_FEAT_PAWR_SCANNER                       (UINT64_C(1) << 44)   /*!< Periodic Advertising with Responses - Scanner role supported. */
+
 #define LL_FEAT_VENDOR_BIG_SYNC_TRANSFER            (UINT64_C(1) << (62))   /*!< Vendor BIG sync transfer. */
 #define LL_FEAT_VENDOR_BIG_TRANSFER                 (UINT64_C(1) << (63))   /*!< Vendor BIG transfer. */
 

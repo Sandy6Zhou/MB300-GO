@@ -66,7 +66,11 @@ void app_surround_sound_exit()
 
 struct app_mode *app_enter_surround_sound_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
 

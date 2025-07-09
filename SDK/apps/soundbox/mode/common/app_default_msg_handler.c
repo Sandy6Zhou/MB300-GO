@@ -566,6 +566,13 @@ static void app_common_app_event_handler(int *msg)
     case APP_MSG_KEY_POWER_OFF_INSTANTLY:
         power_off_instantly();
         break;
+    case APP_MSG_VM_FLUSH_FLASH:
+        if (get_vm_ram_storage_enable()) {
+            printf("APP_MSG_VM_FLUSH_FLASH:%d\n", get_vm_ram_data_used_size());
+            vm_flush2flash(0);
+        }
+        break;
+
     default:
         break;
     }

@@ -67,6 +67,7 @@ typedef struct _APP_VAR {
     u32 start_time;
     u8 pitch_mode;
     s16 mic_eff_volume;
+    u8 a2dp_source_open_flag;
 } APP_VAR;
 
 struct bt_mode_var {
@@ -105,6 +106,7 @@ struct bt_mode_var {
     volatile u8 work_mode;
     volatile u8 last_work_mode;
     u8 bt_dual_conn_config;
+    u8 emitter_or_receiver;
 };
 
 typedef struct _BT_USER_COMM_VAR {
@@ -129,6 +131,7 @@ enum app_mode_t {
     APP_MODE_MIC,
     APP_MODE_SINK,
     APP_MODE_SURROUND_SOUND,
+    APP_MODE_LOUDSPEAKER,
     APP_MODE_NULL,
 };
 
@@ -144,6 +147,7 @@ enum app_mode_index {
     APP_MODE_IIS_INDEX,
     APP_MODE_SURROUND_SOUND_INDEX,
     APP_MODE_MIC_INDEX,
+    APP_MODE_LOUDSPEAKER_INDEX,
 };
 
 #define earphone (&bt_user_priv_var)

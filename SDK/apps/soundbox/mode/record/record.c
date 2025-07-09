@@ -798,7 +798,11 @@ void app_recorder_del_cur_play_file(void)
 
 struct app_mode *app_enter_record_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     y_printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> Enter Record Mode!!\n");

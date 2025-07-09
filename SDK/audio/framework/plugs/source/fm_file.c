@@ -228,6 +228,10 @@ static void fm_outside_adc_close(void)
 {
     struct fm_file_hdl *hdl = adc_f.hdl;
     audio_adc_linein_close(&hdl->linein_ch);
+    if (!adc_hdl.hw_buf) {
+        hdl->adc_buf = NULL; //在adc 驱动中释放了这个buffer
+    }
+    hdl->ch_num = 0;
     audio_adc_del_output_handler(&adc_hdl, &hdl->adc_output);
 }
 

@@ -197,6 +197,17 @@ static int add_device_2_page_list(u8 *mac_addr, u32 timeout)
     return 0;
 }
 
+void dual_conn_user_bt_connect(u8 *addr)
+{
+    add_device_2_page_list(addr, 0);
+    if (g_dual_conn.timer) {
+        sys_timeout_del(g_dual_conn.timer);
+        g_dual_conn.timer = 0;
+    }
+    dual_conn_page_device();
+
+}
+
 static void del_device_from_page_list(u8 *mac_addr)
 {
     struct page_device_info *info;
@@ -438,6 +449,9 @@ static int dual_conn_btstack_event_handler(int *_event)
             return 0;
         }
         puts("dual_conn BT_STATUS_INIT_OK");
+#if TCFG_USER_EMITTER_ENABLE
+        return 0;
+#endif
         dual_conn_page_devices_init();
 #if (TCFG_BT_BACKGROUND_ENABLE)
         bt_background_switch_mode_after_initializes();

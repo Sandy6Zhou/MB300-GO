@@ -372,7 +372,7 @@ const int WTGV2_STACK2BUF = 0;  //等于1时解码buf会加大760，栈会减小
 //***********************
 //* 	LC3 Codec      *
 //***********************
-const int LC3_PLC_EN = 1;            			//0_fade,1_时域,2_频域,3静音;
+const int LC3_PLC_EN = 2;            			//0_fade,1_时域,2_频域,3静音;
 const int LC3_PLC_FADE_OUT_START_POINT = 480;   //丢包后维持音量的点数.
 const int LC3_PLC_FADE_OUT_POINTS = 120 * 5;    //丢包维持指定点数后,淡出的速度,音量从满幅到0需要的点数.
 const int LC3_PLC_FADE_IN_POINTS = 120 * 5;     //丢包后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.
@@ -401,7 +401,7 @@ const int LC3_DECODE_O24bit_ENABLE = MEDIA_24BIT_ENABLE;   //解码输出pcm数�
 //***********************
 //* 	JLA Codec      *
 //***********************
-const  int  JLA_PLC_EN = 1;           //0_fade,1_时域,2_频域,3静音;
+const  int  JLA_PLC_EN = 2;           //0_fade,1_时域,2_频域,3静音;
 #if(HW_FFT_VERSION == FFT_EXT || HW_FFT_VERSION == FFT_EXT_V2) 			//支持非2的指数次幂点数的fft 时 置1
 const  int  JLA_HW_FFT = 1;
 #else
@@ -639,7 +639,7 @@ const int config_audio_eq_lp_adv_enable = 1;	//Low Pass Advance：对应工具�
 
 const int AUDIO_EQ_MAX_SECTION = EQ_SECTION_MAX;
 
-#if TCFG_EQ_ENABLE
+#if TCFG_EQ_ENABLE || TCFG_VOCAL_REMOVER_NODE_ENABLE
 const int config_audio_eq_en = EQ_EN
 
 #if TCFG_CROSSOVER_NODE_ENABLE
@@ -948,6 +948,12 @@ const char log_tag_const_i_APP_DAC  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_APP_DAC  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_w_APP_DAC  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_APP_DAC  = CONFIG_DEBUG_LIB(0);
+
+const char log_tag_const_v_DAC_NG  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_DAC_NG  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_d_DAC_NG  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_w_DAC_NG  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_e_DAC_NG  = CONFIG_DEBUG_LIB(0);
 
 const char log_tag_const_v_AUD_AUX  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_i_AUD_AUX  = CONFIG_DEBUG_LIB(0);

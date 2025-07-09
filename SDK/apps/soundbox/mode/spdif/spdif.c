@@ -1,3 +1,4 @@
+
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma bss_seg(".spdif.data.bss")
 #pragma data_seg(".spdif.data")
@@ -247,6 +248,22 @@ int spdif_app_msg_handler(int *msg)
         app_send_message(APP_MSG_MUTE_CHANGED, sys_audio_mute_statu);
 #endif
         break;
+    case APP_MSG_SPDIF_STREAM_RUN:
+        y_printf(">>>>>>>>>>>>>>> APP_MSG_SPDIF_STREAM_RUN!");
+        spdif_stream_run_open_player();
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+        if (get_le_audio_curr_role() != 2) {
+            spdif_open_player();
+        } else if (get_le_audio_curr_role() == 2 && !spdif_get_data_clean_flag()) {
+#if (LEA_BIG_FIX_ROLE == 0)
+            spdif_open_le_audio();
+#endif
+            spdif_open_player();
+        }
+#else
+        spdif_open_player();
+#endif
+        break;
     default:
         app_common_key_msg_handler(msg);
         break;
@@ -268,6 +285,7 @@ static int app_spdif_init()
 {
     int ret = -1;
     puts("\nspdif start\n");
+    spdif_first_in_flag = 1;
     app_spdif_hd.mute_mark = 0;
     spdif_set_data_clean(app_spdif_hd.mute_mark);	//默认每次进spdif都是非mute状态(自身mute)
     spdif_idle_flag = 0;
@@ -281,7 +299,7 @@ static int app_spdif_init()
             spdif_tone_play_end_callback(NULL, STREAM_EVENT_NONE); // 提示音播放失败就直接调用 linein start
         }
     }
-#endif //TCFG_LOCAL_TWS_ENABLE
+#else //TCFG_LOCAL_TWS_ENABLE
     //开启ui
     /* UI_SHOW_WINDOW(ID_WINDOW_TV);//打开ui主页 */
     /* UI_SHOW_MENU(MENU_TV, 0, 0, NULL); */
@@ -290,6 +308,7 @@ static int app_spdif_init()
     if (ret) {
         spdif_tone_play_end_callback(NULL, STREAM_EVENT_NONE); // 提示音播放失败就直接调用 linein start
     }
+#endif
 #if TCFG_PITCH_SPEED_NODE_ENABLE
     app_var.pitch_mode = PITCH_0;
 #endif
@@ -331,7 +350,11 @@ void app_spdif_exit()
 
 struct app_mode *app_enter_spdif_mode(int arg)
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16];
+#endif
     struct app_mode *next_mode;
 
     app_spdif_init();

@@ -187,6 +187,20 @@ enum {
 
 };
 
+#define    BT_RECEIVER_EN    0
+#define    BT_EMITTER_EN     1
+
+typedef enum {
+    AVCTP_OPID_VOLUME_UP   = 0x41,
+    AVCTP_OPID_VOLUME_DOWN = 0x42,
+    AVCTP_OPID_MUTE        = 0x43,
+    AVCTP_OPID_PLAY        = 0x44,
+    AVCTP_OPID_STOP        = 0x45,
+    AVCTP_OPID_PAUSE       = 0x46,
+    AVCTP_OPID_NEXT        = 0x4B,
+    AVCTP_OPID_PREV        = 0x4C,
+} AVCTP_CMD_TYPE;
+
 extern struct bt_mode_var g_bt_hdl;
 
 extern u8 bt_app_exit_check(void);
@@ -205,4 +219,5 @@ int btstack_exit_for_app(void);
 void bt_work_mode_switch_to_next(void);
 
 int bt_work_mode_select(u8 mode);
+void emitter_search_noname(u8 status, u8 *addr, u8 *name);
 #endif

@@ -505,6 +505,17 @@ int music_file_ab_repeat_close(struct file_player *music_player)
 #endif /*FILE_DEC_AB_REPEAT_EN*/
 
 
+//获取解码文件的码率,采样率和解码格式
+int music_file_get_fmt_api(struct file_player *music_player, struct stream_fmt *fmt)
+{
+    if (!music_player || !fmt) {
+        return false;
+    }
+    int err = jlstream_node_ioctl(music_player->stream, NODE_UUID_DECODER, NODE_IOC_GET_PRIV_FMT, (int)fmt);
+    //printf("coding_type:%x,sample_rate:%d,bit_rate:%d kb/s\n",fmt->coding_type,fmt->sample_rate,fmt->bit_rate);
+    return err;
+}
+
 int music_file_get_breakpoints(struct audio_dec_breakpoint *bp, struct file_player *music_player)
 {
     if (music_player) {
@@ -743,7 +754,10 @@ static int music_file_player_start(struct file_player *player)
 #else
     err = jlstream_start(player->stream);
 #endif
-
+#if 0 //获取码率，采样率,解码格式
+    struct stream_fmt fmt;
+    music_file_get_fmt_api(player, &fmt);
+#endif
 
 #if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
     if (!mp3_flag) {

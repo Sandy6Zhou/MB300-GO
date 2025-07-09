@@ -255,6 +255,12 @@ static int audio_aec_probe(short *talk_mic, short *talk_ref_mic, short *talk_fb_
 #if CVP_LOUDNESS_TRACE_ENABLE
     loudness_meter_short(&mic_loudness, talk_mic, len >> 1);
 #endif/*CVP_LOUDNESS_TRACE_ENABLE*/
+    if (aec_hdl->inbuf_clear_cnt) {
+        aec_hdl->inbuf_clear_cnt--;
+        memset(talk_mic, 0, len);
+        memset(talk_ref_mic, 0, len);
+        memset(talk_fb_mic, 0, len);
+    }
     return 0;
 }
 
@@ -885,22 +891,23 @@ u8 audio_aec_status(void)
 *                  Audio AEC Input
 * Description: AEC源数据输入
 * Arguments  : buf	输入源数据地址
-*			   len	输入源数据长度
+*			   len	输入源数据长度(Byte)
 * Return	 : None.
 * Note(s)    : 输入一帧数据，唤醒一次运行任务处理数据，默认帧长256点
 *********************************************************************
 */
 void audio_aec_inbuf(s16 *buf, u16 len)
 {
+    if (len != 512) {
+        printf("[error] aec point fault\n"); //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+
+    }
+
     if (aec_hdl && aec_hdl->start) {
         if (aec_hdl->input_clear) {
             memset(buf, 0, len);
         }
 #if CVP_TOGGLE
-        if (aec_hdl->inbuf_clear_cnt) {
-            aec_hdl->inbuf_clear_cnt--;
-            memset(buf, 0, len);
-        }
         int ret = aec_in_data(buf, len);
         if (ret == -1) {
         } else if (ret == -2) {

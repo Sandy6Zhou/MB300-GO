@@ -7,6 +7,7 @@
 #include "app_main.h"
 #include "audio_cvp.h"
 #include "cvp/aec_ref_dac_ch_data.h"
+#include "effects/audio_howling_ahs.h"
 
 #if TCFG_APP_LOUDSPEAKER_EN
 
@@ -80,7 +81,9 @@ int loudspeaker_mic_player_open(void)
 
     u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
     jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_FMT, (int)ref_sr);
-    jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);
+    jlstream_node_ioctl(player->stream, NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, AHS_NN_FRAME_POINTS);
+    jlstream_add_thread(player->stream, "mic_effect1");
+    jlstream_add_thread(player->stream, "mic_effect2");
 #endif
     err = jlstream_start(player->stream);
     if (err) {
@@ -110,6 +113,9 @@ void loudspeaker_mic_player_close()
     if (!player) {
         return;
     }
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+    audio_ahs_sem_post();
+#endif
     jlstream_stop(player->stream, 50);
     jlstream_release(player->stream);
 

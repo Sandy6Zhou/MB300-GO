@@ -336,6 +336,22 @@ u16 ble_vendor_set_default_att_mtu(u16 mtu_size);
 /*************************************************************************************************/
 void user_client_set_search_complete(void);
 
+/**
+ * @brief 添加回调函数（同时添加 `search_result` 和 `search_close`）
+ *
+ * @param callback1 `search_result` 回调函数
+ * @param callback2 `search_close` 回调函数
+ */
+void user_client_add_callback(void *callback1, void *callback2);
+
+/**
+ * @brief 移除回调函数（同时移除 `search_result` 和 `search_close`）
+ *
+ * @param callback1 `search_result` 回调函数
+ * @param callback2 `search_close` 回调函数
+ */
+void user_client_remove_callback(void *callback1, void *callback2);
+
 /*************************************************************************************************/
 /*!
  *  \brief      提供生成ble对应的类型地址.

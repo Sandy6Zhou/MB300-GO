@@ -51,6 +51,10 @@ static void led7_enter_mode(u8 mode)
         UI_SHOW_WINDOW(ID_WINDOW_SPDIF);
         /* UI_SHOW_MENU(MENU_SPDIF, 0, 0, NULL); */
         break;
+    case APP_MODE_LOUDSPEAKER:
+        UI_SHOW_WINDOW(UI_LOUDSPEAKER_MENU_MAIN);
+        UI_SHOW_MENU(MENU_LOUDSPEAKER, 0, 0, NULL);
+        break;
     case APP_MODE_SINK:
         UI_SHOW_WINDOW(ID_WINDOW_SINK);
         UI_SHOW_MENU(MENU_SINK, 0, 0, NULL);

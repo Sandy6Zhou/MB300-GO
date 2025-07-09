@@ -209,7 +209,7 @@ static void iis_rx_handle(void *priv, void *buf, int len)
         audio_cvp_phase_align();
     }
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
-    if (hdl->scene == STREAM_SCENE_MIC_EFFECT) {
+    if (hdl->scene == STREAM_SCENE_MIC_EFFECT || hdl->scene == STREAM_SCENE_LOUDSPEAKER_IIS) {
         if (audio_ahs_status()) {
             howling_ahs_read_ref_data();
         }
@@ -259,12 +259,15 @@ void iis_rx_init(struct iis_file_hdl *hdl)
         hdl->sample_rate = general_params->sample_rate;	//默认采样率值
 #endif
     }
-
     jlstream_read_node_data_by_cfg_index(hdl->plug_uuid, hdl->node->subid, 0, (void *)&hdl->ch_idx, NULL);
     if (!iis_hdl[hdl->module_idx]) {
         struct alink_param params = {0};
         params.module_idx = hdl->module_idx;
+#if defined(WIRELESS_MIC_PRODUCT_MODE)
+        params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, hdl->irq_points, hdl->bit_width, hdl->hw_ch_num, AUDIO_DAC_MAX_SAMPLE_RATE);
+#else
         params.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, hdl->hw_ch_num, AUDIO_DAC_MAX_SAMPLE_RATE);
+#endif
         params.sr         = hdl->sample_rate;
         params.bit_width  = hdl->bit_width;
         params.fixed_pns  = const_out_dev_pns_time_ms;
@@ -338,12 +341,11 @@ static void iis_ioc_get_fmt(struct iis_file_hdl *hdl, struct stream_fmt *fmt)
         }
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;
+    case STREAM_SCENE_LOUDSPEAKER_IIS:
+    case STREAM_SCENE_WIRELESS_MIC:
     case STREAM_SCENE_MIC_EFFECT:
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
-        fmt->sample_rate = 16000;
-        if (fmt->sample_rate != hdl->sample_rate) {
-            ASSERT(fmt->sample_rate == hdl->sample_rate, "iis rx sr[%d] is not 16000 [ahs-nn]", hdl->sample_rate);
-        }
+        hdl->sample_rate = 16000;
 #endif
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;

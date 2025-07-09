@@ -250,7 +250,7 @@ void *audio_cvp_ref_iis_hdl_get()
 static u32 get_alink_data_len()
 {
     ASSERT((alink_module_idx < ALINK_MODULE_NUM_MAX) && (alink_ch_idx < ALINK_CH_NUM_MAX), "alink_module_idx %d, alink_ch_idx %d\n", alink_module_idx, alink_ch_idx);
-    u32 len = *ALNK_LEN[alink_module_idx] - *ALNK_SHN[alink_module_idx][alink_ch_idx];
+    u32 len = (*ALNK_LEN[alink_module_idx] - *ALNK_SHN[alink_module_idx][alink_ch_idx]) * (cvp_ref_src->bit_width ? 4 : 2) * 2; // 2 是iis channel
     // r_printf("get_alink_data_len : %d\n", len);
     return len;
 }

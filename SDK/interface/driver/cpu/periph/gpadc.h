@@ -189,6 +189,7 @@ void adc_pmu_vbg_enable();
 void adc_pmu_vbg_disable();
 void adc_ana_ch_sel(enum AD_CH ch, u32 *_adc_con);
 void adc_internal_signal_to_io(enum AD_CH analog_ch, u16 gpio);
+u32 adc_value_to_voltage_for_extern_voltage(u32 adc_value, u32 extern_voltage);
 // void adc_pmu_ch_select(u32 ch);
 // void adc_audio_ch_select(u32 ch_sel);
 void adc_adjust_div(void);

@@ -53,6 +53,8 @@ typedef struct {
     uint8_t         flush_timeout_P_to_C;
     uint16_t        reserved;
     uint32_t        isoIntervalUs;
+    uint16_t        BN_C_To_P;
+    uint16_t        BN_P_To_C;
 } cig_hdl_t;
 
 /* CIG ISO stream parameter. */

@@ -204,5 +204,33 @@ void pcm_fill_flfr_2_qual(void *out, void *in_flfr, u16 in_len);
  * */
 void pcm_fill_rlrr_2_qual(void *out, void *in_rlrr, u16 in_len);
 
+/* note: 16bit位位宽的双声道转6声道
+ * *out:16bit位宽输出地址
+ * *in:16bit位宽输入地址
+ * len:总的输入长度(byte)
+ * */
+void pcm_dual_to_six(void *out, void *in, u16 len);
+
+/* note: 32bit位位宽的双声道转6声道
+ * *out:32bit位宽输出地址
+ * *in:32bit位宽输入地址
+ * len:总的输入长度(byte)
+ * */
+void pcm_dual_to_six_32bit(void *out, void *in, u16 len);
+
+
+/* note: 16bit位位宽的双声道转8声道
+ * *out:16bit位宽输出地址
+ * *in:16bit位宽输入地址
+ * len:总的输入长度(byte)
+ * */
+void pcm_dual_to_eight(void *out, void *in, u16 len);
+
+/* note: 32bit位位宽的双声道转8声道
+ * *out:32bit位宽输出地址
+ * *in:32bit位宽输入地址
+ * len:总的输入长度(byte)
+ * */
+void pcm_dual_to_eight_32bit(void *out, void *in, u16 len);
 
 #endif/*_AUDIO_SPLICING_H_*/

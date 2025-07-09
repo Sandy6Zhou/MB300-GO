@@ -11,7 +11,7 @@
  * note  : 自研ENC产测 CVP通话算法/MIC 控制层
  ****************************************************************
  */
-#include "asm/includes.h"
+#include "cpu/includes.h"
 #include "media/includes.h"
 #include "system/includes.h"
 #include "app_config.h"

@@ -265,8 +265,6 @@ struct audio_dac_hdl {
 */
 int audio_dac_init(struct audio_dac_hdl *dac, const struct dac_platform_data *pd);
 
-void audio_dac_set_capless_DTB(struct audio_dac_hdl *dac, s32 dacr32);
-
 void audio_dac_avdd_level_set(struct audio_dac_hdl *dac, u8 level);
 
 void audio_dac_lpf_level_set(struct audio_dac_hdl *dac, u8 level);

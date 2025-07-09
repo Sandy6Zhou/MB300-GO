@@ -13,7 +13,7 @@
 
 #include "app_config.h"
 #include "app_main.h"
-
+#include "a2dp_player.h"
 
 struct detect_handler {
     u8 codec_type;
@@ -198,6 +198,7 @@ __check:
         int msg[4];
         msg[0] = APP_MSG_BT_A2DP_START;
         memcpy(msg + 1, detect->bt_addr, 6);
+        //set_g_play_addr(detect->bt_addr);           //这里需要提前赋值，如果在background消息处理才赋值，有可能能量检测还没结束手动切模式回到蓝牙就没地方赋值
         app_send_message_from(MSG_FROM_APP, 12, msg);
 #if TCFG_USER_TWS_ENABLE
         u8 data[7];

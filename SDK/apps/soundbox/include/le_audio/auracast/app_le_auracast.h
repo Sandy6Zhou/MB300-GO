@@ -86,7 +86,8 @@ int app_auracast_sink_scan_stop(void);
 
 u8 get_auracast_switch_onoff(void);
 
-
+int auracast_source_open_media_stream();
+int auracast_source_close_media_stream();
 
 #ifdef __cplusplus
 };

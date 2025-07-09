@@ -139,6 +139,8 @@ vocal_track_synthesis_node_adapter
 
 #if TCFG_VOCAL_TRACK_SEPARATION_NODE_ENBALE
 vocal_track_separation_node_adapter
+vocal_track_separation_node_adapter_6to2
+vocal_track_separation_node_adapter_8to2
 #endif
 
 #if TCFG_CROSSOVER_NODE_ENABLE
@@ -689,9 +691,14 @@ aac_enc_plug
 #endif
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
 ahs_node_adapter
+ahs_post_node_adapter
 #endif
 
 #if TCFG_DEC_ENGINE_SOUND_ENABLE
 engine_dec_plug
+#endif
+
+#if TCFG_MUTE_NODE_ENABLE
+mute_node_adapter
 #endif
 

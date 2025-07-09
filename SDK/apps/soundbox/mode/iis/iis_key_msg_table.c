@@ -10,7 +10,7 @@ const int key_iis_ad_num0_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_CHANGE_MODE,    APP_MSG_KEY_POWER_OFF,    	APP_MSG_KEY_POWER_OFF_HOLD, APP_MSG_KEY_POWER_OFF_RELEASE,           APP_MSG_LE_BROADCAST_SW,     		APP_MSG_NULL,
 };
 const int key_iis_ad_num1_msg_table[KEY_ACTION_MAX] = {
-    APP_MSG_MUSIC_PP,       APP_MSG_NULL,    		APP_MSG_NULL,           APP_MSG_NULL,            APP_MSG_IIS_START,     		APP_MSG_NULL,
+    APP_MSG_MUSIC_PP,       APP_MSG_NULL,    		APP_MSG_NULL,           APP_MSG_NULL,            APP_MSG_NULL,     		APP_MSG_NULL,
 };
 const int key_iis_ad_num2_msg_table[KEY_ACTION_MAX] = {
     APP_MSG_VOL_UP,     	APP_MSG_VOL_UP,         APP_MSG_VOL_UP,         APP_MSG_NULL,            APP_MSG_NULL,      		APP_MSG_NULL,

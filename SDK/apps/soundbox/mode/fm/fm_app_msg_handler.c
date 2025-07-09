@@ -34,9 +34,6 @@ int fm_app_msg_handler(int *msg)
 #endif
         (msg_type == APP_MSG_FM_SCAN_ALL
          || msg_type == APP_MSG_FM_SCAN_ALL_DOWN || msg_type == APP_MSG_FM_SCAN_ALL_UP
-#if LEA_BIG_VOL_SYNC_EN
-         || msg_type == APP_MSG_VOL_UP || msg_type == APP_MSG_VOL_DOWN
-#endif
          || msg_type == APP_MSG_FM_SCAN_DOWN || msg_type == APP_MSG_FM_SCAN_UP || msg_type == APP_MSG_MUSIC_PP
          || msg_type == APP_MSG_FM_START  || msg_type == APP_MSG_FM_PREV_STATION || msg_type == APP_MSG_FM_NEXT_STATION
          || msg_type == APP_MSG_FM_PREV_FREQ || msg_type == APP_MSG_FM_NEXT_FREQ

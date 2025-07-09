@@ -263,7 +263,7 @@ static void delay_open_spdif_player(void *priv)
 }
 
 /* 打开 spdif player */
-static void spdif_open_player(int arg)
+void spdif_open_player(void)
 {
     if (app_get_current_mode()->name != APP_MODE_SPDIF) {
         return;
@@ -297,7 +297,7 @@ static void spdif_open_player(int arg)
             if (le_audio == NULL) {
                 r_printf("=========================> [%s, %d] le_audio == NULL\n", __func__, __LINE__);
             }
-            /* sys_timeout_add(NULL, delay_open_spdif_player, 1000); */
+            sys_timeout_add(NULL, delay_open_spdif_player, 1000);
         }
     }
 #else
@@ -324,10 +324,10 @@ int spdif_open_player_by_taskq(int delay_us)
 {
     int ret = 0;
     if (delay_us == 0) {
-        int msg[2];
+        int msg[1];
         msg[0] = (int)spdif_open_player;
-        msg[1] = 0;
-        ret = os_taskq_post_type("app_core", Q_CALLBACK, 2, msg);
+        /* msg[1] = 0; */
+        ret = os_taskq_post_type("app_core", Q_CALLBACK, 1, msg);
     } else {
         sys_timeout_add(NULL, delay_open_spdif_player, delay_us);
     }
@@ -335,7 +335,7 @@ int spdif_open_player_by_taskq(int delay_us)
 }
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-static void spdif_open_le_audio(int arg)
+void spdif_open_le_audio(void)
 {
     if (app_get_current_mode()->name == APP_MODE_SPDIF) {
         y_printf(">>>>>>>>>>>>>>>>>>>>>>> Call Func: le_audio_scene_deal(LE_AUDIO_MUSIC_START)\n");
@@ -345,10 +345,10 @@ static void spdif_open_le_audio(int arg)
 
 int spdif_open_le_audio_by_taskq(void)
 {
-    int msg[2];
+    int msg[1];
     msg[0] = (int)spdif_open_le_audio;
-    msg[1] = 0;
-    int ret = os_taskq_post_type("app_core", Q_CALLBACK, 2, msg);
+    /* msg[1] = 0; */
+    int ret = os_taskq_post_type("app_core", Q_CALLBACK, 1, msg);
     return ret;
 }
 

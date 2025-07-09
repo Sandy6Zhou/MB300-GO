@@ -19,6 +19,7 @@
 #include "le_audio_mix_mic_recorder.h"
 #include "asm/dac.h"
 #include "cvp/aec_ref_dac_ch_data.h"
+#include "effects/audio_howling_ahs.h"
 
 void mic_effect_ram_code_load();
 void mic_effect_ram_code_unload();
@@ -146,7 +147,7 @@ int mic_effect_player_open()
             printf("mic_effect stream[%d] thread_name:%s\n", i, mic_effect_thread_name);
             jlstream_add_thread(player->stream[i], mic_effect_thread_name);
 
-#if (CPU_CORE_NUM > 1) && (!(defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)) //ahs-nn不使能mic_effect多线程
+#if (CPU_CORE_NUM > 1)
             if (CONFIG_JLSTREAM_MULTI_THREAD_ENABLE) {
                 sprintf(mic_effect_thread_name, "mic_effect%d", mic_effect_thread_name_idx);
                 mic_effect_thread_name_idx++;
@@ -162,7 +163,7 @@ int mic_effect_player_open()
             }
             u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
             jlstream_node_ioctl(player->stream[i], NODE_UUID_HOWLING_AHS, NODE_IOC_SET_FMT, (int)ref_sr);
-            jlstream_node_ioctl(player->stream[i], NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);
+            jlstream_node_ioctl(player->stream[i], NODE_UUID_HOWLING_AHS, NODE_IOC_SET_PRIV_FMT, AHS_NN_FRAME_POINTS);
 #endif
 
             err = jlstream_start(player->stream[i]);
@@ -239,6 +240,9 @@ void mic_effect_player_close()
     }
     for (int i = 0; i < MIC_EFFECT_CHANNEL_MAX; i++) {
         if (player->stream[i]) {
+#if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
+            audio_ahs_sem_post();
+#endif
             jlstream_stop(player->stream[i], 0);
             jlstream_release(player->stream[i]);
         }

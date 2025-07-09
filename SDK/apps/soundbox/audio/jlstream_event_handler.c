@@ -43,6 +43,7 @@
 #define PIPELINE_UUID_RECODER       0x49EC
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
 #define PIPELINE_UUID_AI_VOICE      0x5475
+#define PIPELINE_UUID_LOUDSPK       0xAD27
 
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
@@ -146,6 +147,10 @@ static int get_pipeline_uuid(const char *name)
             return PIPELINE_UUID_A2DP_DUT;
         }
 #endif
+    }
+
+    if (!strcmp(name, "loudspkiis") || !strcmp(name, "loudspkmic")) {
+        return PIPELINE_UUID_LOUDSPK;
     }
 
     if (!strcmp(name, "ai_voice")) {
@@ -508,6 +513,16 @@ int jlstream_event_notify(enum stream_event event, int arg)
     int ret = 0;
 
     switch (event) {
+    case STREAM_EVENT_GET_FILE_BUF_SIZE:
+        if (!(arg == AUDIO_CODING_APE \
+              || arg  == AUDIO_CODING_FLAC \
+              || arg  == AUDIO_CODING_DTS \
+              || arg  == AUDIO_CODING_WAV)) {
+            //非上述格式不使用CONFIG_MUSIC_FILE_BUF_SIZE进行设备读取，处理部分U盘读超过512会不响应问题
+            ret = (2 << 16);        //读多少包
+            ret |= 512;		        //一包的长度
+        }
+        break;
     case STREAM_EVENT_LOAD_DECODER:
         ret = load_decoder_handler((struct stream_decoder_info *)arg);
         break;

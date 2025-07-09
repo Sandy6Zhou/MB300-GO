@@ -37,6 +37,13 @@ const int CONFIG_LMP_CONNECTION_NUM = 2;
 const int CONFIG_LMP_CONNECTION_NUM = 1;
 #endif
 
+const int CONFIG_BTCTLER_JL_DONGLE_SOURCE_ENABLE=0;
+#if TCFG_USER_EMITTER_ENABLE
+const int config_master_qos_poll=1;
+#else
+const int config_master_qos_poll=0;
+#endif
+
 const int CONFIG_DISTURB_SCAN_ENABLE = 0;
 #define TWS_PURE_MONITOR_MODE    0//1:纯监听模式
 
@@ -148,18 +155,9 @@ const int CONFIG_LNA_CHECK_VAL = -80;
     const int CONFIG_TWS_DATA_TRANS_ENABLE = 0;
 #endif//end TCFG_USER_TWS_ENABLE
 
-#if TCFG_BT_SUPPORT_LHDC //LHDC使用较高码率时需要增大蓝牙buf
 #if (TCFG_BT_SUPPORT_LHDC_V5 || TCFG_BT_SUPPORT_LHDC || TCFG_BT_SUPPORT_LDAC) //LHDC/LDAC使用较高码率时需要增大蓝牙buf
 	const int CONFIG_A2DP_MAX_BUF_SIZE          = 50 * 1024;
 	const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 40;
-#else
-	const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
-	#if TWS_PURE_MONITOR_MODE
-		const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 63;
-	#else
-		const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 8;
-	#endif
-#endif
 #elif TCFG_KBOX_1T3_MODE_EN
         const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 63;
     #if (defined CONFIG_CPU_BR29) && (TCFG_USER_TWS_ENABLE)
@@ -168,11 +166,16 @@ const int CONFIG_LNA_CHECK_VAL = -80;
         const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
     #endif
 #else
-        const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
-        const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 4;
+	const int CONFIG_A2DP_MAX_BUF_SIZE          = 30 * 1024;
+	#if TWS_PURE_MONITOR_MODE
+		const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 63;
+	#else
+		const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT       = 8;
+	#endif
 #endif
 
 const int CONFIG_BT_DUAL_MODE_MANAGER_ENABLE = 0;
+const u64 config_default_big_chmap = 0;//x1DFFDFFBFF;
 
 #if 0
 // 可重写函数实时调试qos硬件开关状态，判断当前qos是开还是关
@@ -258,10 +261,14 @@ const int config_btctler_eir_version_info_len = 21;
 
 const int CONFIG_ESCO_MUX_RX_BULK_ENABLE  =  0;
 
+#if TCFG_USER_EMITTER_ENABLE
+const int CONFIG_BREDR_INQUIRY   =  1;
+#else
 const int CONFIG_BREDR_INQUIRY   =  0;
+#endif
 const int CONFIG_INQUIRY_PAGE_OFFSET_ADJUST =  0;
 
-#if TCFG_RCSP_DUAL_CONN_ENABLE
+#if TCFG_RCSP_DUAL_CONN_ENABLE || TCFG_USER_EMITTER_ENABLE
 	const int CONFIG_LMP_NAME_REQ_ENABLE  =  1;
 #elif (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
 	const int CONFIG_LMP_NAME_REQ_ENABLE  =  1;
@@ -288,8 +295,8 @@ const int CONFIG_LMP_MASTER_ESCO_ENABLE  =  0;
 	#endif
 
 #else
-	const int CONFIG_WIFI_DETECT_ENABLE = 0;
-    const int CONFIG_TWS_AFH_ENABLE     = 0;
+	const int CONFIG_WIFI_DETECT_ENABLE = 3;
+    const int CONFIG_TWS_AFH_ENABLE     = 1;
 #endif//end CONFIG_SUPPORT_WIFI_DETECT
 
 const int ESCO_FORWARD_ENABLE = 0;
@@ -324,7 +331,6 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 #if (TCFG_USER_BLE_ENABLE)
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-
     const int config_btctler_le_roles =
     #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN)
         (LE_ADV | LE_SLAVE | LE_SCAN) |
@@ -338,7 +344,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
         const uint64_t config_btctler_le_features = LL_FEAT_ISO_SYNC | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LL_FEAT_VENDOR_BIG_SYNC_TRANSFER;
         //pkt_v3 optimized_en:BIT(18)
         #if defined(TCFG_BB_PKT_V3_EN) && TCFG_BB_PKT_V3_EN
-            const int config_bb_optimized_ctrl = BIT(18) | BIT(19) | LE_BB_OPT_FEAT_ISO_DIRECT_PUSH; //BIT(7);//|BIT(8);
+            const int config_bb_optimized_ctrl = BIT(18) | BIT(19) | LE_BB_OPT_FEAT_ISO_DIRECT_PUSH | BIT(5); //BIT(7);//|BIT(8);
         #else
             const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
         #endif
@@ -380,7 +386,11 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE       //开了第三方协议le_hw_nums需要额外增加，开多少协议个需要加多少个hw
     const int config_btctler_le_hw_nums = 8; //默认多开两条支持2个APP连接
 #else
+#if TCFG_AURACAST_PAWR_ENABLE
+    const int config_btctler_le_hw_nums = 8;
+#else
     const int config_btctler_le_hw_nums = 6;
+#endif
 #endif
 #else
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE       //开了第三方协议le_hw_nums需要额外增加，开多少协议个需要加多少个hw
@@ -389,8 +399,13 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     const int config_btctler_le_hw_nums = 5;
 #endif
 #endif
-    const int config_btctler_le_roles    = (LE_MASTER | LE_SLAVE | LE_ADV | LE_SCAN);
-    const uint64_t config_btctler_le_features = LL_FEAT_ISO_BROADCASTER | LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING;
+
+    const int config_btctler_le_roles    = (LE_MASTER | LE_SLAVE | LE_ADV | LE_SCAN | LE_INIT);
+#if TCFG_AURACAST_PAWR_ENABLE
+    const uint64_t config_btctler_le_features = LE_ENCRYPTION | LL_FEAT_ISO_BROADCASTER | LE_DATA_PACKET_LENGTH_EXTENSION| LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING |  LL_FEAT_LE_EXT_ADV | LL_FEAT_PAWR_SCANNER | LL_FEAT_PAWR_ADVERTISER;
+#else
+    const uint64_t config_btctler_le_features = LE_ENCRYPTION | LL_FEAT_ISO_BROADCASTER | LE_DATA_PACKET_LENGTH_EXTENSION| LL_FEAT_ISO_SYNC | LL_FEAT_ISO_HOST_SUPPORT | LE_2M_PHY | CHANNEL_SELECTION_ALGORITHM_2 | LE_EXTENDED_ADVERTISING | LE_PERIODIC_ADVERTISING |  LL_FEAT_LE_EXT_ADV;
+#endif
     const int config_btctler_le_rx_nums = 20;
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
@@ -422,6 +437,9 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_roles    = (LE_MASTER | LE_SCAN);
         const uint64_t config_btctler_le_features = LE_FEATURES_BIS|LE_CORE_V50_FEATURES;
+    #elif (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+        const int config_btctler_le_roles    = (LE_MASTER | LE_INIT| LE_SCAN | LE_SLAVE  | LE_ADV);
+        const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES;
     #else
         const int config_btctler_le_roles    = (LE_SLAVE  | LE_ADV);
         const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES;
@@ -491,6 +509,74 @@ const bool config_tws_le_role_sw =(TWS_LE_AUDIO_LE_ROLE_SW_EN|TWS_RCSP_LE_ROLE_S
 const int sniff_support_reset_anchor_point = 0;   //sniff状态下是否支持reset到最近一次通信点，用于HID
 const int sniff_long_interval = (500 / 0.625);    //sniff状态下进入long interval的通信间隔(ms)
 const int config_rf_oob = 0;
+
+#if TCFG_KBOX_1T3_MODE_EN
+#if defined(TCFG_BB_PKT_V3_EN) && TCFG_BB_PKT_V3_EN
+typedef struct  {
+	int rssi_thd1;
+	int rssi_thd2;
+	float delay_thd1;
+	float delay_thd2;
+
+	float delay_thd3;
+	float delay_thd4;
+	float recover_thd1;
+	float recover_thd2;
+
+	float recover_thd3;
+	float recover_thd4;
+	float  per_thd;
+	int    delay_num_max;
+	int    delay_num_fast;
+
+	u8     delay_count_period1;
+	u8      delay_count_period2;
+	u8      recover_count_period;
+	u8      delay_control_period;
+
+	u8    log_en;
+} pkt_v3_delay_judge_params_t;
+
+const pkt_v3_delay_judge_params_t config_pkt_v3_param = {
+	.log_en = 2,
+	.rssi_thd1 = 70,
+	.rssi_thd2 = 80,
+	.delay_thd1 = 0.003,
+	.delay_thd2 = 0.002,
+	.delay_thd3 = 0.007, ///
+	.delay_thd4 = 0.004, //
+
+	.recover_thd1 = 0.001,
+	.recover_thd2 = 0.001,
+	.recover_thd3 = 0.002,
+	.recover_thd4 = 0.002,
+
+#if defined(TCFG_BB_PKT_V3_LEVEL_SEL) && (TCFG_BB_PKT_V3_LEVEL_SEL==1)
+	.delay_num_max = 9,
+	.delay_num_fast = 3,
+#else
+	.delay_num_max = 3,
+	.delay_num_fast = 2,
+#endif
+	.per_thd = 0.01,
+
+	.delay_count_period1 = 2,
+	.delay_count_period2 = 4,
+	.recover_count_period = 12,
+	.delay_control_period = 2,
+};
+#endif
+
+const struct le_adv_link_param_cfg le_adv_link_param = {
+	    .param3[0] = -10,
+	    .param3[1] = -15,
+};
+#if defined(TCFG_BB_PKT_V3_LEVEL_SEL) && (TCFG_BB_PKT_V3_LEVEL_SEL==1)
+const u8 config_pkt_v3_num = 0 | (9 << 4);
+#else
+const u8 config_pkt_v3_num = 0 | (3 << 4);
+#endif
+#endif //1T3_EN
 
 const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmission; 0:for ll bqb mode
 // *INDENT-ON*

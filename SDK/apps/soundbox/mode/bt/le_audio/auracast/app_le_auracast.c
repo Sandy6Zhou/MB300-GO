@@ -26,11 +26,14 @@
 #include "bt_event_func.h"
 #include "spdif_file.h"
 #include "le_audio_common.h"
+#include "le_auracast_config.h"
+#include "le_auracast_pawr.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL)
 static int ble_connect_dev_detect_timer = 0;
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #include "ble_rcsp_server.h"
+#include "btstack_rcsp_user.h"
 #endif
 #endif
 
@@ -76,7 +79,6 @@ static int ble_connect_dev_detect_timer = 0;
 #define MAX_BIS_NUMS   MAX(AURACAST_SOURCE_BIS_NUMS, AURACAST_SINK_BIS_NUMS)
 
 #define AURACAST_BIS_ENCRYPTION_ENABLE      (0)
-
 /**************************************************************************************************
   Data Types
 **************************************************************************************************/
@@ -117,6 +119,7 @@ struct app_auracast_t {
     u8 role;
     u8 bis_num;
     u8 big_hdl;
+    u32 presentation_delay_us;
     void *recorder;
     struct le_audio_player_hdl rx_player;
     struct app_auracast_info_t bis_hdl_info[MAX_BIS_NUMS];
@@ -226,21 +229,32 @@ static unsigned char errpacket[2] = {
 
 auracast_user_config_t user_config = {
     .config_num_bis = AURACAST_SOURCE_BIS_NUMS,
-    .config_sampling_frequency = AURACAST_BIS_SAMPLING_RATE,
-    .config_variant = AURACAST_BIS_VARIANT,
     .encryption = AURACAST_BIS_ENCRYPTION_ENABLE,
     .broadcast_id = 0x123456,
     /* .broadcast_name = "JL_auracast", */
 };
 auracast_advanced_config_t user_advanced_config = {
-    .bn = AURACAST_ISO_BN,
-    .rtn = AURACAST_BIS_RTN,
     .adv_cnt = 3,
     .big_offset = 1500,
 };
 
 static u16 auracast_sink_sync_timeout_hdl = 0;
 static auracast_sink_source_info_t *cur_listening_source_info = NULL;						// 当前正在监听广播设备播歌的信息
+static struct auracast_cfg_t *auracast_cfg_info = NULL;
+
+static int auracast_event_to_user(int event, void *value, u32 len)
+{
+    int *evt = zalloc(sizeof(int) + len);
+    ASSERT(evt);
+    evt[0] = event << 16;
+    evt[0] |= len;
+    if (value) {
+        memcpy(&evt[1], value, len);
+    }
+    app_send_message_from(MSG_FROM_AURACAST, sizeof(int) + len, (int *)evt);
+    free(evt);
+    return 0;
+}
 
 /* #if TCFG_AURACAST_SINK_CONNECT_BY_APP */
 /* static u8 add_source_state = 0; */
@@ -270,12 +284,12 @@ extern void set_ext_scan_priority(u8 set_pr);
 u32 get_auracast_sdu_size()
 {
     u16 frame_dms;
-    if (auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len >= 10000) {
+    if (auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len >= 10000) {
         frame_dms = 100;
     } else {
         frame_dms = 75;
     }
-    return (frame_dms * auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].bit_rate / 8 / 1000 / 10);
+    return (frame_dms * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].bit_rate / 8 / 1000 / 10);
 }
 
 /* --------------------------------------------------------------------------*/
@@ -494,9 +508,9 @@ static bool is_auracast_as_source()
     //(2)暂停作为广播接收设备。
     if ((cur_mode->name == APP_MODE_BT) &&
         (bt_get_connect_status() != BT_STATUS_WAITINT_CONN)) {
-        if ((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING &&  bt_get_connect_status() == BT_STATUS_PLAYING_MUSIC) ||
-            get_a2dp_decoder_status() ||
-            a2dp_player_runing()) {
+        if (((bt_a2dp_get_status() == BT_MUSIC_STATUS_STARTING &&  bt_get_connect_status() == BT_STATUS_PLAYING_MUSIC) ||
+             get_a2dp_decoder_status() ||
+             a2dp_player_runing()) && g_play_addr_vaild()) {
             return true;
         } else {
             return false;
@@ -574,7 +588,7 @@ static bool is_auracast_as_source()
     //当处于下面几种模式时，作为广播发送设备
     if (cur_mode->name == APP_MODE_PC) {
 #if defined(TCFG_USB_SLAVE_AUDIO_SPK_ENABLE) && TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        if ((pc_get_status() || config_auracast_as_master) && g_bt_hdl.background.broadcast_mode == 1) {
+        if (pc_get_status() && g_bt_hdl.background.broadcast_mode == 1) {
             return true;
         } else {
             return false;
@@ -667,6 +681,9 @@ int app_auracast_open()
 #if TCFG_KBOX_1T3_MODE_EN
     le_audio_ops_register(APP_MODE_NULL);
 #endif
+
+    auracast_cfg_info = get_auracast_cfg_data(app_get_current_mode()->name);
+    ASSERT(auracast_cfg_info, "can not read auracast cfg info\n");
 
     if (is_auracast_as_source()) {
         //初始化广播发送端参数
@@ -841,6 +858,9 @@ static int auracast_sink_sync_create(uint8_t *packet, uint16_t length)
         y_printf("bis_hdl:0x%x", app_auracast.bis_hdl_info[i].bis_hdl);
     }
 
+#if TCFG_AURACAST_PAWR_ENABLE
+    pawr_slave_init();
+#endif
     /* app_auracast_mutex_post(&mutex, __LINE__); */
     return 0;
 }
@@ -869,12 +889,15 @@ static int auracast_sink_sync_terminate(uint8_t *packet, uint16_t length)
     }
     auracast_sink_media_close();
 
+#if TCFG_AURACAST_PAWR_ENABLE
+    app_speaker_cancle_pawr_sync();
+#endif
+
     app_auracast.bis_num = 0;
     app_auracast.big_hdl = 0;
     app_auracast.status = APP_AURACAST_STATUS_SCAN;
 
     app_auracast_sink_scan_start();
-
     /* app_auracast_mutex_post(&mutex, __LINE__); */
     return 0;
 }
@@ -906,6 +929,7 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
     }
 
     switch (event) {
+    /*=================Sink Event===============*/
     case AURACAST_SINK_SOURCE_INFO_REPORT_EVENT:
         printf("AURACAST_SINK_SOURCE_INFO_REPORT_EVENT\n");
         auracast_sink_source_info_report_event_deal(packet, length);
@@ -914,25 +938,7 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
         printf("AURACAST_SINK_BLE_CONNECT_EVENT\n");
         break;
     case AURACAST_SINK_BIG_SYNC_CREATE_EVENT:
-        printf("AURACAST_SINK_BIG_SYNC_CREATE_EVENT\n");
-
-        if (cur_listening_source_info == NULL) {
-            break;
-        }
-        /* ASSERT(cur_listening_source_info); */
-        memcpy(cur_listening_source_info, auracast_sink_listening_source_info_get(), sizeof(auracast_sink_source_info_t));
-
-        if (auracast_sink_sync_timeout_hdl != 0) {
-            sys_timeout_del(auracast_sink_sync_timeout_hdl);
-            auracast_sink_sync_timeout_hdl = 0;
-        }
-
-#if TCFG_AUTO_SHUT_DOWN_TIME
-        sys_auto_shut_down_disable();   // 恢复自动关机
-#endif
-        auracast_sink_sync_create(packet, length);
-        //le_auracast_audio_open(packet, length);
-        //app_auracast_app_notify_listening_status(2, 0);
+        auracast_event_to_user(event, packet, length);
         break;
     case AURACAST_SINK_BIG_SYNC_TERMINATE_EVENT:
         //主动解除同步
@@ -940,25 +946,10 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
         break;
     case AURACAST_SINK_BIG_SYNC_FAIL_EVENT:
     case AURACAST_SINK_BIG_SYNC_LOST_EVENT:
-        printf("big lost or fail\n");
-        if (auracast_sink_sync_timeout_hdl != 0) {
-            sys_timeout_del(auracast_sink_sync_timeout_hdl);
-            auracast_sink_sync_timeout_hdl = 0;
-        }
-
-        auracast_sink_sync_terminate(packet, length);
-#if TCFG_AUTO_SHUT_DOWN_TIME
-        sys_auto_shut_down_enable();   // 恢复自动关机
-#endif
-        //app_auracast_app_notify_listening_status(0, 2);
+        auracast_event_to_user(event, packet, length);
         break;
     case AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT:
-        if (cur_listening_source_info) {
-            printf("AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT\n");
-            auracast_sink_big_sync_create(cur_listening_source_info);
-        } else {
-            printf("AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT FAIL!\n");
-        }
+        auracast_event_to_user(event, packet, length);
         break;
     case AURACAST_SINK_BIG_INFO_REPORT_EVENT:
         printf("AURACAST_SINK_BIG_INFO_REPORT_EVENT\n");
@@ -972,18 +963,83 @@ static void auracast_sink_event_callback(uint16_t event, uint8_t *packet, uint16
     case AURACAST_SINK_EXT_SCAN_COMPLETE_EVENT:
         printf("AURACAST_SINK_EXT_SCAN_COMPLETE_EVENT\n");
         break;
+    case AURACAST_SINK_PADV_REPORT_EVENT:
+        /* log_info(" AURACAST_SINK_PADV_REPORT_EVENT"); */
+        /* put_buf(packet, length); */
+        break;
     default:
+        printf("auracast sink unknow event %x\n", event);
         break;
     }
 }
 
+int app_auracast_bass_server_event_callback(uint8_t event, uint8_t *packet, uint16_t size)
+{
+    int ret = 0;
+    struct le_audio_bass_add_source_info_t *bass_source_info = (struct le_audio_bass_add_source_info_t *)packet;
+    auracast_sink_source_info_t add_source_param = {0};
+    switch (event) {
+    case BASS_SERVER_EVENT_SCAN_STOPPED:
+        break;
+    case BASS_SERVER_EVENT_SCAN_STARTED:
+        break;
+    case BASS_SERVER_EVENT_SOURCE_ADDED:
+        printf("BASS_SERVER_EVENT_SOURCE_ADDED\n");
+        if ((bass_source_info->pa_sync == BASS_PA_SYNC_SYNCHRONIZE_TO_PA_PAST_AVAILABLE) \
+            || (bass_source_info->pa_sync == BASS_PA_SYNC_SYNCHRONIZE_TO_PA_PAST_NOT_AVAILABLE)) {
+            memcpy(add_source_param.source_mac_addr, bass_source_info->address, 6);
+            bass_source_info->bis_sync_state = 0x03;
+            app_auracast_sink_big_sync_create(&add_source_param);
+        }
+        break;
+    case BASS_SERVER_EVENT_SOURCE_MODIFIED:
+        printf("BASS_SERVER_EVENT_SOURCE_MODIFIED\n");
+        if ((bass_source_info->pa_sync == BASS_PA_SYNC_SYNCHRONIZE_TO_PA_PAST_AVAILABLE) \
+            || (bass_source_info->pa_sync == BASS_PA_SYNC_SYNCHRONIZE_TO_PA_PAST_NOT_AVAILABLE)) {
+            app_auracast_sink_big_sync_terminate();
+            memcpy(add_source_param.source_mac_addr, bass_source_info->address, 6);
+            app_auracast_sink_big_sync_create(&add_source_param);
+        } else {
+            app_auracast_sink_big_sync_terminate();
+        }
+        break;
+    case BASS_SERVER_EVENT_SOURCE_DELETED:
+        break;
+    case BASS_SERVER_EVENT_BROADCAST_CODE:
+        printf("BASS_SERVER_EVENT_BROADCAST_CODE id=%d\n", packet[0]);
+        put_buf(packet, size);
+
+        ASSERT(cur_listening_source_info);
+        auracast_sink_set_broadcast_code(&packet[1]);
+        ret = app_auracast_sink_big_sync_create(cur_listening_source_info);
+        if (ret != 0) {
+        }
+        break;
+    }
+    return 0;
+}
+
+#include "user_cfg.h"
+extern void bt_le_audio_adv_enable(u8 enable);
+extern void le_audio_init(u8 mode);
+extern void le_audio_uninit(u8 mode);
+extern void le_audio_name_reset(u8 *name, u8 len);
 void app_auracast_sink_init(void)
 {
     printf("app_auracast_sink_init\n");
-    auracast_sink_init();
-    auracast_sink_event_callback_register(auracast_sink_event_callback);
+#if !(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
+    // BASS
+    // char le_audio_name[LOCAL_NAME_LEN] = "le_audio_";     //le_audio蓝牙名
+    // u8 tem_len = 0;//strlen(le_audio_name);
+    // memcpy(&le_audio_name[tem_len], (u8 *)bt_get_local_name(), LOCAL_NAME_LEN - tem_len);
+    // le_audio_name_reset((u8 *)le_audio_name, strlen(le_audio_name));
 
-    //le_audio_bass_event_callback_register(app_auracast_bass_server_event_callback);
+    // le_audio_init(3);
+    // bt_le_audio_adv_enable(1);
+#endif
+    auracast_sink_init(AURACAST_SINK_API_VERSION);
+    auracast_sink_event_callback_register(auracast_sink_event_callback);
+    le_audio_bass_event_callback_register(app_auracast_bass_server_event_callback);
 }
 
 static int __app_auracast_sink_big_sync_terminate(void)
@@ -1025,6 +1081,8 @@ static int __app_auracast_sink_scan_start(void)
  */
 int app_auracast_sink_scan_start(void)
 {
+    // BASS
+    // return 0;
     printf("app_auracast_sink_scan_start\n");
     return __app_auracast_sink_scan_start();
 }
@@ -1136,8 +1194,6 @@ static void app_auracast_retry_open(void *priv)
     }
 }
 
-
-}
 #endif
 #endif
 
@@ -1272,10 +1328,21 @@ int app_auracast_sink_close(u8 status)
         auracast_sink_big_sync_terminate();
     }
     auracast_sink_scan_stop();
+
+#if !(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
+    // BASS
+    // bt_le_audio_adv_enable(0);
+    // le_audio_uninit(3);
+#endif
+
     os_time_dly(10);
     auracast_sink_uninit();
     app_auracast.status = status;
     auracast_sink_media_close();
+
+#if TCFG_AURACAST_PAWR_ENABLE
+    app_speaker_cancle_pawr_sync();
+#endif
 
 #if LEA_BIG_RX_CLOSE_EDR_EN
     if (app_auracast.role == APP_AURACAST_AS_SINK) {
@@ -1342,9 +1409,9 @@ int auracast_source_user_can_send_now_callback(uint8_t big_hdl)
     u16 tx_offset = 0;
     u32 timestamp;
     timestamp = (auracast_source_read_iso_tx_sync(0) \
-                 + auracast_source_get_sync_delay() + AURACAST_ISO_BN * auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len) & 0xfffffff;
+                 + auracast_source_get_sync_delay() + auracast_cfg_info->bn * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len) & 0xfffffff;
     if (app_auracast.recorder) {
-        rlen = le_audio_stream_tx_data_handler(app_auracast.recorder, tx_temp_buf, tx_temp_buf_len, timestamp, TCFG_LE_AUDIO_PLAY_LATENCY);
+        rlen = le_audio_stream_tx_data_handler(app_auracast.recorder, tx_temp_buf, tx_temp_buf_len, timestamp, auracast_cfg_info->play_latency); //发送延时,其他都是播放延时
         if (!rlen) {
             putchar('^');
         }
@@ -1353,12 +1420,19 @@ int auracast_source_user_can_send_now_callback(uint8_t big_hdl)
         memset(tx_temp_buf, 0, tx_temp_buf_len);
     }
 
-    for (bis_sub_event_counter = 0; bis_sub_event_counter < AURACAST_ISO_BN; bis_sub_event_counter++) {
+    for (bis_sub_event_counter = 0; bis_sub_event_counter < auracast_cfg_info->bn; bis_sub_event_counter++) {
         for (bis_index = 0; bis_index < AURACAST_SOURCE_BIS_NUMS; bis_index++) {
             auracast_source_user_send_iso_packet(bis_index, bis_sub_event_counter, tx_temp_buf + tx_offset, get_auracast_sdu_size());
             tx_offset += get_auracast_sdu_size();
         }
     }
+
+    if (get_vm_ram_storage_enable()) {
+        if (get_vm_ram_data_used_size()) {
+            app_send_message(APP_MSG_VM_FLUSH_FLASH, 0);
+        }
+    }
+
     return 1;// 就是用户使用接口自己发iso数据
     /* return 0; */
 }
@@ -1390,8 +1464,8 @@ static void auracast_source_app_event_callback(uint16_t event, uint8_t *packet, 
 {
     switch (event) {
     case AURACAST_SOURCE_BIG_CREATED:
-        g_printf("AURACAST_SOURCE_BIG_CREATED\n");
-        auracast_source_create(packet, length);
+        g_printf("AURACAST_SOURCE_BIG_CREATED from bt_stack");
+        auracast_event_to_user(event, packet, length);
         break;
     case AURACAST_SOURCE_BIG_TERMINATED:
         g_printf("AURACAST_SOURCE_BIG_TERMINATED\n");
@@ -1462,21 +1536,27 @@ int app_auracast_source_open()
     }
 
     u16 frame_dms;
-    if (auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len >= 10000) {
+    if (auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len >= 10000) {
         frame_dms = 100;
     } else {
         frame_dms = 75;
     }
-    tx_temp_buf_len = AURACAST_SOURCE_BIS_NUMS * AURACAST_ISO_BN * get_auracast_sdu_size();
+    tx_temp_buf_len = AURACAST_SOURCE_BIS_NUMS * auracast_cfg_info->bn * get_auracast_sdu_size();
     g_printf("tx_temp_buf_len:%d", tx_temp_buf_len);
     tx_temp_buf = zalloc(tx_temp_buf_len);
 
-    auracast_source_init();
+    auracast_source_init(AURACAST_SOURCE_API_VERSION);
+    if (auracast_cfg_info) {
+        user_config.config_sampling_frequency = auracast_cfg_info->sample_rate;
+        user_config.config_variant = auracast_cfg_info->variant;
+        user_config.presentation_delay_us = auracast_cfg_info->play_latency;
+        user_advanced_config.bn = auracast_cfg_info->bn;
+        user_advanced_config.rtn = auracast_cfg_info->rtn;
+    }
     auracast_source_config(&user_config);
     auracast_source_advanced_config(&user_advanced_config);
     auracast_source_event_callback_register(auracast_source_app_event_callback);
     auracast_source_start();
-
     app_auracast.role = APP_AURACAST_AS_SOURCE;
     app_auracast.status = APP_AURACAST_STATUS_BROADCAST;
 
@@ -1510,6 +1590,10 @@ int app_auracast_source_close(u8 status)
     os_time_dly(10);
     auracast_source_uninit();
     auracast_source_media_close(0xff);
+
+#if TCFG_AURACAST_PAWR_ENABLE
+    app_speaker_stop_pawr();
+#endif
 
     app_auracast.bis_num = 0;
     app_auracast.role = 0;
@@ -1643,6 +1727,10 @@ int app_auracast_deal(int scene)
 
     switch (scene) {
     case LE_AUDIO_APP_MODE_ENTER:
+        if (!auracast_app_mode_exit) {
+            log_error("app_auracast_deal,scene has entered");
+            break;
+        }
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
         auracast_app_mode_exit = 0;
@@ -1668,6 +1756,10 @@ int app_auracast_deal(int scene)
         break;
 
     case LE_AUDIO_APP_MODE_EXIT:
+        if (auracast_app_mode_exit) {
+            log_error("app_auracast_deal,scene has exited");
+            break;
+        }
         log_info("auracast_app_mode_exit");
         //退出当前模式
         auracast_app_mode_exit = 1;
@@ -1697,7 +1789,10 @@ int app_auracast_deal(int scene)
             }
         }
 #else
-        if (app_auracast.role == APP_AURACAST_AS_SOURCE) {
+        g_printf("app_auracast.bis_num:%d\n", app_auracast.bis_num);
+        //BIS赋值之后才可以调用media_reset, 处理后台拉回蓝牙模式时, auracast_open直接打开了source
+        //协议栈source_create之前，app_core又收到a2dp_media_start消息跑到这里，导致数据流重复打开
+        if (app_auracast.role == APP_AURACAST_AS_SOURCE && app_auracast.bis_num) {
             //固定收发角色重启广播数据流
             auracast_source_media_reset();
             ret = 1;
@@ -1813,6 +1908,28 @@ void app_auracast_close_in_other_mode()
     app_auracast_suspend();
 }
 
+static void auracast_source_param_prepare(struct le_audio_stream_params *params)
+{
+    u16 frame_dms;
+    if (auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len >= 10000) {
+        frame_dms = 100;
+    } else {
+        frame_dms = 75;
+    }
+
+    params->fmt.nch = AURACAST_SOURCE_BIS_NUMS;
+    params->fmt.coding_type = AUDIO_CODING_LC3;
+    params->fmt.frame_dms = frame_dms;
+    ASSERT(auracast_cfg_info, "auracast cfg NULL!\n");
+    params->fmt.bit_rate = params->fmt.nch * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].bit_rate;
+    params->fmt.sdu_period = auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len;
+    params->fmt.isoIntervalUs = auracast_cfg_info->bn * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len;
+    params->fmt.sample_rate = auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].sample_rate;
+    params->fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+    params->latency = auracast_cfg_info->tx_latency;
+    params->conn = auracast_source_get_bis_hdl(0);
+}
+
 static int auracast_source_media_open()
 {
     g_printf("auracast_source_media_open");
@@ -1824,31 +1941,13 @@ static int auracast_source_media_open()
         le_audio_switch_ops->local_audio_close();
     }
 
-    u16 frame_dms;
-    if (auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len >= 10000) {
-        frame_dms = 100;
-    } else {
-        frame_dms = 75;
-    }
-
     struct le_audio_stream_params params = {0};
-    params.fmt.nch = AURACAST_SOURCE_BIS_NUMS;
-    params.fmt.coding_type = AUDIO_CODING_LC3;
-    params.fmt.frame_dms = frame_dms;
-    params.fmt.bit_rate = params.fmt.nch * auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].bit_rate;
-    params.fmt.sdu_period = AURACAST_ISO_BN * auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len;
-    params.fmt.isoIntervalUs =  AURACAST_ISO_BN * auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].frame_len;
-    params.fmt.sample_rate = auracast_code_list[AURACAST_BIS_SAMPLING_RATE][AURACAST_BIS_VARIANT].sample_rate;
-    params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
-    params.latency = TCFG_LE_AUDIO_PLAY_LATENCY;
-    params.conn = auracast_source_get_bis_hdl(0);
-
+    auracast_source_param_prepare(&params);
     //打开广播音频播放
     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
         app_auracast.recorder = le_audio_switch_ops->tx_le_audio_open(&params);
         g_printf("auracast_source_tx_le_audio_open:0x%x", (u32)app_auracast.recorder);
     }
-    app_auracast.status = APP_AURACAST_STATUS_BROADCAST;
     app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
 }
@@ -1886,9 +1985,43 @@ static int auracast_source_media_close()
         }
     }
 
-    app_auracast.status = APP_AURACAST_STATUS_SUSPEND;
     app_auracast_mutex_post(&mutex, __LINE__);
     return 0;
+}
+
+int auracast_source_close_media_stream(void)
+{
+    if (app_auracast.role == APP_AURACAST_AS_SOURCE) {
+        app_auracast_mutex_pend(&mutex, __LINE__);
+        if (app_auracast.recorder) {
+            if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
+                le_audio_switch_ops->tx_le_audio_close(app_auracast.recorder);
+                app_auracast.recorder = NULL;
+                g_printf("auracast_source_media_stream_close");
+            }
+        }
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return 0;
+    }
+    return -1;
+}
+
+int auracast_source_open_media_stream(void)
+{
+    if (app_auracast.role == APP_AURACAST_AS_SOURCE) {
+        app_auracast_mutex_pend(&mutex, __LINE__);
+        struct le_audio_stream_params params = {0};
+        auracast_source_param_prepare(&params);
+        //打开广播音频播放
+        if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
+            app_auracast.recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+            g_printf("auracast_source_media_stream_open");
+            put_buf(get_g_play_addr(), 6);
+        }
+        app_auracast_mutex_post(&mutex, __LINE__);
+        return 0;
+    }
+    return -1;
 }
 
 int auracast_source_media_reset()
@@ -1923,6 +2056,9 @@ static int auracast_sink_media_open(uint16_t bis_hdl, uint8_t *packet, uint16_t 
     g_printf("nch:%d, coding_type:0x%x, dec_ch_mode:%d",
              params.fmt.nch, params.fmt.coding_type, params.fmt.dec_ch_mode);
 
+    app_auracast.presentation_delay_us = config->presentation_delay_us;
+    printf("presentation_delay_us:%d\n", config->presentation_delay_us);
+
     if (config->frame_duration == FRAME_DURATION_7_5) {
         params.fmt.frame_dms = 75;
     } else if (config->frame_duration == FRAME_DURATION_10) {
@@ -1931,7 +2067,7 @@ static int auracast_sink_media_open(uint16_t bis_hdl, uint8_t *packet, uint16_t 
         ASSERT(0, "frame_dms err:%d", config->frame_duration);
     }
     params.fmt.sdu_period = config->sdu_period;
-    params.fmt.isoIntervalUs = config->sdu_period;
+    params.fmt.isoIntervalUs = g_sink_bn * config->sdu_period;
     params.fmt.sample_rate = config->sample_rate;
     params.fmt.bit_rate = params.fmt.nch * config->bit_rate;
     params.conn = bis_hdl;
@@ -1981,6 +2117,13 @@ static int auracast_sink_media_close()
         }
     }
 
+    for (i = 0; i < g_sink_bn; i++) {
+        if (multi_bis_rx_buf[i]) {
+            free(multi_bis_rx_buf[i]);
+            multi_bis_rx_buf[i] = 0;
+        }
+    }
+
     //当前处于播放状态，关闭le audio音频流后恢复本地播放
     if (player_status == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         if (le_audio_switch_ops && le_audio_switch_ops->local_audio_open) {
@@ -2011,10 +2154,10 @@ static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
     hci_iso_hdr_t hdr = {0};
     ll_iso_unpack_hdr(packet, &hdr);
 
-    if (size) {
+    if (hdr.iso_sdu_length) {
         if (are_all_zeros(hdr.iso_sdu, hdr.iso_sdu_length)) {
             /* log_error("SDU empty"); */
-            putchar('m');
+            putchar('z');
             plc_flag = 1;
         }
     }
@@ -2067,25 +2210,25 @@ static void auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
             if (i == (app_auracast.bis_num - 1)) {
                 memcpy(multi_bis_rx_buf[j], errpacket, 2);
                 le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)multi_bis_rx_buf[j], 2,
-                                         hdr.time_stamp + TCFG_LE_AUDIO_PLAY_LATENCY);
+                                         hdr.time_stamp + app_auracast.presentation_delay_us);
                 multi_bis_data_offect[j] = 0;
                 multi_bis_plc_flag[j] = 0;
             }
         } else {
-            le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)errpacket, 2, hdr.time_stamp + TCFG_LE_AUDIO_PLAY_LATENCY);
+            le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)errpacket, 2, hdr.time_stamp + app_auracast.presentation_delay_us);
         }
     } else {
         /* printf("%d 0x%x", j, hdr.handle); */
         if (multi_bis_rx_buf[j]) {
             memcpy(multi_bis_rx_buf[j] + multi_bis_data_offect[j], hdr.iso_sdu, hdr.iso_sdu_length);
             multi_bis_data_offect[j] += hdr.iso_sdu_length;
-            ASSERT(multi_bis_data_offect[j] <= multi_bis_rx_temp_buf_len);
+            ASSERT(multi_bis_data_offect[j] <= multi_bis_rx_temp_buf_len, "offset:%d iso_sdu:%d\n", multi_bis_data_offect[j], hdr.iso_sdu_length);
             if (multi_bis_data_offect[j] >= multi_bis_rx_temp_buf_len) {
-                le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)multi_bis_rx_buf[j], multi_bis_rx_temp_buf_len, hdr.time_stamp + TCFG_LE_AUDIO_PLAY_LATENCY);
+                le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)multi_bis_rx_buf[j], multi_bis_rx_temp_buf_len, hdr.time_stamp + app_auracast.presentation_delay_us);
                 multi_bis_data_offect[j] -= multi_bis_rx_temp_buf_len;
             }
         } else {
-            le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)hdr.iso_sdu, hdr.iso_sdu_length, hdr.time_stamp + TCFG_LE_AUDIO_PLAY_LATENCY);
+            le_audio_stream_rx_frame(app_auracast.rx_player.rx_stream, (void *)hdr.iso_sdu, hdr.iso_sdu_length, hdr.time_stamp + app_auracast.presentation_delay_us);
         }
     }
 }
@@ -2116,5 +2259,83 @@ u8 get_auracast_switch_onoff(void)
     return auracast_switch_onoff;
 }
 
+static int app_aruacast_conn_status_event_handler(int *msg)
+{
+    uint16_t event = msg[0] >> 16;
+    uint16_t length = msg[0] & 0xffff;
+    uint8_t *packet = (uint8_t *)(msg + 1);
+    switch (event) {
+    /*=================Sink Event===============*/
+    case AURACAST_SINK_BIG_SYNC_CREATE_EVENT:
+        printf("AURACAST_SINK_BIG_SYNC_CREATE_EVENT\n");
+
+        if (cur_listening_source_info == NULL || app_auracast.role == APP_AURACAST_AS_SOURCE) {
+            break;
+        }
+        memcpy(cur_listening_source_info, auracast_sink_listening_source_info_get(), sizeof(auracast_sink_source_info_t));
+        /* ASSERT(cur_listening_source_info); */
+        if (auracast_sink_sync_timeout_hdl != 0) {
+            sys_timeout_del(auracast_sink_sync_timeout_hdl);
+            auracast_sink_sync_timeout_hdl = 0;
+        }
+
+#if TCFG_AUTO_SHUT_DOWN_TIME
+        sys_auto_shut_down_disable();   // 恢复自动关机
 #endif
+        auracast_sink_sync_create(packet, length);
+        break;
+    case AURACAST_SINK_BIG_SYNC_FAIL_EVENT:
+    case AURACAST_SINK_BIG_SYNC_LOST_EVENT:
+        printf("big lost or fail\n");
+        if (auracast_sink_sync_timeout_hdl != 0) {
+            sys_timeout_del(auracast_sink_sync_timeout_hdl);
+            auracast_sink_sync_timeout_hdl = 0;
+        }
+
+        auracast_sink_sync_terminate(packet, length);
+#if TCFG_AUTO_SHUT_DOWN_TIME
+        sys_auto_shut_down_enable();   // 恢复自动关机
+#endif
+        break;
+    case AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT:
+        if (cur_listening_source_info) {
+            printf("AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT\n");
+            auracast_sink_big_sync_create(cur_listening_source_info);
+        } else {
+            printf("AURACAST_SINK_PERIODIC_ADVERTISING_SYNC_LOST_EVENT FAIL!\n");
+        }
+        break;
+
+    /*=================Source Event===============*/
+    case AURACAST_SOURCE_BIG_CREATED:
+        g_printf("AURACAST_SOURCE_BIG_CREATED\n");
+        if (app_auracast.bis_num == 0 && app_auracast.role == APP_AURACAST_AS_SOURCE) {
+#if TCFG_AURACAST_PAWR_ENABLE
+            app_speaker_start_pawr();
+#endif
+            auracast_source_create(packet, length);
+        } else {
+            printf("AURACAST ROLE ERR!\n");
+        }
+        break;
+
+    default:
+        printf("auracast unknow event %x\n", event);
+        break;
+    }
+    return 0;
+}
+
+APP_MSG_PROB_HANDLER(app_le_auracast_msg_entry) = {
+    .owner = 0xff,
+    .from = MSG_FROM_AURACAST,
+    .handler = app_aruacast_conn_status_event_handler,
+};
+
+#endif
+
+
+
+
+
 
