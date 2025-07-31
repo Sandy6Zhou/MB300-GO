@@ -16,6 +16,7 @@
 #include "app_config.h"
 #include "wireless_trans.h"
 #include "tech_lib/jla_ll_codec_api.h"
+#include "media_config.h"
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
 #endif
@@ -84,9 +85,39 @@ extern int bt_audio_reference_clock_select(void *addr, u8 network);
 extern u32 bb_le_clk_get_time_us(void);
 extern void ll_config_ctrler_clk(uint16_t handle, uint8_t sel);
 
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
-extern const unsigned short JLA_V2_FRAMELEN_MASK;
+int le_audio_get_encoder_len(u32 coding_type, u16 frame_len, u32 bit_rate)
+{
+    int len = 0;
+    switch (coding_type) {
+    case AUDIO_CODING_LC3:
+        len = (frame_len * bit_rate / 1000 / 8 / 10);
+        break;
+    case AUDIO_CODING_JLA:
+        len = (frame_len * bit_rate / 1000 / 8 / 10 + 2);
+#if JL_CC_CODED_EN
+        len += (len & 1); //开fec 编码时会微调码率，使编出来一帧的数据长度是偶数,故如果计算出来是奇数需要+1;
+#endif/*JL_CC_CODED_EN*/
+        break;
+    case AUDIO_CODING_JLA_V2:
+        len = (frame_len * bit_rate / 1000 / 8 / 10 + (JLA_V2_CODEC_WITH_FRAME_HEADER == 0 ? 0 : 2));
+        break;
+#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
+    case AUDIO_CODING_JLA_LL:
+        len = jla_ll_enc_frame_len();
+        break;
 #endif
+    case AUDIO_CODING_JLA_LW:
+        len = (frame_len * bit_rate / 1000 / 8 / 10);
+        break;
+    default:
+        printf(" %s, %d, unsuport this type: 0x%x \n", __func__, __LINE__, coding_type);
+        break;
+    }
+    /* printf(" le_audio_encoder_len:   coding_type: 0x%x  encoder_len: %d\n",coding_type,len); */
+    return len;
+}
+
+
 
 void *le_audio_stream_create(u16 conn, struct le_audio_stream_format *fmt)
 {
@@ -348,23 +379,7 @@ void *le_audio_stream_tx_open(void *le_audio, int coding_type, void *priv, int (
     }
 
     tx_stream = (struct le_audio_tx_stream *)zalloc(sizeof(struct le_audio_tx_stream));
-
-    if (ctx->fmt.coding_type == AUDIO_CODING_LC3) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 ;
-    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
-    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_V2) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
-    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_LL) {
-        frame_size = jla_ll_enc_frame_len();
-#endif
-    } else if (coding_type == AUDIO_CODING_JLA_LW) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000;
-    } else {
-        //TODO : 其他格式的buffer设置
-    }
-
+    frame_size = le_audio_get_encoder_len(ctx->fmt.coding_type, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
     int isoIntervalUs_len = (ctx->fmt.isoIntervalUs / 100 / ctx->fmt.frame_dms) * frame_size;
     tx_stream->buf.size = isoIntervalUs_len * LE_AUDIO_TX_BUF_CONTAIN_FREAM_NUMBER;
     tx_stream->buf.addr = malloc(tx_stream->buf.size);
@@ -417,7 +432,7 @@ int le_audio_stream_tx_buffered_time(void *stream)
     struct le_audio_tx_stream *tx_stream = (struct le_audio_tx_stream *)stream;
     struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)tx_stream->parent;
 
-    int frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
+    int frame_size = le_audio_get_encoder_len(ctx->fmt.coding_type, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
 
     return cbuf_get_data_len(&tx_stream->buf.cbuf) / frame_size * ctx->fmt.frame_dms * 100;
 }
@@ -449,6 +464,7 @@ void *le_audio_stream_rx_open(void *le_audio, int coding_type)
     struct le_audio_stream_context *ctx = (struct le_audio_stream_context *)le_audio;
     struct le_audio_rx_stream *rx_stream = ctx->rx_stream;
     int frame_size = 0;
+    int buf_frame_number = 0;
 
     if (rx_stream) {
         atomic_inc(&rx_stream->ref);
@@ -459,23 +475,13 @@ void *le_audio_stream_rx_open(void *le_audio, int coding_type)
     if (!rx_stream) {
         return NULL;
     }
-    int buf_frame_number = LE_AUDIO_RX_BUF_CONTAIN_FREAM_NUMBER;
     INIT_LIST_HEAD(&rx_stream->frames);
-    if (coding_type == AUDIO_CODING_LC3) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 ;
-    } else if (coding_type == AUDIO_CODING_JLA) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
-    } else if (coding_type == AUDIO_CODING_JLA_V2) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000 + 2;
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
-    } else if (coding_type == AUDIO_CODING_JLA_LL) {
-        frame_size = jla_ll_enc_frame_len();;
-#endif
-    } else if (ctx->fmt.coding_type == AUDIO_CODING_JLA_LW) {
-        frame_size = ctx->fmt.frame_dms * ctx->fmt.bit_rate / 8 / 10000;
-    } else if (coding_type == AUDIO_CODING_PCM) {
+    if (coding_type == AUDIO_CODING_PCM) {
         buf_frame_number = LE_AUDIO_RX_BUF_CONTAIN_FREAM_NUMBER_PCM;
         frame_size = ctx->fmt.frame_dms * ctx->fmt.sample_rate * ctx->fmt.nch * (ctx->fmt.bit_width ? 4 : 2) / 10000;
+    } else {
+        buf_frame_number = LE_AUDIO_RX_BUF_CONTAIN_FREAM_NUMBER;
+        frame_size = le_audio_get_encoder_len(coding_type, ctx->fmt.frame_dms, ctx->fmt.bit_rate);
     }
 
     int iso_interval_len = (ctx->fmt.isoIntervalUs / 100 / ctx->fmt.frame_dms) * frame_size;

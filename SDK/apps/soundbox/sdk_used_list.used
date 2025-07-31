@@ -145,6 +145,7 @@ eq_node_adapter
 vbass_node_adapter
 wav_dec_plug
 mp3_dec_plug
+mp3_stream_dec_plug
 
 
 

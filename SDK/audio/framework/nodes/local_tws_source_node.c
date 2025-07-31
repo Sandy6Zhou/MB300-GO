@@ -15,6 +15,7 @@
 #include "codec/sbc_enc.h"
 #include "effects/effects_adj.h"
 #include "app_config.h"
+#include "media_config.h"
 
 #if TCFG_LOCAL_TWS_ENABLE
 
@@ -46,7 +47,6 @@ struct local_tws_source_context {
     u32 tws_timestamp;
 };
 
-extern const unsigned short JLA_V2_FRAMELEN_MASK;
 extern int tws_conn_system_clock_init(u8 factor);
 extern u32 tws_conn_local_to_master_time(u32 usec);
 extern u32 bt_audio_reference_clock_time(u8 network);
@@ -223,7 +223,7 @@ static int jla_v2_enc_out_len(int sample_rate, int frame_dms, int bit_rate)
         input_point = frame_dms * sample_rate / 10 / 1000;
     }
 
-    return bit_rate * input_point / (8 * sample_rate) + 2; //采用编码器内部计算帧长的公式,兼容44.1K采样率
+    return bit_rate * input_point / (8 * sample_rate) + (JLA_V2_CODEC_WITH_FRAME_HEADER == 0 ? 0 : 2); //采用编码器内部计算帧长的公式,兼容44.1K采样率
 }
 
 static int jla_look_ahead_pcm_frames(int sample_rate, int frame_dms)

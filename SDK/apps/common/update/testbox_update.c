@@ -45,6 +45,7 @@ static void testbox_bt_classic_update_private_param_fill(UPDATA_PARM *p)
 
 }
 
+extern void emu_stack_limit_set(u8 mode, u32 limit_l, u32 limit_h);
 static void testbox_bt_classic_update_before_jump_handle(int type)
 {
     if (CONFIG_UPDATE_ENABLE && CONFIG_UPDATE_BT_LMP_EN) {
@@ -64,6 +65,8 @@ static void testbox_bt_classic_update_before_jump_handle(int type)
         ram_protect_close();
         //note:last func will not return;
 
+        emu_stack_limit_set(1, 0, 0xFFFFFFF);
+        emu_stack_limit_set(0, 0, 0xFFFFFFF);
         __bt_updata_reset_bt_bredrexm_addr();       //仅36、27、28使用跳转，后续CPU升级都直接reset
 #else
 #if CONFIG_UPDATE_JUMP_TO_MASK

@@ -84,20 +84,25 @@ static int btstack_a2dp_boardcast_onoff_msg_handler(int *msg)
 
     switch (event->event) {
     case BT_STATUS_CONN_A2DP_CH:
-        g_printf("BT_STATUS_CONN_A2DP_CH\n");
         //链接上a2dp_ch的设备之前被抢占,创建定时器恢复a2dp播放
-        if (btstack_get_conn_device(event->args) == a2dp_play_devices) {
-            g_printf("send music_start\n");
-            btstack_device_control(a2dp_play_devices, USER_CTRL_AVCTP_OPID_PLAY);
-            a2dp_play_devices = NULL;
-            /* sys_timeout_add(NULL, delay_resume_a2dp, 5000); */
+        if (boardcast_detach_conn) {
+            g_printf("BT_STATUS_CONN_A2DP_CH when broadcast onff\n");
+            if (btstack_get_conn_device(event->args) == a2dp_play_devices) {
+                g_printf("send music_start\n");
+                btstack_device_control(a2dp_play_devices, USER_CTRL_AVCTP_OPID_PLAY);
+                a2dp_play_devices = NULL;
+                /* sys_timeout_add(NULL, delay_resume_a2dp, 5000); */
+            }
+            boardcast_detach_conn --;
+            y_printf("boardcast_detach_conn :%d\n", boardcast_detach_conn);
+
         }
-        boardcast_detach_conn --;
-        y_printf("boardcast_detach_conn :%d\n", boardcast_detach_conn);
         break;
     case BT_STATUS_DISCON_A2DP_CH:
-        g_printf("BT_STATUS_DISCON_A2DP_CH\n");
-        bt_action_a2dp_reconn(btstack_get_conn_device(event->args), event->args);
+        if (boardcast_detach_conn) {
+            g_printf("BT_STATUS_DISCON_A2DP_CH when broadcast onoff\n");
+            bt_action_a2dp_reconn(btstack_get_conn_device(event->args), event->args);
+        }
         break;
 
     case BT_STATUS_FIRST_DISCONNECT:

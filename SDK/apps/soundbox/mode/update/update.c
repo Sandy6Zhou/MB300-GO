@@ -101,7 +101,9 @@ static int app_update_prob_handler(int *msg)
     if (msg[0] == APP_MSG_WRITE_RESFILE_START) {
         g_resfile_writing = 1;
         struct app_mode *mode = app_get_current_mode();
-        if (mode) {
+        //PC模式下会断连然后重连，一次在断连前push mode，重连时又会push mode一次（此时会push update mode）。
+        //升级结束后会 pop update mode，导致异常。所以在push mode的时候做一下过滤防止异常
+        if (mode && mode->name != APP_MODE_UPDATE) {
             app_push_mode(mode->name);
         }
         app_send_message2(APP_MSG_GOTO_MODE, APP_MODE_UPDATE, 0);

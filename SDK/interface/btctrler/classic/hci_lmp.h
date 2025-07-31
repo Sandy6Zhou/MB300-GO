@@ -26,7 +26,7 @@ struct lp_ws_t {
 
 void lmp_private_a2dp_start(void *_conn);
 
-void lmp_private_a2dp_stop(void *_conn);
+void lmp_private_a2dp_stop(void *_conn, u8 suspend);
 
 int lmp_private_is_clearing_a2dp_packet(void *_conn);
 

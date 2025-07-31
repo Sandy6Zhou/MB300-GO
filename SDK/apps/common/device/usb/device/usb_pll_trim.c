@@ -14,13 +14,16 @@
 extern const int clock_sys_src_use_lrc_hw;
 void usb_pll_trim_release(void)
 {
+#ifndef CONFIG_BR31_FPGA_VERIFY
     USB_TRIM_CON0 &= ~BIT(11);                     // diable sync update mode
     USB_TRIM_CON0  = 0;                            // turn off usb trim
     USB_TRIM_CON1  = 0;                            // turn off usb trim
     USB_TRIM_PND = BIT(4) | BIT(5) | BIT(6) | BIT(7); // clear all pending & close ie
+#endif
 }
 u8 usb_pll_trim_init(enum usb_pll_trim_mode mode, u16 trim_prd, u16 freq_deviation) //mode:模式选择; trim_prd:自动校准周期，单位ms; freq_deviation:频率偏差范围, 10 千分之10
 {
+#ifndef CONFIG_BR31_FPGA_VERIFY
     if (clock_sys_src_use_lrc_hw == 0) {
         return 0;
     }
@@ -90,6 +93,7 @@ u8 usb_pll_trim_init(enum usb_pll_trim_mode mode, u16 trim_prd, u16 freq_deviati
     default:
         break;
     }
+#endif
     return 0;
 }
 
@@ -98,6 +102,7 @@ u8 usb_pll_trim_init(enum usb_pll_trim_mode mode, u16 trim_prd, u16 freq_deviati
 #include "timer.h"
 static void test_func(void *priv)
 {
+#ifndef CONFIG_BR31_FPGA_VERIFY
     u32 pll_nr = USB_PLL_NR;
     printf("pll_nr:%d\n", pll_nr);
     u32 flag = rand32() % 2;
@@ -110,6 +115,7 @@ static void test_func(void *priv)
     pll_nr = 2114 + rand;
     USB_PLL_NR = pll_nr;
     printf("rand:%d, pll_nr_set:%d\n", rand, pll_nr);
+#endif
 }
 void usb_pll_trim_test()
 {

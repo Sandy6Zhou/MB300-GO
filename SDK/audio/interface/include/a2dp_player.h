@@ -48,4 +48,6 @@ void set_g_play_addr(u8 *addr);
 void app_set_a2dp_play_status(u8 *bt_addr, u8 st);
 
 bool g_play_addr_vaild(void);
+void a2dp_player_set_ai_tx_node_func(int (*func)(u8 *, u32));
+
 #endif

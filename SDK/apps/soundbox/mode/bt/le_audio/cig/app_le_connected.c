@@ -1207,6 +1207,9 @@ int app_connected_deal(int scene)
         log_info("LE_AUDIO_APP_MODE_EXIT");
         //退出当前模式
         connected_app_mode_exit = 1;
+        if (get_vm_ram_storage_enable()) {
+            vm_flush2flash(0);
+        }
     case LE_AUDIO_APP_CLOSE:
         config_connected_as_master = 0;
         app_connected_suspend();

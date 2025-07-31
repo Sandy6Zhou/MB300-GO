@@ -28,6 +28,8 @@
 #include "btstack/a2dp_media_codec.h"
 #include "classic/tws_api.h"
 
+extern const u32 LLNS_DNS_SUPPORT_SAMPLE_RATE; //当前LLNS_DNS 降噪节点只支持32kHZ采样率
+
 struct le_audio_a2dp_recorder {
     void *stream;
     void *file;
@@ -530,7 +532,9 @@ int le_audio_iis_recorder_open(void *params, void *le_audio, int latency)
 #endif
 
 #if TCFG_LLNS_DNS_NODE_ENABLE
-        jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LLNS_DNS, NODE_IOC_SET_PRIV_FMT, 32000); //当前LLNS_DNS降噪节点只支持32k
+        if (LLNS_DNS_SUPPORT_SAMPLE_RATE) {
+            jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_LLNS_DNS, NODE_IOC_SET_PRIV_FMT, LLNS_DNS_SUPPORT_SAMPLE_RATE); //当前LLNS_DNS降噪节点只支持32k
+        }
 #endif
         jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, irq_point);
         jlstream_node_ioctl(g_iis_recorder->stream, NODE_UUID_IIS0_RX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);

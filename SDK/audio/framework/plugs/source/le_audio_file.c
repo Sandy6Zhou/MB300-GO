@@ -14,6 +14,7 @@
 #include "system/timer.h"
 #include "app_config.h"
 #include "effects/effects_adj.h"
+#include "sync/audio_syncts.h"
 
 struct le_audio_file_handle {
     u8 start;
@@ -133,6 +134,10 @@ static void le_audio_rx_tick_handler(void *priv)
     struct le_audio_file_handle *hdl = (struct le_audio_file_handle *)priv;
 
     if (hdl->start) {
+        if (!(hdl->node->type & NODE_TYPE_IRQ) &&
+            !(hdl->node->state & NODE_STA_SOURCE_NO_DATA)) {
+            return;
+        }
         jlstream_wakeup_thread(NULL, hdl->node, NULL);
     }
 }
@@ -214,6 +219,7 @@ static int le_audio_file_ioctl(void *file, int cmd, int arg)
         break;
     case NODE_IOC_GET_FMT:
         le_audio_file_get_fmt(hdl, (struct stream_fmt *)arg);
+        stream_node_ioctl(hdl->node, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_SYNC_NETWORK, hdl->ble_to_local_time ? AUDIO_NETWORK_LOCAL : AUDIO_NETWORK_BLE);
         break;
     case NODE_IOC_START:
         le_audio_file_start(hdl);

@@ -212,9 +212,14 @@ static int pc_spk_ioc_get_fmt(struct pc_spk_file_hdl *hdl, struct stream_fmt *fm
     }
     fmt->sample_rate    = pc_spk_fmt.sample_rate;
     fmt->bit_wide = (pc_spk_fmt.bit == 24) ? 1 : 0;
-    fmt->pcm_24bit_type = (pc_spk_fmt.bit == 24) ? PCM_24BIT_DATA_3BYTE : PCM_24BIT_DATA_4BYTE;
     //log_debug(">>>>>>>>>>>>>>>>>>>>>>>>>>>>> fmt->bit_wide : %d\n", fmt->bit_wide);
     return 0;
+}
+
+static int pc_spk_ioc_get_fmt_ex(struct pc_spk_file_hdl *hdl, struct stream_fmt_ex *fmt)
+{
+    fmt->pcm_24bit_type = (pc_spk_fmt.bit == 24) ? PCM_24BIT_DATA_3BYTE : PCM_24BIT_DATA_4BYTE;
+    return 1;
 }
 
 static int pc_spk_ioc_set_fmt(struct pc_spk_file_hdl *hdl, struct stream_fmt *fmt)
@@ -260,6 +265,9 @@ static int pc_spk_ioctl(void *_hdl, int cmd, int arg)
     switch (cmd) {
     case NODE_IOC_GET_FMT:
         pc_spk_ioc_get_fmt(hdl, (struct stream_fmt *)arg);
+        break;
+    case NODE_IOC_GET_FMT_EX:
+        ret = pc_spk_ioc_get_fmt_ex(hdl, (struct stream_fmt_ex *)arg);
         break;
     case NODE_IOC_SET_FMT:
         ret = pc_spk_ioc_set_fmt(hdl, (struct stream_fmt *)arg);

@@ -22,6 +22,7 @@ const struct stream_file_ops tone_file_ops;
 static u8 g_player_id = 0;
 static OS_MUTEX g_tone_mutex;
 static struct list_head g_head = LIST_HEAD_INIT(g_head);
+static struct list_head mtone_g_head = LIST_HEAD_INIT(mtone_g_head);
 static u8 g_stream_index = 0;
 
 static int tone_player_start(struct tone_player *);
@@ -366,7 +367,11 @@ static int tone_player_start(struct tone_player *player)
     }
     jlstream_set_dec_file(player->stream, player, &tone_file_ops);
 
+#if TCFG_INTELLIGENT_DUER
+    err = 5;
+#else
     err = jlstream_start(player->stream);
+#endif
     if (err) {
         goto __exit1;
     }
@@ -660,10 +665,16 @@ static void fileplay_player_callback(void *_player_id, int event)
         if (!player) {
             break;
         }
+        if (list_empty(&mtone_g_head)) {          //先判断是否为空防止触发异常
+            break;
+        }
+        os_mutex_pend(&g_tone_mutex, 0);
         jlstream_release(player->stream);
+        list_del(&player->entry);
         tone_file_close(player);
         g_stream_index &= ~BIT(player->stream_index);
         free(player);
+        os_mutex_post(&g_tone_mutex);
         break;
     }
 }
@@ -699,6 +710,7 @@ static int fileplay_player_start(struct tone_player *player, u8 index)
     if (err) {
         goto __exit1;
     }
+    list_add_tail(&player->entry, &mtone_g_head);
     return 0;
 __exit1:
     jlstream_release(player->stream);
@@ -715,18 +727,22 @@ struct tone_player *play_fileplay_file(const char *file_name, u8 index)
     /* return -ENOMEM; */
 #endif
 
+    os_mutex_pend(&g_tone_mutex, 0);
     if (g_stream_index & BIT(index)) {
+        os_mutex_post(&g_tone_mutex);
         return NULL;
     }
 
     player = tone_player_create(file_name);
     if (!player) {
+        os_mutex_post(&g_tone_mutex);
         return NULL;
     }
     g_stream_index |= BIT(index);
     player->stream_index = index;
     int err = fileplay_player_start(player, index);
     printf("play_fileplay_file %d\n", err);
+    os_mutex_post(&g_tone_mutex);
     if (!err) {
         return player;
     } else {
@@ -817,14 +833,54 @@ void engine_sound_play_demo(void)
 }
 #endif
 
+int fileplay_runing()
+{
+    local_irq_disable();
+    int ret = list_empty(&mtone_g_head) ? 0 : 1;
+    local_irq_enable();
+    return ret;
+}
 
+
+//指定需要关闭的文件播放器
 void fileplay_close(struct tone_player *player)
 {
+    os_mutex_pend(&g_tone_mutex, 0);
+    struct tone_player *_player, *n;
     if (player) {
-        jlstream_release(player->stream);
+        list_for_each_entry_safe(_player, n, &mtone_g_head, entry) {
+            if (_player == player) {
+                __list_del_entry(&_player->entry);
+                if (_player->stream) {
+                    jlstream_stop(_player->stream, 50);
+                    jlstream_release(_player->stream);
+                }
+                tone_file_close(_player);
+                g_stream_index &= ~BIT(_player->stream_index);
+                free(_player);
+                break;
+            }
+        }
+    }
+    os_mutex_post(&g_tone_mutex);
+}
+//关闭所有文件播放器
+void fileplay_close_all()
+{
+    os_mutex_pend(&g_tone_mutex, 0);
+    struct tone_player *player, *n;
+    list_for_each_entry_safe(player, n, &mtone_g_head, entry) {
+        __list_del_entry(&player->entry);
+        if (player->stream) {
+            jlstream_stop(player->stream, 50);
+            jlstream_release(player->stream);
+        }
         tone_file_close(player);
         g_stream_index &= ~BIT(player->stream_index);
+        free(player);
     }
+    os_mutex_post(&g_tone_mutex);
+
 }
 
 void multifile_play_demo(void)

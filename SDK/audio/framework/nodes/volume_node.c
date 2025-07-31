@@ -279,6 +279,13 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         params.fade_step  = MUSIC_DVOL_FS;
         params.vol_limit  = -1;
         break;
+#if RCSP_MODE && RCSP_ADV_TRANSLATOR
+    case STREAM_SCENE_AI_VOICE:
+        /*puts("set_a2dp_volume\n");*/
+        hdl->state = APP_AUDIO_STATE_MUSIC;
+        params.fade_step  = MUSIC_DVOL_FS;
+        break;
+#endif
     case STREAM_SCENE_LEA_CALL:
     case STREAM_SCENE_ESCO:
         /*puts("set_esco_volume\n");*/

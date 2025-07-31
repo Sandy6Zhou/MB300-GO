@@ -538,8 +538,10 @@ extern u32 bt_cmd_prepare_for_addr(u8 *addr, USER_CMD_TYPE cmd, u16 param_len, u
 extern u32 bt_cmd_prepare(USER_CMD_TYPE cmd, u16 param_len, u8 *param);
 //作为发射器时操作命令的接口
 extern u32 bt_emitter_cmd_prepare(USER_CMD_TYPE cmd, u16 param_len, u8 *param);
+extern u32 bt_emitter_cmd_prepare_for_addr(u8 *addr, USER_CMD_TYPE cmd, u16 param_len, u8 *param);
 /*根据规则生产BLE的随机地址*/
 extern void bt_make_ble_address(u8 *ble_address, u8 *edr_address);
+extern void set_start_search_spp_device(u8 spp);
 
 
 /****************蓝牙的一些状态获取接口*************************/

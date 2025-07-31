@@ -7,6 +7,7 @@
 #include "jlstream.h"
 #include "ai_voice_recoder.h"
 #include "encoder_node.h"
+#include "sdk_config.h"
 
 struct ai_voice_recoder {
     struct jlstream *stream;
@@ -26,9 +27,20 @@ static void ai_voice_recoder_callback(void *private_data, int event)
     }
 }
 
+void ai_voice_recoder_set_ai_tx_node_func(int (*func)(u8 *, u32))
+{
+    struct ai_voice_recoder *recoder = g_ai_voice_recoder;
+    if (recoder && recoder->stream) {
+        jlstream_node_ioctl(recoder->stream, NODE_UUID_AI_TX, NODE_IOC_SET_PRIV_FMT, (int)func);
+    }
+}
+
 int ai_voice_recoder_open(u32 code_type, u8 ai_type)
 {
     int err;
+#if TCFG_INTELLIGENT_DUER
+    struct stream_enc_fmt ai_tx_s_enc_fmt = {0};
+#endif
     struct stream_fmt fmt;
     struct encoder_fmt enc_fmt;
     struct ai_voice_recoder *recoder;
@@ -51,19 +63,42 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
         err = -ENOMEM;
         goto __exit0;
     }
+#if TCFG_INTELLIGENT_DUER
+    jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_GET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
+#endif
     switch (code_type) {
     case AUDIO_CODING_OPUS:
-        //1. quality:bitrate     0:16kbps    1:32kbps    2:64kbps
-        //   quality: MSB_2:(bit7_bit6)     format_mode    //0:百度_无头.                   1:酷狗_eng+range.
-        //   quality:LMSB_2:(bit5_bit4)     low_complexity //0:高复杂度,高质量.兼容之前库.  1:低复杂度,低质量.
-        //2. sample_rate         sample_rate=16k         ignore
-        enc_fmt.quality = 1 | ai_type/*| LOW_COMPLEX*/;
-        fmt.sample_rate = 16000;
+        //  bitrate
+        //     16000,320000,640000 这三个码率分别对应非ogg解码库
+        //     的 OPUS_SRINDEX 值为0,1,2
+        //  format
+        //     0:百度_无头.
+        //     1:酷狗_eng+range.
+        //     2:ogg封装,pc软件可播放.
+        //     3:size+rangeFinal. 源码可兼容版本.
+        //  complexity
+        //     0|1|2|3     3质量最好.速度要求最高.
+        //  frame_ms
+        //     20|40|60|80|100 ms.
+        //  sample_rate
+        //     sample_rate=16k         ignore
+        enc_fmt.bit_rate = 16000;
+        enc_fmt.complexity = 0 | ai_type/*| LOW_COMPLEX*/;
+        enc_fmt.sample_rate = 16000;
+        enc_fmt.format =  0;
+        /* enc_fmt.frame_dms = 20 * 10;//与工具保持一致，要乘以10,表示20ms */
         fmt.coding_type = AUDIO_CODING_OPUS;
+#if TCFG_INTELLIGENT_DUER
+        ai_tx_s_enc_fmt.coding_type = AUDIO_CODING_OPUS;
+        ai_tx_s_enc_fmt.bit_rate = 16000;
+        ai_tx_s_enc_fmt.sample_rate = 16000;
+        ai_tx_s_enc_fmt.frame_dms = 20 * 10;
+#endif
         break;
     case AUDIO_CODING_SPEEX:
         enc_fmt.quality = 5;
         enc_fmt.complexity = 2;
+        enc_fmt.sample_rate = 16000;
         fmt.sample_rate = 16000;
         fmt.coding_type = AUDIO_CODING_SPEEX;
         break;
@@ -75,7 +110,9 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
     }
     err = jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_SET_PRIV_FMT, (int)(&enc_fmt));
     err += jlstream_node_ioctl(recoder->stream, NODE_UUID_AI_TX, NODE_IOC_SET_FMT, (int)(&fmt));
-
+#if TCFG_INTELLIGENT_DUER
+    err += jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_SET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
+#endif
     //设置ADC的中断点数
     err += jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, 320);
     if (err) {

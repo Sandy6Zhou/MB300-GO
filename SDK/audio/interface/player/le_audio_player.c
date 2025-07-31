@@ -280,12 +280,22 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
     }
     jlstream_set_scene(player->stream, STREAM_SCENE_WIRELESS_MIC);
     if (lea_param) {
-        int frame_point = lea_param->fmt.frame_dms *  lea_param->fmt.sample_rate / 1000 / 10;
+        int frame_point = 0;
+        if (lea_param->fmt.isoIntervalUs) { //多帧传输的时候，避免mixer拆帧输出，mixer_buf需要根据isoIntervalUs
+            frame_point = lea_param->fmt.isoIntervalUs *  lea_param->fmt.sample_rate / 1000 / 1000;
+        } else {
+            frame_point = lea_param->fmt.frame_dms *  lea_param->fmt.sample_rate / 1000 / 10;
+        }
         jlstream_node_ioctl(player->stream, NODE_UUID_MIXER, NODE_IOC_SET_PRIV_FMT, (int)frame_point);
     }
 #else
     struct le_audio_player *player = &g_le_audio_player;
+
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
+#else
     uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"le_audio");
+#endif
     if (!player) {
         return -ENOMEM;
     }

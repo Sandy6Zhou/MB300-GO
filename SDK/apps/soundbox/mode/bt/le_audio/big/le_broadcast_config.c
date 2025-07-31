@@ -17,6 +17,7 @@
 #include "le_broadcast.h"
 #include "wireless_trans.h"
 #include "classic/tws_api.h"
+#include "le_audio_stream.h"
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
@@ -137,34 +138,9 @@ static u32 calcul_big_enc_output_frame_len(u16 frame_len, u32 bit_rate, u32 code
 {
     int len = 0;
     if (code_type == 0) {
-        //code_type 为0, 用默认参数
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA || LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
-        len = (frame_len * bit_rate / 1000 / 8 / 10 + 2);
-#if JL_CC_CODED_EN
-        len += (len & 1); //开fec 编码时会微调码率，使编出来一帧的数据长度是偶数,故如果计算出来是奇数需要+1;
-#endif/*JL_CC_CODED_EN*/
-#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
-        len = jla_ll_enc_frame_len();
-#elif(LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW)
-        len = (frame_len * bit_rate / 1000 / 8 / 10);
-#endif// WIERLESS_TRANS_CODING_TYPE == LIVE_AUDIO_CODING_JLA
+        len = le_audio_get_encoder_len(LE_AUDIO_CODEC_TYPE, frame_len, bit_rate);
     } else {
-        switch (code_type) {
-        case AUDIO_CODING_JLA:
-        case AUDIO_CODING_JLA_V2:
-            len = (frame_len * bit_rate / 1000 / 8 / 10 + 2);
-            break;
-        case AUDIO_CODING_JLA_LL:
-#if ((LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)|| (SURROUND_SOUND_DUAL_CODEC_TYPE == AUDIO_CODING_JLA_LL) || (SURROUND_SOUND_MONO_CODEC_TYPE == AUDIO_CODING_JLA_LL))
-            len = jla_ll_enc_frame_len();
-#endif
-            break;
-        case AUDIO_CODING_JLA_LW:
-#if ((LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW) || (SURROUND_SOUND_DUAL_CODEC_TYPE == AUDIO_CODING_JLA_LW) || (SURROUND_SOUND_MONO_CODEC_TYPE == AUDIO_CODING_JLA_LW))
-            len = (frame_len * bit_rate / 1000 / 8 / 10);
-#endif
-            break;
-        }
+        len = le_audio_get_encoder_len(code_type, frame_len, bit_rate);
     }
 
     return len;

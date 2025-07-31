@@ -16,6 +16,7 @@
 #include "audio_base.h"
 #include "le_connected.h"
 #include "wireless_trans.h"
+#include "le_audio_stream.h"
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 
@@ -87,19 +88,7 @@ const static u8 platform_data_mapping[] = {
 /* 如果码率超过96K,即帧长超过122,就需要将每次传输数据大小 修改为一帧编码长度 */
 static u32 calcul_cig_enc_output_frame_len(u16 frame_len, u32 bit_rate)
 {
-    int len = 0;
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA || LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_V2)
-    len = (frame_len * bit_rate / 1000 / 8 / 10 + 2);
-#if JL_CC_CODED_EN
-    len += (len & 1); //开fec 编码时会微调码率，使编出来一帧的数据长度是偶数,故如果计算出来是奇数需要+1;
-#endif/*JL_CC_CODED_EN*/
-#elif (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
-    len = jla_ll_enc_frame_len();
-#elif(LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LW)
-    len = (frame_len * bit_rate / 1000 / 8 / 10);
-#endif// WIERLESS_TRANS_CODING_TYPE == LIVE_AUDIO_CODING_JLA
-
-    return len;
+    return le_audio_get_encoder_len(LE_AUDIO_CODEC_TYPE, frame_len, bit_rate);
 }
 
 u32 get_cig_enc_output_frame_len(void)
@@ -141,7 +130,7 @@ u32 get_cig_dec_input_buf_len(void)
     return dec_input_buf_len;
 }
 
-u32 get_cig_iso_period_us(void)
+u32 get_cig_sdu_period_us(void)
 {
     return platform_data.args[platform_data_index].iso_interval / platform_data.frame_len / 100;
 }

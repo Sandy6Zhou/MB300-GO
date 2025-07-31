@@ -14,7 +14,6 @@
 #include "le_audio_stream.h"
 #include "effects/effects_adj.h"
 #include "tech_lib/jla_ll_codec_api.h"
-#include "app_config.h"
 
 #define LE_AUDIO_TX_SOURCE      0
 #define LE_AUDIO_LOCAL_SOURCE   1
@@ -30,7 +29,6 @@ struct le_audio_source_syncts {
 };
 
 struct le_audio_source_context {
-    u8 diff_coding_type;
     void *tx_stream;
     void *rx_stream;
     void *le_audio;
@@ -208,20 +206,7 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
     if (!hdl) {
         return 0;
     }
-    int frame_size = 0;
-    if (hdl->coding_type == AUDIO_CODING_LC3) {
-        frame_size = hdl->frame_dms * hdl->bit_rate / 8 / 10000 ;
-    } else if (hdl->coding_type == AUDIO_CODING_JLA) {
-        frame_size = hdl->frame_dms * hdl->bit_rate / 8 / 10000 + 2;
-    } else if (hdl->coding_type == AUDIO_CODING_JLA_V2) {
-        frame_size = hdl->frame_dms * hdl->bit_rate / 8 / 10000 + 2;
-#if (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_JLA_LL)
-    } else if (hdl->coding_type == AUDIO_CODING_JLA_LL) {
-        frame_size = jla_ll_enc_frame_len();
-#endif
-    } else {
-        //TODO : 其他格式的buffer设置
-    }
+    int frame_size = le_audio_get_encoder_len(hdl->coding_type, hdl->frame_dms, hdl->bit_rate);
 
     int ch = strcmp(ctx->name, "LEA_Source_CH1") ? 0 : 1;
     ctx->tx_stream = le_audio_dual_stream_tx_open(ctx->le_audio, hdl->coding_type, frame_size, ch);
@@ -232,29 +217,6 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
 
 #endif
 
-    if (!ctx->diff_coding_type) { /*两个iport非相同格式，说明一个为PCM格式的本地播放源和一个压缩格式的转发源*/
-        if (hdl->coding_type == AUDIO_CODING_PCM) {
-#if LEA_LOCAL_SYNC_PLAY_EN
-            if (ctx->rx_stream) {
-                return 0;
-            }
-            ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, hdl->coding_type);
-#endif
-            hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
-        } else {
-            if (ctx->tx_stream) {
-                le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler, 0);
-                return 0;
-            }
-            ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
-            le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler, 0);
-            hdl->attribute = LE_AUDIO_TX_SOURCE;
-            le_audio_usec_to_local_usec(ctx);
-        }
-        return 0;
-    }
-
-    /*两个iport的格式相同，说明本地播放源和转发源为相同格式，需要区分一个为发送一个为本地存储*/
     if (!ctx->tx_stream) {
         ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
         le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler, 0);
@@ -333,10 +295,6 @@ static int le_audio_source_ioc_fmt_nego(struct stream_iport *iport)
 
     if (!ctx->coding_type) {
         ctx->coding_type = in_fmt->coding_type;
-    }
-
-    if (ctx->coding_type != 0 && in_fmt->coding_type != ctx->coding_type) {
-        ctx->diff_coding_type = 1;
     }
 
     if (in_fmt->coding_type == 0) {

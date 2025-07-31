@@ -220,7 +220,6 @@ INCLUDES := \
 	-Iinterface/net/lwip_2_2_0/lwip/port \
 	-Iinterface/net/lwip_2_2_0/lwip/src \
 	-Iinterface/net/lwip_2_2_0/lwip/src/include \
-	-Iapps/common/netapps/iflytek \
 	-Iapps/common/third_party_profile/jieli/rcsp \
 	-Iapps/common/third_party_profile/jieli/rcsp/adv \
 	-Iapps/common/third_party_profile/jieli/rcsp/rcsp_functions \
@@ -290,12 +289,15 @@ INCLUDES := \
 	-Iinterface/media/effects \
 	-Iinterface/system/os \
 	-Iinterface/system/port \
-	-Ilib/net/lwip_2_1_3/apps/ntp \
-	-Iapps/common/netapps \
-	-Ilib/net/web_socket \
+	-Iapps/common/netapps/my_platform \
+	-Iinterface/net/network_download \
+	-Iapps/common/netapps/intelligent_duer \
 	-Iinterface/net/web_socket \
-	-Iinterface/net/lwip_2_2_0 \
-	-Iapps/common/netapps/my_cjson \
+	-Iapps/common/netapps/intelligent_iflytek/SparkDesk \
+	-Iapps/common/netapps/intelligent_iflytek/tts \
+	-Iapps/common/netapps/intelligent_iflytek/vad \
+	-Iapps/common/netapps/intelligent_iflytek \
+	-Iapps/common/netapps/intelligent_rtc \
 	-Iinterface/net \
 	-Iinterface/net/lwip_2_2_0/lwip/src/include/netif \
 	-Iinterface/net/lwip_2_2_0/lwip/port/arch \
@@ -409,14 +411,34 @@ c_SRC_FILES := \
 	apps/common/net/lwip_2_2_0/port/bt_ethernetif.c \
 	apps/common/net/lwip_2_2_0/port/fixme.c \
 	apps/common/net/lwip_2_2_0/port/sys_arch.c \
-	apps/common/netapps/iflytek/ifly_api.c \
-	apps/common/netapps/iflytek/ifly_auth.c \
-	apps/common/netapps/iflytek/ifly_socket.c \
-	apps/common/netapps/iflytek/ifly_sparkdesk.c \
-	apps/common/netapps/iflytek/ifly_tts.c \
-	apps/common/netapps/iflytek/ifly_vad.c \
-	apps/common/netapps/iflytek/ifly_vad_demo.c \
-	apps/common/netapps/my_cjson/my_cjson.c \
+	apps/common/netapps/intelligent_duer/duer_auth_algorithm.c \
+	apps/common/netapps/intelligent_duer/duer_http_req.c \
+	apps/common/netapps/intelligent_duer/duer_json_parse.c \
+	apps/common/netapps/intelligent_duer/duer_json_request.c \
+	apps/common/netapps/intelligent_duer/duer_record.c \
+	apps/common/netapps/intelligent_duer/duer_socket.c \
+	apps/common/netapps/intelligent_iflytek/SparkDesk/sparkdesk_main.c \
+	apps/common/netapps/intelligent_iflytek/authentication.c \
+	apps/common/netapps/intelligent_iflytek/demo.c \
+	apps/common/netapps/intelligent_iflytek/ifly_common.c \
+	apps/common/netapps/intelligent_iflytek/ifly_socket.c \
+	apps/common/netapps/intelligent_iflytek/tts/tts_main.c \
+	apps/common/netapps/intelligent_iflytek/vad/vad_main.c \
+	apps/common/netapps/intelligent_rtc/rtc_auth_api.c \
+	apps/common/netapps/intelligent_rtc/rtc_auth_canonical_headers.c \
+	apps/common/netapps/intelligent_rtc/rtc_auth_exceptslash.c \
+	apps/common/netapps/intelligent_rtc/rtc_auth_hmac_sig.c \
+	apps/common/netapps/intelligent_rtc/rtc_auth_uriencode.c \
+	apps/common/netapps/intelligent_rtc/rtc_record.c \
+	apps/common/netapps/intelligent_rtc/rtc_socket.c \
+	apps/common/netapps/my_platform/my_platform_cjson.c \
+	apps/common/netapps/my_platform/my_platform_http.c \
+	apps/common/netapps/my_platform/my_platform_http_api.c \
+	apps/common/netapps/my_platform/my_platform_list_download.c \
+	apps/common/netapps/my_platform/my_platform_mem.c \
+	apps/common/netapps/my_platform/my_platform_record.c \
+	apps/common/netapps/my_platform/my_platform_time.c \
+	apps/common/netapps/my_platform/my_platform_url_list.c \
 	apps/common/temp_trim/dtemp_pll_trim.c \
 	apps/common/test/fs_test.c \
 	apps/common/third_party_profile/common/3th_profile_api.c \
@@ -759,6 +781,7 @@ c_SRC_FILES := \
 	audio/common/audio_utils.c \
 	audio/common/audio_volume_mixer.c \
 	audio/common/bt_audio_energy_detection.c \
+	audio/common/codec/jla_lw_config.c \
 	audio/common/debug/audio_debug.c \
 	audio/common/demo/audio_alink_demo.c \
 	audio/common/demo/audio_eq_demo.c \
@@ -864,6 +887,7 @@ c_SRC_FILES := \
 	audio/framework/plugs/source/a2dp_file.c \
 	audio/framework/plugs/source/a2dp_streamctrl.c \
 	audio/framework/plugs/source/adc_file.c \
+	audio/framework/plugs/source/ai_rx_file.c \
 	audio/framework/plugs/source/esco_file.c \
 	audio/framework/plugs/source/fm_file.c \
 	audio/framework/plugs/source/iis_file.c \
@@ -880,6 +904,7 @@ c_SRC_FILES := \
 	audio/framework/plugs/source/source_dev4_file.c \
 	audio/interface/player/a2dp_player.c \
 	audio/interface/player/adda_loop_player.c \
+	audio/interface/player/ai_rx_player.c \
 	audio/interface/player/dev_flow_player.c \
 	audio/interface/player/esco_player.c \
 	audio/interface/player/file_player.c \
@@ -930,7 +955,6 @@ c_SRC_FILES := \
 	cpu/br28/charge/chargestore_config.c \
 	cpu/br28/lua_port_api.c \
 	cpu/br28/overlay_code.c \
-	cpu/br28/periph/led/pwm_led.c \
 	cpu/br28/periph/mcpwm.c \
 	cpu/br28/periph/rdec.c \
 	cpu/br28/periph/touch/lp_touch_key.c \
@@ -952,6 +976,7 @@ c_SRC_FILES := \
 	cpu/components/ir_decoder.c \
 	cpu/components/ir_encoder.c \
 	cpu/components/led_api.c \
+	cpu/components/pwm_led_v1.c \
 	cpu/components/rdec_soft.c \
 	cpu/components/two_io_led.c \
 	cpu/components/ui_driver/led7/led7_driver.c \
@@ -1060,11 +1085,12 @@ LFLAGS := \
 	cpu/br28/liba/lib_f2a_dec.a \
 	cpu/br28/liba/agreement.a \
 	cpu/br28/liba/opus_enc_lib.a \
+	cpu/br28/liba/lib_opus_stenc.a \
+	cpu/br28/liba/lib_ogg_opus_dec.a \
 	cpu/br28/liba/aac_enc_lib.a \
 	cpu/br28/liba/libLHDCv4DecodeLib.a \
 	cpu/br28/liba/libLHDCv5DecodeLib.a \
 	cpu/br28/liba/lib_ldac_dec.a \
-	cpu/br28/liba/lib_ogg_opus_dec.a \
 	cpu/br28/liba/lib_ogg_vorbis_dec.a \
 	cpu/br28/liba/libjlsp.a \
 	cpu/br28/liba/libjlsp_kws.a \
@@ -1144,6 +1170,9 @@ LFLAGS := \
 	cpu/br28/liba/lwip_2_2_0.a \
 	cpu/br28/liba/mbedtls_3_4_0.a \
 	cpu/br28/liba/websocket.a \
+	cpu/br28/liba/http_cli.a \
+	cpu/br28/liba/libmpeg.a \
+	cpu/br28/liba/network_download.a \
 	cpu/br28/liba/cbuf.a \
 	cpu/br28/liba/lbuf.a \
 	cpu/br28/liba/printf.a \

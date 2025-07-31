@@ -825,6 +825,14 @@ static int dual_conn_hci_event_handler(int *_event)
             if (is_remote_test == 0) {
                 add_device_2_page_list(event->args, TCFG_BT_TIMEOUT_PAGE_TIME * 1000);
             }
+        } else if (event->value == ERROR_CODE_PIN_OR_KEY_MISSING) {
+            printf("ERROR_CODE_PIN_OR_KEY_MISSING");
+            del_device_from_page_list(event->args);
+            if (g_dual_conn.timer) {
+                sys_timeout_del(g_dual_conn.timer);
+                g_dual_conn.timer = 0;
+            }
+            dual_conn_page_device();
         }
         break;
     case HCI_EVENT_CONNECTION_COMPLETE:

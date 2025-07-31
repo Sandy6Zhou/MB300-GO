@@ -1763,6 +1763,9 @@ int app_auracast_deal(int scene)
         log_info("auracast_app_mode_exit");
         //退出当前模式
         auracast_app_mode_exit = 1;
+        if (get_vm_ram_storage_enable()) {
+            vm_flush2flash(0);
+        }
     case LE_AUDIO_APP_CLOSE:
         phone_start_cnt = 0;
         app_auracast_suspend();
@@ -1853,7 +1856,13 @@ int app_auracast_deal(int scene)
         //当前处于蓝牙模式并且挂起前广播，恢复广播并作为接收设备
         if (is_need_resume_auracast()) {
             /* app_auracast_resume(); */
-            app_auracast_sink_open();
+            if (is_auracast_as_source()) {
+                //初始化广播发送端参数
+                app_auracast_source_open();
+            } else {
+                //初始化广播接收端参数
+                app_auracast_sink_open();
+            }
         }
         break;
 
@@ -1917,11 +1926,15 @@ static void auracast_source_param_prepare(struct le_audio_stream_params *params)
         frame_dms = 75;
     }
 
-    params->fmt.nch = AURACAST_SOURCE_BIS_NUMS;
+    params->fmt.nch = AURACAST_TX_CODEC_CHANNEL;
     params->fmt.coding_type = AUDIO_CODING_LC3;
     params->fmt.frame_dms = frame_dms;
     ASSERT(auracast_cfg_info, "auracast cfg NULL!\n");
-    params->fmt.bit_rate = params->fmt.nch * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].bit_rate;
+    if (AURACAST_TX_CODEC_CHANNEL == 2 &&  AURACAST_SOURCE_BIS_NUMS == 1) {
+        params->fmt.bit_rate = auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].bit_rate;
+    } else {
+        params->fmt.bit_rate = params->fmt.nch * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].bit_rate;
+    }
     params->fmt.sdu_period = auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len;
     params->fmt.isoIntervalUs = auracast_cfg_info->bn * auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].frame_len;
     params->fmt.sample_rate = auracast_code_list[auracast_cfg_info->sample_rate][auracast_cfg_info->variant].sample_rate;
@@ -2045,7 +2058,7 @@ static int auracast_sink_media_open(uint16_t bis_hdl, uint8_t *packet, uint16_t 
 
     struct le_audio_stream_params params = {0};
     //默认解码所有bis链路的数据
-    params.fmt.nch = app_auracast.bis_num;
+    params.fmt.nch = AURACAST_RX_CODEC_CHANNEL;
     //解码器最多支持双声道数据解码,超过2条声道的情况,只能选其中一条声道进行解码
     if (params.fmt.nch > 2) {
         params.fmt.nch = 1;
@@ -2069,7 +2082,11 @@ static int auracast_sink_media_open(uint16_t bis_hdl, uint8_t *packet, uint16_t 
     params.fmt.sdu_period = config->sdu_period;
     params.fmt.isoIntervalUs = g_sink_bn * config->sdu_period;
     params.fmt.sample_rate = config->sample_rate;
-    params.fmt.bit_rate = params.fmt.nch * config->bit_rate;
+    if (AURACAST_RX_CODEC_CHANNEL == 2 && AURACAST_SINK_BIS_NUMS == 1) {
+        params.fmt.bit_rate = config->bit_rate;
+    } else {
+        params.fmt.bit_rate = params.fmt.nch * config->bit_rate;
+    }
     params.conn = bis_hdl;
 
     g_printf("frame_dms:%d, sdu_period:%d, sample_rate:%d, bit_rate:%d",

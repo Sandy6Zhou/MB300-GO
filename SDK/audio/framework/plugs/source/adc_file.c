@@ -484,7 +484,8 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
     //cvp读dac 参考数据
     if ((hdl->scene == STREAM_SCENE_ESCO) ||
         (hdl->scene == STREAM_SCENE_PC_MIC) ||
-        (hdl->scene == STREAM_SCENE_LEA_CALL)) {
+        (hdl->scene == STREAM_SCENE_LEA_CALL) ||
+        (hdl->scene == STREAM_SCENE_AI_VOICE)) {
 
 #if TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (defined TCFG_IIS_NODE_ENABLE)
         /*对齐iis外部参考数据延时*/
@@ -732,7 +733,7 @@ int adc_file_mic_open(struct adc_mic_ch *mic, int ch) //用于打开通话使用
             mic_gain                = esco_adc_f.cfg.param[ch_index].mic_gain;
             mic_pre_gain            = esco_adc_f.cfg.param[ch_index].mic_pre_gain;
 
-            if ((mic_param.mic_bias_sel == 0) && (esco_adc_f.platform_cfg[ch_index].power_io != 0)) {
+            if (mic_param.mic_bias_sel == 0) {
                 u32 gpio = uuid2gpio(esco_adc_f.platform_cfg[ch_index].power_io);
                 gpio_set_mode(IO_PORT_SPILT(gpio), PORT_OUTPUT_HIGH);
             }
@@ -761,7 +762,7 @@ int adc_file_cfg_mic_open(struct adc_mic_ch *mic, int ch, struct adc_file_common
             mic_gain                = adc_f->cfg.param[ch_index].mic_gain;
             mic_pre_gain            = adc_f->cfg.param[ch_index].mic_pre_gain;
 
-            if ((mic_param.mic_bias_sel == 0) && (adc_f->platform_cfg[ch_index].power_io != 0)) {
+            if (mic_param.mic_bias_sel == 0) {
                 u32 gpio = uuid2gpio(adc_f->platform_cfg[ch_index].power_io);
                 gpio_set_mode(IO_PORT_SPILT(gpio), PORT_OUTPUT_HIGH);
             }
@@ -883,7 +884,7 @@ static int adc_file_ioc_stop(struct adc_file_hdl *hdl)
 
         for (u32 i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             if (hdl->adc_f->cfg.mic_en_map & BIT(i)) {
-                if ((hdl->adc_f->platform_cfg[i].mic_bias_sel == 0) && (hdl->adc_f->platform_cfg[i].power_io != 0)) {
+                if (hdl->adc_f->platform_cfg[i].mic_bias_sel == 0) {
                     if (!audio_adc_is_active()) {
                         u32 gpio = uuid2gpio(hdl->adc_f->platform_cfg[i].power_io);
                         gpio_set_mode(IO_PORT_SPILT(gpio), PORT_OUTPUT_LOW);

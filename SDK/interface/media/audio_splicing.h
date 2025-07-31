@@ -233,4 +233,36 @@ void pcm_dual_to_eight(void *out, void *in, u16 len);
  * */
 void pcm_dual_to_eight_32bit(void *out, void *in, u16 len);
 
+/* note: 16bit位位宽的双声道拆分为左右声道
+ * *out_l:左16bit位宽输出地址
+ * *out_r:右16bit位宽输出地址
+ * *in:16bit位宽输入地址
+ * len:输入长度(byte)
+ * */
+void pcm_dual_2_single_l_r(void *out_l, void *out_r, void *in, u16 in_len);
+
+/* note: 32bit位位宽的双声道拆分为左右声道
+ * *out_l:左32bit位宽输出地址
+ * *out_r:右32bit位宽输出地址
+ * *in:32bit位宽输入地址
+ * len:输入长度(byte)
+ * */
+void pcm_dual_2_single_l_r_32bit(void *out_l, void *out_r, void *in, u16 in_len);
+
+/* note: 16bit位位宽的两个单声道组合成四声道
+ * *out:16bit位宽输出地址
+ * *in_l:左16bit位宽输入地址
+ * *in_r:右16bit位宽输入地址
+ * len:一个声道的输入长度(byte)
+ * */
+void pcm_single_l_r_2_dual(void *out, void *in_l, void *in_r, u16 in_len);
+
+/* note: 32bit位位宽的两个单声道组合成双声道
+ * *out:32bit位宽输出地址
+ * *in_l:左32bit位宽输入地址
+ * *in_r:右32bit位宽输入地址
+ * len:一个声道的输入长度(byte)
+ * */
+void pcm_single_l_r_2_dual_32bit(void *out, void *in_l, void *in_r, u16 in_len);
+
 #endif/*_AUDIO_SPLICING_H_*/

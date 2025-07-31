@@ -28,6 +28,9 @@
 #include "audio_dut_control.h"
 #include "mic_effect.h"
 #include "le_audio_mix_mic_recorder.h"
+#if RCSP_MODE && RCSP_ADV_TRANSLATOR
+#include "rcsp_translator.h"
+#endif
 
 #define PIPELINE_UUID_TONE_NORMAL   0x7674
 #define PIPELINE_UUID_A2DP          0xD96F
@@ -118,6 +121,20 @@ static int get_pipeline_uuid(const char *name)
     if (!strcmp(name, "esco")) {
         clock_alloc("esco", 48 * 1000000UL);
         return PIPELINE_UUID_ESCO;
+    }
+
+    if (!strcmp(name, "ai_rx_call")) {
+        clock_alloc("ai_rx", 48 * 1000000UL);
+        return PIPELINE_UUID_ESCO;
+    }
+    if (!strcmp(name, "ai_rx_media")) {
+        clock_alloc("ai_rx", 48 * 1000000UL);
+
+#if TCFG_INTELLIGENT_DUER
+        return PIPELINE_UUID_MEDIA; //小度用媒体的pipeline_uuid
+#else
+        return PIPELINE_UUID_A2DP;
+#endif
     }
 
     if (!strcmp(name, "mic_effect")) {
@@ -379,6 +396,10 @@ static int load_decoder_handler(struct stream_decoder_info *info)
         info->task_name = "file_dec";
     }
 
+    if (info->scene == STREAM_SCENE_AI_VOICE) {
+        info->frame_time = 10;
+    }
+
     return 0;
 }
 
@@ -461,6 +482,53 @@ static int tws_switch_get_status()
 #endif
 }
 
+#if RCSP_MODE && RCSP_ADV_TRANSLATOR
+static int esco_switch_get_status()
+{
+    int trans = 0; //获取翻译状态
+    struct translator_mode_info minfo;
+    JL_rcsp_translator_get_mode_info(&minfo);
+    if (minfo.mode == RCSP_TRANSLATOR_MODE_CALL_TRANSLATION) {
+        trans = 1;
+    }
+    if (trans) {
+        return 0;
+    } else {
+        return 1;
+    }
+
+}
+
+
+static int esco_trans_switch_get_status()
+{
+    return !esco_switch_get_status();
+
+}
+
+static int media_switch_get_status()
+{
+    int trans = 0;//获取翻译状态
+    struct translator_mode_info minfo;
+    JL_rcsp_translator_get_mode_info(&minfo);
+    if (minfo.mode == RCSP_TRANSLATOR_MODE_A2DP_TRANSLATION) {
+        trans = 1;
+    }
+    if (trans) {
+        return 0;
+    } else {
+        return 1;
+    }
+
+}
+
+
+static int media_trans_switch_get_status()
+{
+    return !media_switch_get_status();
+
+}
+#endif
 static int tws_get_output_channel()
 {
     int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
@@ -497,6 +565,26 @@ static int get_switch_node_callback(const char *arg)
 #if TCFG_LOCAL_TWS_ENABLE
     if (!strncmp(arg, "Switch1", strlen("Switch1"))) {
         return (int)tws_switch_get_status;
+    }
+#endif
+#if RCSP_MODE && RCSP_ADV_TRANSLATOR
+    if (!strcmp(arg, "ESCO_Switch")) {
+        return (int)esco_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_Trans")) {
+        return (int)esco_trans_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_MIC_Switch")) {
+        return (int)esco_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_MIC_Trans")) {
+        return (int)esco_trans_switch_get_status;
+    }
+    if (!strcmp(arg, "Media_Switch")) {
+        return (int)media_switch_get_status;
+    }
+    if (!strcmp(arg, "Media_Trans")) {
+        return (int)media_trans_switch_get_status;
     }
 #endif
     return 0;

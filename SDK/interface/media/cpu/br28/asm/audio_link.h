@@ -109,7 +109,11 @@ typedef enum {
  */
 typedef enum {
     ALINK_SR_192000 = 192000,
+    ALINK_SR_176400 = 176400,
+    ALINK_SR_128000 = 128000,
     ALINK_SR_96000 = 96000,
+    ALINK_SR_88200 = 88200,
+    ALINK_SR_64000 = 64000,
     ALINK_SR_48000 = 48000,
     ALINK_SR_44100 = 44100,
     ALINK_SR_32000 = 32000,
@@ -205,7 +209,7 @@ void audio_alink_lock(u8 module_idx);
 void audio_alink_unlock(u8 module_idx);
 
 #define IIS_CH_NUM  2
-#define ALINK_SR_NUM 11
+#define ALINK_SR_NUM 15
 #define IIS_SW_MUTE_EN 1
 #define IIS_USE_DOUBLE_BUF_MODE_EN 0
 extern u32 alink_sr_tab[ALINK_SR_NUM];

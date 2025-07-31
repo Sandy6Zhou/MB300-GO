@@ -596,6 +596,9 @@ static void do_operate_search_handle(void)
     log_info("find target_handle:");
     log_info_hexdump((u8 *)&target_handle[cur_dev_cid], sizeof(target_hdl_t));
 
+    if (get_ble_work_state(cur_dev_cid) != BLE_ST_CREATE_CONN) {
+        return;
+    }
     if (0 == opt_handle_used_cnt) {
         goto opt_end;
     }

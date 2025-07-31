@@ -23,12 +23,13 @@ const int config_media_tws_en = 0;
 #endif
 
 const int config_audio_dac_ng_debug = 0;
+const int config_audio_dac_enable = TCFG_DAC_NODE_ENABLE;
 
 /* 16bit数据流中也存在32bit位宽数据的处理 */
 const int config_ch_adapter_32bit_enable = 1;
 const int config_mixer_32bit_enable = 1;
 const int config_jlstream_fade_32bit_enable = 1;
-const int config_audio_eq_xfade_enable = 1;
+const int config_peak_rms_32bit_enable = 1;
 const int config_audio_vocal_track_synthesis_32bit_enable = 1;
 
 #if (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_MONO_L)
@@ -194,6 +195,8 @@ const int virtual_bass_pro_soft_crossover = 0;//控制虚拟低音pro 中的分�
 const int virtual_bass_pro_soft_eq = 1;       //控制虚拟低音pro 中的EQ是用软件运行或者硬件运行 1软件 0硬件 默认1
 
 
+const int config_audio_eq_xfade_enable = 1;
+const float config_audio_eq_xfade_time = 0;//0.4f;//0：一帧fade完成 非0：连续多帧fade，过度更加平滑，fade过程算力会相应增加(fade时间 范围(0~1)单位:秒)
 
 
 const int limiter_run_mode = EFx_PRECISION_PRO
@@ -418,6 +421,13 @@ const int const_audio_howling_ahs_data_export = 0;  //数据写卡导出，需�
  * 由于src输入输出buffer复用问题，建议采样率配置:iis(16k)->dac(32k/48k)。
  */
 const int const_audio_howling_ahs_iis_in_dac_out = 0;
+
+/*
+ * ahs-nn 算法是否使用双核
+ * 1:双核-啸叫抑制效果更优，延时略大，资源消耗多。流程需要串AHS-NN + AHS-NN-POST。
+ * 0:单核-延时低，资源消耗少。流程仅需要串AHS-NN。
+ */
+const int const_audio_howling_ahs_dual_core = 1;
 
 /*
  * 某些算法参数更新需要重新申请buffer，

@@ -37,6 +37,7 @@ struct a2dp_file_hdl {
     void *ts_handle;
     u32 sample_rate;
     u16 codec_version;
+    u8 chconfig_id;
     u8 channel_num;
     u16 seqn;
     u32 base_time;
@@ -322,16 +323,13 @@ static int a2dp_ioc_get_fmt(struct a2dp_file_hdl *hdl, struct stream_fmt *fmt)
     case A2DP_CODEC_LHDC_V5: //LHDC 直接从蓝牙获取格式信息。
         fmt->coding_type = AUDIO_CODING_LHDC_V5;
         fmt->sample_rate = a2dp_media_get_sample_rate(hdl->file);
-        fmt->dec_bit_wide = a2dp_media_get_bit_wide(hdl->file);
-        fmt->codec_version = a2dp_media_get_codec_version(hdl->file);
         fmt->channel_mode = AUDIO_CH_LR;
         hdl->media_type = type;
-        hdl->codec_version = fmt->codec_version;
+        hdl->codec_version = a2dp_media_get_codec_version(hdl->file);
         hdl->sample_rate = fmt->sample_rate;
         hdl->channel_num = (fmt->channel_mode == AUDIO_CH_LR) ? 2 : 1;
 
-        printf("a2dp  format %s, sample_rate %d, bit_wide %d, codec_version %d\n",
-               "LHDC_v5", hdl->sample_rate, fmt->dec_bit_wide, fmt->codec_version);
+        printf("a2dp  format %s, sample_rate %d\n", "LHDC_v5", hdl->sample_rate);
         return 0;
         break;
 #endif
@@ -339,16 +337,13 @@ static int a2dp_ioc_get_fmt(struct a2dp_file_hdl *hdl, struct stream_fmt *fmt)
     case A2DP_CODEC_LHDC: //LHDC 直接从蓝牙获取格式信息。
         fmt->coding_type = AUDIO_CODING_LHDC;
         fmt->sample_rate = a2dp_media_get_sample_rate(hdl->file);
-        fmt->dec_bit_wide = a2dp_media_get_bit_wide(hdl->file);
-        fmt->codec_version = a2dp_media_get_codec_version(hdl->file);
         fmt->channel_mode = AUDIO_CH_LR;
         hdl->media_type = type;
-        hdl->codec_version = fmt->codec_version;
+        hdl->codec_version = a2dp_media_get_codec_version(hdl->file);
         hdl->sample_rate = fmt->sample_rate;
         hdl->channel_num = (fmt->channel_mode == AUDIO_CH_LR) ? 2 : 1;
 
-        printf("a2dp  format %s, sample_rate %d, bit_wide %d, codec_version %s\n",
-               "LHDC", hdl->sample_rate, fmt->dec_bit_wide, ((fmt->codec_version == 500) ? "LLAC" : "LHDC V3/V4"));
+        printf("a2dp  format %s, sample_rate %d\n", "LHDC", hdl->sample_rate);
         return 0;
 #endif
     default:
@@ -416,8 +411,8 @@ __again:
         int chconfig_id = (frame[2] >> (8 - 5)) & 0x03;
 
         fmt->channel_mode = AUDIO_CH_LR;
-        fmt ->sample_rate = ldac_sample_rates[sr];
-        fmt->chconfig_id = chconfig_id;
+        fmt->sample_rate = ldac_sample_rates[sr];
+        hdl->chconfig_id = chconfig_id;
         //printf(" %x  %x  %x\n",frame[0],frame[1],frame[2]);
         printf("LDAC param : sr:%d, sample_rate : %d  chconfig_id : %d\n", sr, fmt->sample_rate, chconfig_id);
 #endif
@@ -437,6 +432,35 @@ __again:
     return 0;
 }
 
+static int a2dp_ioc_get_fmt_ex(struct a2dp_file_hdl *hdl, struct stream_fmt_ex *fmt)
+{
+    switch (hdl->media_type) {
+    case A2DP_CODEC_SBC:
+    case A2DP_CODEC_MPEG24:
+        break;
+#if (defined(TCFG_BT_SUPPORT_LHDC_V5) && TCFG_BT_SUPPORT_LHDC_V5)
+    case A2DP_CODEC_LHDC_V5: //LHDC 直接从蓝牙获取格式信息。
+        fmt->dec_bit_wide = a2dp_media_get_bit_wide(hdl->file);
+        fmt->codec_version = hdl->codec_version;
+        printf("LHDC_V5, bit_wide %d, codec_version %d\n", fmt->dec_bit_wide, fmt->codec_version);
+        return 1;
+#endif
+#if (defined(TCFG_BT_SUPPORT_LHDC) && TCFG_BT_SUPPORT_LHDC)
+    case A2DP_CODEC_LHDC: //LHDC 直接从蓝牙获取格式信息。
+        fmt->dec_bit_wide = a2dp_media_get_bit_wide(hdl->file);
+        fmt->codec_version = hdl->codec_version;
+        printf("LHDC, bit_wide %d, codec_version %s\n",
+               fmt->dec_bit_wide, ((fmt->codec_version == 500) ? "LLAC" : "LHDC V3/V4"));
+        return 1;
+#endif
+#if (defined(TCFG_BT_SUPPORT_LDAC) && TCFG_BT_SUPPORT_LDAC)
+    case A2DP_CODEC_LDAC:
+        fmt->chconfig_id = hdl->chconfig_id;
+        return 1;
+#endif
+    }
+    return 0;
+}
 
 
 static int a2dp_ioc_set_bt_addr(struct a2dp_file_hdl *hdl, u8 *bt_addr)
@@ -831,6 +855,10 @@ static int a2dp_ioctl(void *_hdl, int cmd, int arg)
         break;
     case NODE_IOC_GET_FMT:
         err = a2dp_ioc_get_fmt(hdl, (struct stream_fmt *)arg);
+        stream_node_ioctl(hdl->node, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_SYNC_NETWORK, hdl->edr_to_local_time ? AUDIO_NETWORK_LOCAL : AUDIO_NETWORK_BT2_1);
+        break;
+    case NODE_IOC_GET_FMT_EX:
+        err = a2dp_ioc_get_fmt_ex(hdl, (struct stream_fmt_ex *)arg);
         break;
     case NODE_IOC_SET_PRIV_FMT:
         break;

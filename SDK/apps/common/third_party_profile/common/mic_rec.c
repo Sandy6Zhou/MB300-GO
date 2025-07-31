@@ -396,5 +396,6 @@ int mic_rec_pram_init(/* const char **name,  */u32 enc_type, u8 opus_type, u16(*
     __this->init_ok = 1;
     return 0;
 }
+
 #endif
 

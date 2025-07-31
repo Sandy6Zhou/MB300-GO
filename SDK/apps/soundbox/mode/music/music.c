@@ -871,7 +871,7 @@ struct app_mode *app_enter_music_mode(int arg)
 
     app_music_init();
     while (1) {
-        if (scandisk_msg_pop(msg, ARRAY_SIZE(msg)) == 0) {       /*先从扫盘记录消息中获取msg*/
+        if (scandisk_msg_pop(msg, sizeof(msg)) == 0) {       /*先从扫盘记录消息中获取msg*/
             if (!app_get_message(msg, ARRAY_SIZE(msg), music_mode_key_table)) {
                 continue;
             }

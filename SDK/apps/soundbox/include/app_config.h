@@ -257,7 +257,7 @@
 #endif
 
 // 详细功能参考rcsp_cfg.h
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (TME_EN | DMA_EN | GMA_EN | XIMALAYA_EN)))
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (TME_EN | DMA_EN | GMA_EN | XIMALAYA_EN))||TCFG_INTELLIGENT_DUER)
 #define    BT_MIC_EN                 1
 #define    TCFG_ENC_SPEEX_ENABLE     0
 #define    OTA_TWS_SAME_TIME_ENABLE  0     //是否支持TWS同步升级

@@ -23,4 +23,5 @@ void audio_ahs_far_refbuf(s16 *buf, u16 len);
 void audio_jlsp_ahs_run_1(s16 *frame_out, u16 points);
 u8 audio_ahs_status(void);
 void audio_ahs_sem_post();
+void audio_jlsp_ahs_run_single_core(s16 *in, u16 points);
 #endif

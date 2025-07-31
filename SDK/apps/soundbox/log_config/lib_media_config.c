@@ -34,13 +34,27 @@
 #if OS_CPU_CORE > 1
 const int CONFIG_JLSTREAM_MULTI_THREAD_ENABLE = 1; //音频流多线程使能
 const int CONFIG_MULTI_THREAD_SELF_ADAPTION_ENABLE = 1;
+const int CONFIG_DECODE_NODE_TASK_ENABLE = 1;
 #else
 const int CONFIG_JLSTREAM_MULTI_THREAD_ENABLE = 0;
 const int CONFIG_MULTI_THREAD_SELF_ADAPTION_ENABLE = 0;
+#if TCFG_APP_MUSIC_EN
+const int CONFIG_DECODE_NODE_TASK_ENABLE = 1;
+#else
+const int CONFIG_DECODE_NODE_TASK_ENABLE = 0;
+#endif
 #endif
 const int CONFIG_DAC_CACHE_MSEC = TCFG_AUDIO_DAC_BUFFER_TIME_MS - 5;
 //数据流frame申请跟踪Debug
 const int CONFIG_STREAM_FRAME_DEBUG = 0;
+const int CONFIG_JLSTREAM_BIND_BT_NAME_ENABLE = 1;
+#if TCFG_STREAM_BIN_ENC_ENABLE
+const int CONFIG_STREAM_BIN_ENC_ENABLE = 1;
+#else
+const int CONFIG_STREAM_BIN_ENC_ENABLE = 0;
+#endif
+
+const int config_jlstream_node_report_enable = TCFG_CFG_TOOL_ENABLE;
 
 //音频流位宽配置
 #ifndef MEDIA_24BIT_ENABLE
@@ -467,6 +481,7 @@ const int JLA_V2_PLC_FADE_OUT_START_POINT = 480;   //plc维持音量的点数.
 const int JLA_V2_PLC_FADE_OUT_POINTS = 120 * 5;    //plc维持指定点数后,淡出的速度,音量从满幅到0需要的点数.
 const int JLA_V2_PLC_FADE_IN_POINTS = 120 * 5;     //plc后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.
 
+const int JLA_V2_CODEC_WITH_FRAME_HEADER = 0;//jla_v2编解码是否带2个byte的头信息，注意这2个byte 的头信息没有算到编解码的码率里面
 
 //***********************
 //* 	JLA_LL Codec      *
@@ -691,6 +706,10 @@ const  int  ESCO_PLC_SUPPORT_24BIT_EN = MEDIA_24BIT_ENABLE;  //24bit开关
 const  int  ESCO_PLC_FADE_OUT_START_POINT = 500;	//丢包后修复过程中，维持音量的点数.即修复这么多点后，开始淡出
 const  int  ESCO_PLC_FADE_OUT_POINTS = 2048; 		//丢包维持指定点数后,淡出的速度,音量从满幅到0需要的点数. 即淡出完需要的点数
 const  int  ESCO_PLC_FADE_IN_POINTS = 32; 			//丢包后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.即淡入完需要的点数
+
+//1:在配置的淡出点数结束之前，根据信号的特征如果认为已经修不好了，提前快速淡出，
+//0:按照实际配置的淡出点数淡出
+const  int  ESCO_PLC_ADV_ENABLE = 1;
 
 //***********************
 //*   Howling Suppress  *
@@ -973,15 +992,15 @@ const char log_tag_const_i_AUDIO_STREAM  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_AUDIO_STREAM  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_STREAM  = CONFIG_DEBUG_LIB(TRUE);
 
-const char log_tag_const_v_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_c_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_v_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_c_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_i_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_d_AUDIO_DECODER  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_DECODER  = CONFIG_DEBUG_LIB(TRUE);
 
-const char log_tag_const_v_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_c_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_v_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_c_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_i_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_d_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(TRUE);
 

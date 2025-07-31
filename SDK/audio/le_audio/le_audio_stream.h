@@ -117,6 +117,8 @@ int le_audio_stream_tx_drain(void *stream);
 int le_audio_stream_rx_drain(void *stream);
 
 int le_audio_stream_set_start_time(void *stream, u32 start_time);
+
+int le_audio_get_encoder_len(u32 coding_type, u16 frame_len, u32 bit_rate);
 /*****************************LE Audio stream 音频流管理简介**************************
  *
  *  1、LE Audio 的一条BIS/CIS可对应一路LE Audio stream

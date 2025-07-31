@@ -29,7 +29,7 @@
 #define PAWR_TX_SLOT_SPACING             2           // Slot spacing in 0.125 ms units (2 = 250us)
 #define PAWR_TX_CHANNEL_INDEX            30           // fix channel index
 #define PAWR_TX_RESPONSE_ACCESS_ADDRESS  0x692e0e53  // Example AA for responses
-#define PAWR_TX_VENDOR_OP_PADV_FIELD     0xFF
+#define PAWR_TX_VENDOR_OP_PADV_FIELD     0xEF
 
 /* PAwR Receiver Configuration */
 #define PAWR_RX_TARGET_SUBEVENT         0           // Subevent index to respond in (0-based)
