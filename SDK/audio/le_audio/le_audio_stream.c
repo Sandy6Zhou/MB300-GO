@@ -279,7 +279,23 @@ static int __le_audio_stream_tx_data_handler(void *stream, void *data, int len, 
 #endif
         }
         timestamp = (timestamp + latency) & 0xfffffff;
-        le_audio_stream_rx_frame(rx_stream, addr, rx_stream->isoIntervalUs_len, timestamp);
+
+        //对于sdu_interval 比较大的时，按照sdu_interal填数据，可以节省ram
+        if ((ctx->fmt.isoIntervalUs != ctx->fmt.sdu_period) && (ctx->fmt.sdu_period == 10 * 1000)) { //这里默认10ms 的编码帧才这样处理
+            int sdu_num = ctx->fmt.isoIntervalUs / ctx->fmt.sdu_period;
+            int sduIntervalUs_len = rx_stream->isoIntervalUs_len / sdu_num;
+            u8 *tmp_data = (u8 *)addr;
+            for (int i = 0; i < sdu_num; i++) {
+                /* printf(" %d, %d, %d, %u\n",sdu_num,sduIntervalUs_len , rx_stream->isoIntervalUs_len,timestamp); */
+                le_audio_stream_rx_frame(rx_stream, tmp_data, sduIntervalUs_len, timestamp);
+                timestamp = (timestamp + ctx->fmt.sdu_period) & 0xfffffff;
+                tmp_data += sduIntervalUs_len;
+            }
+
+        } else {
+            le_audio_stream_rx_frame(rx_stream, addr, rx_stream->isoIntervalUs_len, timestamp);
+        }
+
         cbuf_read_updata(&rx_stream->buf.cbuf, rx_stream->isoIntervalUs_len);
         spin_unlock(&ctx->lock);
         /*printf("-%d-\n", rx_stream->isoIntervalUs_len);*/

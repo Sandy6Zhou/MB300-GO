@@ -265,4 +265,8 @@ void pcm_single_l_r_2_dual(void *out, void *in_l, void *in_r, u16 in_len);
  * */
 void pcm_single_l_r_2_dual_32bit(void *out, void *in_l, void *in_r, u16 in_len);
 
+void pcm_single_to_double_diff(u32 points, void *inbuf, void *outbuf);
+
+void pcm_single_to_double_diff_32bit(u32 points, void *inbuf, void *outbuf);
+
 #endif/*_AUDIO_SPLICING_H_*/

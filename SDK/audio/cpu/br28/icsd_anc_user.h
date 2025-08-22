@@ -5,6 +5,7 @@
 
 #include "esco_player.h"
 #include "adc_file.h"
+#include "audio_adc.h"
 
 typedef struct {
     u16 mic_ch_sel;

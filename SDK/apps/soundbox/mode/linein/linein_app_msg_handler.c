@@ -60,10 +60,12 @@ int linein_app_msg_handler(int *msg)
         break;
     case APP_MSG_LINEIN_START:
         printf("app msg linein start\n");
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             linein_last_onoff = 1;
             break;
         }
+#endif
         linein_start();
         linein_last_onoff = 1;
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */
@@ -78,30 +80,22 @@ int linein_app_msg_handler(int *msg)
         if (get_le_audio_curr_role() == 2) {
             //接收端已连上
             linein_volume_mute_mark ^= 1;
-            audio_app_mute_en(linein_volume_mute_mark);
+            linein_app_mute_en(linein_volume_mute_mark);
         } else {
             if (linein_volume_mute_mark == 1) {
                 //没有连接情况下，如果之前是mute住了，那么先解mute
                 linein_volume_mute_mark ^= 1;
-                audio_app_mute_en(linein_volume_mute_mark);
+                linein_app_mute_en(linein_volume_mute_mark);
+
                 break;
             }
         }
 #elif (LEA_BIG_FIX_ROLE == LEA_ROLE_AS_TX)
-        //固定为接收端
-        u8 linein_volume_mute_mark = app_audio_get_mute_state(APP_AUDIO_STATE_MUSIC);
-        if (get_le_audio_curr_role() == 2) {
-            //接收端已连上
-            linein_volume_mute_mark ^= 1;
-            audio_app_mute_en(linein_volume_mute_mark);
-        } else {
-            if (linein_volume_mute_mark == 1) {
-                //没有连接情况下，如果之前是mute住了，那么先解mute
-                linein_volume_mute_mark ^= 1;
-                audio_app_mute_en(linein_volume_mute_mark);
-                break;
-            }
-        }
+        //固定为发送端
+        u8 linein_volume_mute_mark = get_linein_app_mute_en();
+        printf("[fix tx linein pp] linein_volume_mute_mark:%d\n ", linein_volume_mute_mark);
+        linein_volume_mute_mark ^= 1;
+        linein_app_mute_en(linein_volume_mute_mark);
 #endif
 #endif
         linein_last_onoff = linein_volume_pp();

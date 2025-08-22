@@ -124,7 +124,11 @@ const u32 lib_config_uart_flow_enable = 1;
 #define     AUTH_sdk_chip_key    (1<<2)   //SDK秘钥校验
 
 //需要对应的功能，就或上对应的宏定义，支持多种鉴权同时打开
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+const u32 lib_config_enable_auth_check = AUTH_multi_algorithm;
+#else
 const u32 lib_config_enable_auth_check = 0b0000;
+#endif
 
 //fm搜台调试信息保存, 打开后搜完台使用dump_fm_debug_info打印
 const int config_fm_scan_debug = 0;

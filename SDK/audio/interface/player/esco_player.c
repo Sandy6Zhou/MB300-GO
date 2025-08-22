@@ -85,7 +85,7 @@ int esco_player_open_extended(u8 *bt_addr, int ext_type, void *ext_param)
     jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, TCFG_ESCO_DL_CVSD_SR_USE_16K);
 #endif /*TCFG_ESCO_DL_CVSD_SR_USE_16K*/
 
-#if ((defined TCFG_MULTI_CH_IIS_NODE_ENABLE) && (TCFG_MULTI_CH_IIS_NODE_ENABLE == 1)) || ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))
+#if (((defined TCFG_MULTI_CH_IIS_NODE_ENABLE) && (TCFG_MULTI_CH_IIS_NODE_ENABLE == 1)) || ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))) && (TCFG_DAC_NODE_ENABLE == 0)
 #if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE == 48000)
     //如果涉及iis输出, 将通话的同步节点采样率改为48k, 前提是全局采样率已经设置为48000
     jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, 3);

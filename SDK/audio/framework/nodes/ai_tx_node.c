@@ -18,9 +18,7 @@ struct ai_tx_hdl {
     int (*tx_func)(u8 *buf, u32 len);
 };
 
-#if TCFG_INTELLIGENT_DUER
-extern int rec_enc_output(void *priv, void *buf, int len);
-#endif
+
 static void ai_tx_handle_frame(struct stream_iport *iport, struct stream_note *note)
 {
     struct ai_tx_hdl *hdl = (struct ai_tx_hdl *)iport->node->private_data;
@@ -31,9 +29,6 @@ static void ai_tx_handle_frame(struct stream_iport *iport, struct stream_note *n
         if (!frame) {
             break;
         }
-#if (TCFG_INTELLIGENT_DUER)
-        rec_enc_output(NULL, frame->data, frame->len);
-#endif
         if (hdl->tx_func) {
             hdl->tx_func(frame->data, frame->len);
         }

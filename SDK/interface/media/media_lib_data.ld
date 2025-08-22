@@ -26,6 +26,7 @@
     *(.msbc_data)
     *(.cvsd_data)
     *(.sbc_data)
+    *(.sbc_dec.data)
     *(.bt_aac_dec.data)
 	*(.bt_aac_dec_data)
     *(.btaac_rom_dec.data)

@@ -30,8 +30,12 @@
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
 #include "bt_key_func.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
-#if(TCFG_USER_TWS_ENABLE == 0)
+
+#if(TCFG_APP_BT_EN && TCFG_USER_TWS_ENABLE == 0)
 //开关a2dp后，是否保持变调状态
 #define A2DP_PLAYBACK_PITCH_KEEP          0
 
@@ -193,15 +197,17 @@ static void a2dp_play_in_task(u8 *data)
         }
         bt_stop_a2dp_slience_detect(bt_addr);
         memcpy(g_play_addr, bt_addr, 6);
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
             break;
         }
+#endif
         int err = a2dp_player_open(bt_addr);
         if (err == -EBUSY) {
             bt_start_a2dp_slience_detect(bt_addr, 50); //丢掉50包(约1s)之后才开始能量检测,过滤掉提示音，避免提示音引起抢占
         }
         /* memset(g_play_addr, 0xff, 6); */
-        musci_vocal_remover_update_parm();
+        music_vocal_remover_update_parm();
         break;
     case CMD_A2DP_CLOSE:
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
@@ -499,10 +505,44 @@ static void *a2dp_tx_le_audio_open(void *args)
 {
     int err;
     void *le_audio = NULL;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (get_a2dp_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+        //处理固定接收端后台播歌能量检测过程，直接切模式回蓝牙地址未赋值的情况
+        if (g_play_addr_vaild() == FALSE) {
+            u8 detect_addr[6];
+            bt_slience_get_detect_addr(detect_addr);
+            set_g_play_addr(detect_addr);
+        }
+        if (le_audio == NULL) {
+            //这个时候mic广播是没有打开 的
+            le_audio = le_audio_stream_create(params->conn, &params->fmt);
+            err = le_audio_a2dp_recorder_open(get_g_play_addr(), (void *)&params->fmt, le_audio);
+            if (err != 0) {
+                ASSERT(0, "recorder open fail");
+            }
+            //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+            set_local_mix_mic_le_audio(le_audio);
+#if LEA_LOCAL_SYNC_PLAY_EN
+            err = le_audio_player_open(le_audio, params);
+            if (err != 0) {
+                ASSERT(0, "player open fail");
+            }
+#endif
+        } else {
+            //mic广播是先打开的
+            err = le_audio_a2dp_recorder_open(get_g_play_addr(), (void *)&params->fmt, le_audio);
+            if (err != 0) {
+                ASSERT(0, "recorder open fail");
+            }
+        }
+        local_le_audio_music_start_deal();
+    }
+#else
 
     if (get_a2dp_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
         //处理固定接收端后台播歌能量检测过程，直接切模式回蓝牙地址未赋值的情况
         if (g_play_addr_vaild() == FALSE) {
@@ -521,7 +561,7 @@ static void *a2dp_tx_le_audio_open(void *args)
         }
 #endif
     }
-
+#endif
     return le_audio;
 }
 
@@ -531,13 +571,17 @@ static int a2dp_tx_le_audio_close(void *le_audio)
         return -EPERM;
     }
 
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio_a2dp_recorder_close(get_g_play_addr());
+    local_le_audio_music_stop_deal();
+#else
     //关闭广播音频播放
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
 #endif
     le_audio_a2dp_recorder_close(get_g_play_addr());
     le_audio_stream_free(le_audio);
-
+#endif
     return 0;
 }
 

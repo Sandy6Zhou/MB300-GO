@@ -319,6 +319,10 @@ static void iis_ioc_get_fmt(struct iis_file_hdl *hdl, struct stream_fmt *fmt)
         }
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;
+
+    case STREAM_SCENE_WIRELESS_MIC:
+        hdl->channel_mode   = (LE_AUDIO_CODEC_CHANNEL == 2 ?  AUDIO_CH_LR : AUDIO_CH_MIX);
+        break;
     case STREAM_SCENE_MIC_EFFECT:
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;

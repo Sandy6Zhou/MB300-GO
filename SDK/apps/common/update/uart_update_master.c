@@ -345,6 +345,7 @@ bool get_uart_update_sta(void)
 
 static void update_process_run(void)
 {
+    u16 timeout = 0;
     update_baudrate = UART_DEFAULT_BAUD;
     uart_update_set_baud(update_baudrate);
 
@@ -354,7 +355,7 @@ static void update_process_run(void)
 
     u8 *pbuf = (u8 *)&__this->rx_cmd;
     while (1) {
-        if (OS_NO_ERR != os_sem_pend(&__this->rx_sem, 800)) {
+        if (OS_NO_ERR != os_sem_pend(&__this->rx_sem, timeout)) {
             log_info("uart_timeout\n");
             __this->update_sta = UPDATE_STA_TIMEOUT;
             update_baudrate = 9600;
@@ -370,6 +371,7 @@ static void update_process_run(void)
         switch (pbuf[0]) {
         case CMD_UPDATE_START:
             log_info("CMD_UPDATE_START\n");
+            timeout = 800;
             __this->update_sta = UPDATE_STA_START;
             update_baudrate = UART_UPDATE_BAUD;
             WRITE_LIT_U32(pbuf + 1, update_baudrate);

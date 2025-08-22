@@ -201,6 +201,7 @@ void cfg_file_parse(u8 idx)
     log_info("tws pair code config:");
     put_buf((void *)&bt_cfg.tws_device_indicate, 2);
 
+#if TCFG_APP_BT_EN
     //-----------------------------CFG_BT_RF_POWER_ID----------------------------//
     ret = syscfg_read(CFG_BT_RF_POWER_ID, &app_var.rf_power, 1);
     if (ret < 0) {
@@ -214,7 +215,7 @@ void cfg_file_parse(u8 idx)
     bt_max_pwr_set(app_var.rf_power, 5, 8, ble_power);//last is ble tx_pwer(0~9)
     /* g_printf("rf config:%d\n", app_var.rf_power); */
     log_info("rf config:%d\n", app_var.rf_power);
-
+#endif
     //-----------------------------CFG_AEC_ID------------------------------------//
     log_info("aec config:");
 #if TCFG_AUDIO_DUAL_MIC_ENABLE
@@ -358,6 +359,7 @@ void cfg_file_parse(u8 idx)
     /*************************************************************************/
     /*                      CFG READ IN VM                                   */
     /*************************************************************************/
+#if TCFG_APP_BT_EN
     u8 mac_buf[6];
     u8 mac_buf_tmp[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     u8 mac_buf_tmp2[6] = {0, 0, 0, 0, 0, 0};
@@ -401,7 +403,7 @@ void cfg_file_parse(u8 idx)
     memcpy(bt_cfg.edr_name, dut_name, sizeof(dut_name));
     memcpy(bt_cfg.mac_addr, dut_addr, 6);
 #endif
-
+#endif //TCFG_APP_BT_EN
     /*************************************************************************/
     /*                      CFG READ IN isd_config.ini                       */
     /*************************************************************************/

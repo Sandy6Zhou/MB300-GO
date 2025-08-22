@@ -256,6 +256,14 @@ int broadcast_send_custom_data(u16 aux_hdl, void *data, size_t length);
 
 int broadcast_audio_all_close(u16 big_hdl);
 int broadcast_audio_all_open(u16 big_hdl);
+
+#if LE_AUDIO_LOCAL_MIC_EN
+void __broadcast_audio_cur_mode_tx_stream_open(u16 big_hdl);
+void __broadcast_audio_cur_mode_tx_stream_close(u16 big_hdl);
+void __alone_local_mic_tx_le_audio_close(u16 big_hdl);
+void __alone_local_mic_tx_le_audio_open(u16 big_hdl);
+#endif
+
 #ifdef __cplusplus
 };
 #endif

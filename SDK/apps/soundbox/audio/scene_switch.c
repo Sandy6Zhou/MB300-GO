@@ -751,7 +751,7 @@ void music_vocal_remover_switch(void)
 #endif
 }
 //media数据流启动后更新人声消除bypass参数
-void musci_vocal_remover_update_parm()
+void music_vocal_remover_update_parm()
 {
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     vocal_remover_param_tool_set cfg = {0};

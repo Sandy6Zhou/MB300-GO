@@ -7,7 +7,6 @@
 #include "jlstream.h"
 #include "ai_voice_recoder.h"
 #include "encoder_node.h"
-#include "sdk_config.h"
 
 struct ai_voice_recoder {
     struct jlstream *stream;
@@ -38,9 +37,6 @@ void ai_voice_recoder_set_ai_tx_node_func(int (*func)(u8 *, u32))
 int ai_voice_recoder_open(u32 code_type, u8 ai_type)
 {
     int err;
-#if TCFG_INTELLIGENT_DUER
-    struct stream_enc_fmt ai_tx_s_enc_fmt = {0};
-#endif
     struct stream_fmt fmt;
     struct encoder_fmt enc_fmt;
     struct ai_voice_recoder *recoder;
@@ -63,9 +59,6 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
         err = -ENOMEM;
         goto __exit0;
     }
-#if TCFG_INTELLIGENT_DUER
-    jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_GET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
-#endif
     switch (code_type) {
     case AUDIO_CODING_OPUS:
         //  bitrate
@@ -88,12 +81,6 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
         enc_fmt.format =  0;
         /* enc_fmt.frame_dms = 20 * 10;//与工具保持一致，要乘以10,表示20ms */
         fmt.coding_type = AUDIO_CODING_OPUS;
-#if TCFG_INTELLIGENT_DUER
-        ai_tx_s_enc_fmt.coding_type = AUDIO_CODING_OPUS;
-        ai_tx_s_enc_fmt.bit_rate = 16000;
-        ai_tx_s_enc_fmt.sample_rate = 16000;
-        ai_tx_s_enc_fmt.frame_dms = 20 * 10;
-#endif
         break;
     case AUDIO_CODING_SPEEX:
         enc_fmt.quality = 5;
@@ -110,9 +97,7 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
     }
     err = jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_SET_PRIV_FMT, (int)(&enc_fmt));
     err += jlstream_node_ioctl(recoder->stream, NODE_UUID_AI_TX, NODE_IOC_SET_FMT, (int)(&fmt));
-#if TCFG_INTELLIGENT_DUER
-    err += jlstream_node_ioctl(recoder->stream, NODE_UUID_ENCODER, NODE_IOC_SET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
-#endif
+
     //设置ADC的中断点数
     err += jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, 320);
     if (err) {

@@ -26,6 +26,8 @@
 #include "boot.h"
 #include "asm/sfc_norflash_api.h"
 
+#if TCFG_UPDATE_ENABLE
+
 #if TCFG_MIC_EFFECT_ENABLE
 #include "mic_effect.h"
 #endif
@@ -699,4 +701,9 @@ u32 update_get_machine_num(u8 *buf, u32 len)
     y_printf(">>>[test]: machine num : %s\n", buf);
     return name_len;
 }
-
+#else
+u16 update_result_get(void)
+{
+    return 0;
+}
+#endif

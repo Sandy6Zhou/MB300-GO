@@ -31,6 +31,9 @@
 #include "rcsp_device_status.h"
 #include "rcsp_music_func.h"
 #include "rcsp_config.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 extern struct __music music_hdl;
 
@@ -69,9 +72,11 @@ void music_player_err_deal(int err)
 
     switch (err) {
     case MUSIC_PLAYER_SUCC:
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (get_le_audio_curr_role()) {
             le_audio_scene_deal(LE_AUDIO_MUSIC_START);
         }
+#endif
         music_hdl.file_err_counter = 0;
         break;
     case MUSIC_PLAYER_ERR_NULL:
@@ -423,8 +428,9 @@ int music_app_msg_handler(int *msg)
         } else {
             err = music_player_play_first_file(music_hdl.player_hd, logo);
         }
-
+#if TCFG_LE_AUDIO_APP_CONFIG
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+#endif
 
         break;
 
@@ -454,8 +460,9 @@ int music_app_msg_handler(int *msg)
             printf(">>> logo: %s, folder_path: %s\n", _logo, folder_path);		//udisk0
             err = music_player_play_by_path(music_hdl.player_hd, _logo, "/JL_REC/");
         }
-
+#if TCFG_LE_AUDIO_APP_CONFIG
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+#endif
 
         break;
     case APP_MSG_MUSIC_PLAY_START_BY_DEV:
@@ -463,9 +470,11 @@ int music_app_msg_handler(int *msg)
         logo = (char *)msg[1];
         log_i("KEY_MUSIC_DEVICE_TONE_END %s\n", logo);
 
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             break;
         }
+#endif
 
         if (logo) {
             if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
@@ -513,15 +522,22 @@ int music_app_msg_handler(int *msg)
 #endif
         log_i("APP_MSG_MUSIC_PLAY_START %s\n", logo);
 
-        if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
+        int rett = -1;
+#if TCFG_LE_AUDIO_APP_CONFIG
+        rett = le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
+        if (rett > 0) {
             break;
         }
-
-        if (!get_le_audio_curr_role() || dev_manager_get_total(1)) {
-            if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
-                err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
-            } else {
-                err = music_player_play_first_file(music_hdl.player_hd, logo);
+#endif
+        //程序跑到这里rett的值只能是<=0
+        //如果返回值为0的话说明打开了广播，那么音乐的播放控制权交给广播的逻辑, 不在这里做控制
+        if (rett != 0) {
+            if (dev_manager_get_total(1)) {
+                if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
+                    err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
+                } else {
+                    err = music_player_play_first_file(music_hdl.player_hd, logo);
+                }
             }
         }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LEA_BIG_FIX_ROLE==0)
@@ -549,7 +565,9 @@ int music_app_msg_handler(int *msg)
         logo = dev_manager_get_logo(dev_manager_find_active(1));
         err = music_player_play_by_sclust(music_hdl.player_hd, logo, msg[1]);
 
+#if TCFG_LE_AUDIO_APP_CONFIG
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+#endif
 
         break;
     case APP_MSG_MUSIC_FR:
@@ -571,7 +589,9 @@ int music_app_msg_handler(int *msg)
         logo = dev_manager_get_logo(dev_manager_find_active(1));
         err = music_player_play_by_number(music_hdl.player_hd, logo, msg[1]);
 
+#if TCFG_LE_AUDIO_APP_CONFIG
         le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+#endif
 
         break;
     case APP_MSG_MUSIC_PLAY_START_AT_DEST_TIME:
@@ -606,10 +626,11 @@ int music_app_msg_handler(int *msg)
 
 
 #if (TCFG_APP_MUSIC_EN && !RCSP_APP_MUSIC_EN)
+#if RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE
     rcsp_device_status_update(MUSIC_FUNCTION_MASK,
                               BIT(MUSIC_INFO_ATTR_STATUS) | BIT(MUSIC_INFO_ATTR_FILE_PLAY_MODE));
 #endif
-
+#endif
 
     return 0;
 }
@@ -710,22 +731,54 @@ static void *music_tx_le_audio_open(void *fmt)
     int err;
     void *le_audio = NULL;
     g_le_audio_flag = 1;
-
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)fmt;
+    struct le_audio_stream_format stream_fmt = params->fmt;
+    struct stream_enc_fmt enc_fmt = {
+        .coding_type = stream_fmt.coding_type,
+        .channel = stream_fmt.nch,
+        .bit_rate = stream_fmt.bit_rate,
+        .sample_rate = stream_fmt.sample_rate,
+        .frame_dms = stream_fmt.frame_dms,
+    };
     char *logo = NULL;
+
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    local_le_audio_music_start_deal();
+    if (le_audio == NULL) {
+        //这个时候mic广播是没有打开的
+        le_audio = le_audio_stream_create(params->conn, &params->fmt);
+        //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+        set_local_mix_mic_le_audio(le_audio);
+    } else {
+        //这个时候广播mic是打开的
+    }
+    music_app_set_btaddr(le_audio, &enc_fmt);
+
+    logo = dev_manager_get_logo(dev_manager_find_active(1));
+    if (music_player_runing()) {
+        if (dev_manager_get_logo(music_hdl.player_hd->dev) && logo) {///播放的设备跟当前活动的设备是同一个设备，关闭当前播放
+            if (0 == strcmp(logo, dev_manager_get_logo(music_hdl.player_hd->dev))) {
+                music_player_stop(music_hdl.player_hd, 0);
+            }
+        }
+    }
+    if (true == breakpoint_vm_read(music_hdl.breakpoint, logo)) {
+        err = music_player_play_by_breakpoint(music_hdl.player_hd, logo, music_hdl.breakpoint);
+    } else {
+        err = music_player_play_first_file(music_hdl.player_hd, logo);
+    }
+
+    if (err == MUSIC_PLAYER_SUCC) {
+        update_le_audio_deal_scene(LE_AUDIO_MUSIC_START);
+    }
+    music_player_err_deal(err);
+#else
 
     if (1) {//(get_music_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)fmt;
-        struct le_audio_stream_format stream_fmt = params->fmt;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
 
-        struct stream_enc_fmt enc_fmt = {
-            .coding_type = stream_fmt.coding_type,
-            .channel = stream_fmt.nch,
-            .bit_rate = stream_fmt.bit_rate,
-            .sample_rate = stream_fmt.sample_rate,
-            .frame_dms = stream_fmt.frame_dms,
-        };
 
         music_app_set_btaddr(le_audio, &enc_fmt);
         /* app_send_message(APP_MSG_MUSIC_PLAY_START, 0); */ // 注释是由于采用发送MUSIC_PLAY_START消息来开启解码音频数据流方式会导致固定发射端时会出现循环播放的问题
@@ -749,6 +802,7 @@ static void *music_tx_le_audio_open(void *fmt)
         }
         music_player_err_deal(err);
     }
+#endif
 
     return le_audio;
 }
@@ -760,6 +814,13 @@ static int music_tx_le_audio_close(void *le_audio)
     }
 
     g_le_audio_flag = 0;
+#if LE_AUDIO_LOCAL_MIC_EN
+    if (music_player_get_playing_breakpoint(music_hdl.player_hd, music_hdl.breakpoint, 1) == true) {
+        music_player_stop(music_hdl.player_hd, 0); //先停止，防止下一步操作VM卡顿
+        breakpoint_vm_write(music_hdl.breakpoint, dev_manager_get_logo(music_hdl.player_hd->dev));
+    }
+    local_le_audio_music_stop_deal();
+#else
     if (music_player_get_playing_breakpoint(music_hdl.player_hd, music_hdl.breakpoint, 1) == true) {
         music_player_stop(music_hdl.player_hd, 0); //先停止，防止下一步操作VM卡顿
         breakpoint_vm_write(music_hdl.breakpoint, dev_manager_get_logo(music_hdl.player_hd->dev));
@@ -769,6 +830,7 @@ static int music_tx_le_audio_close(void *le_audio)
     le_audio_player_close(le_audio);
 #endif
     le_audio_stream_free(le_audio);
+#endif
 
     return 0;
 }

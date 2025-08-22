@@ -33,6 +33,7 @@ typedef struct {
 extern const u8 sdp_pnp_service_data[];
 extern const u8 sdp_a2dp_service_data[];
 extern const u8 sdp_avctp_ct_service_data[];
+extern const u8 sdp_avctp_ct_service_data_browsing[];
 extern const u8 sdp_avctp_ta_service_data[];
 extern const u8 sdp_hfp_service_data[];
 extern const u8 sdp_spp_service_data[];
@@ -80,10 +81,20 @@ SDP_RECORD_HANDLER_REGISTER(a2dp_sdp_record_item) = {
 #endif
 #if (TCFG_BT_SUPPORT_AVCTP==1)
 u8 acp_profile_support = 1;
+#if (defined TCFG_BT_SUPPORT_BIP && (TCFG_BT_SUPPORT_BIP==1))
+u8 bip_profile_support = 1;
+u8 lmp_support_ertm_enable = 1;
+SDP_RECORD_HANDLER_REGISTER(arp_ct_sdp_record_item) = {
+    .service_record = (u8 *)sdp_avctp_ct_service_data_browsing,
+    .service_record_handle = 0x00010002,
+};
+#else
 SDP_RECORD_HANDLER_REGISTER(arp_ct_sdp_record_item) = {
     .service_record = (u8 *)sdp_avctp_ct_service_data,
     .service_record_handle = 0x00010002,
 };
+#endif
+
 #if TCFG_BT_VOL_SYNC_ENABLE
 SDP_RECORD_HANDLER_REGISTER(arp_ta_sdp_record_item) = {
     .service_record = (u8 *)sdp_avctp_ta_service_data,
@@ -157,9 +168,6 @@ SDP_RECORD_HANDLER_REGISTER(pan_sdp_record_item) = {
 };
 #endif
 
-#if (defined TCFG_BT_SUPPORT_BIP && (TCFG_BT_SUPPORT_BIP==1))
-u8 bip_profile_support = 1;
-#endif
 
 /*注意hid_conn_depend_on_dev_company置1之后，安卓手机会默认断开HID连接 */
 /*注意hid_conn_depend_on_dev_company置2之后，默认不断开HID连接 */

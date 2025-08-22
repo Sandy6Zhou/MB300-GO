@@ -18,6 +18,7 @@
 #include "clock_manager/clock_manager.h"
 #include "audio_config_def.h"
 #include "effects/audio_vbass.h"
+#include "audio_effect_demo.h"
 #include "framework/include/decoder_node.h"
 #include "le_audio_player.h"
 #if AUDIO_EQ_LINK_VOLUME
@@ -76,6 +77,9 @@ static void music_player_callback(void *_player_id, int event)
 #endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
+#endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
 #endif
         if (list_empty(&(g_file_player.head))) {          //先判断是否为空防止触发异常
             break;

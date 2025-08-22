@@ -11,6 +11,9 @@
 #include "effects/convert_data.h"
 #include "effects/audio_spatial_adv.h"
 #include "effects/audio_virtual_bass_pro.h"
+#include "effects/audio_vibrato.h"
+#include "effects/audio_harmony.h"
+#include "effects/audio_tremolo.h"
 
 
 

@@ -3,6 +3,9 @@
 
 source_node_adapter
 
+
+
+
 #if TCFG_MIXER_NODE_ENABLE
 mixer_node_adapter
 #endif
@@ -34,7 +37,7 @@ file_play_plug
 #endif
 
 sbc_hwaccel
-sbc_decoder_plug
+sbc_decoder_hw_plug
 msbc_decoder_plug
 
 #if TCFG_PDM_NODE_ENABLE
@@ -364,7 +367,7 @@ jla_ll_dec_plug
 le_audio_file_plug
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN)) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && (LE_AUDIO_CODEC_TYPE == AUDIO_CODING_LC3)))
 lc3_dec_plug
 lc3_encoder_plug
 #endif
@@ -707,4 +710,14 @@ mute_node_adapter
 noisefloor_node_adapter
 #endif
 
+#if TCFG_VIBRATO_NODE_ENABLE
+vibrato_node_adapter
+#endif
 
+#if TCFG_HARMONY_NODE_ENABLE
+harmony_node_adapter
+#endif
+
+#if TCFG_TREMOLO_NODE_ENABLE
+tremolo_node_adapter
+#endif

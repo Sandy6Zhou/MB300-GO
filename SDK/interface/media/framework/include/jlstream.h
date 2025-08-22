@@ -100,6 +100,8 @@ struct jlstream;
 #define NODE_IOC_MIDI_CTRL_QUE_KEY  0x0002003a      //MIDI查询指定通道的key播放
 #define NODE_IOC_SET_SYNC_NETWORK   0x0002003b
 #define NODE_IOC_GET_PRIV_FMT 		0x0002003c		//获取解码码率等信息
+#define NODE_IOC_SOURCE_MUTE_EN     0x0002003d		//从源头处mute（数据流源头清零）
+#define NODE_IOC_GET_SOURCE_MUTE_EN 0x0002003e
 
 #define NODE_IOC_START              (0x00040000 | NODE_STA_RUN)
 #define NODE_IOC_PAUSE              (0x00040000 | NODE_STA_PAUSE)

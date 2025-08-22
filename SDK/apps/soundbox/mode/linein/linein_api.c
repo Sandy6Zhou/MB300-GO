@@ -10,8 +10,6 @@
 #include "media/includes.h"
 #include "tone_player.h"
 #include "app_tone.h"
-/* #include "audio_dec_linein.h" */
-#include "asm/audio_linein.h"
 #include "app_main.h"
 #include "ui_manage.h"
 #include "vm.h"
@@ -41,9 +39,13 @@
 #include "app_le_auracast.h"
 #include "bt_key_func.h"
 #include "btstack_rcsp_user.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 /*************************************************************
   此文件函数主要是linein实现api
  **************************************************************/
+
 
 #if TCFG_APP_LINEIN_EN
 
@@ -117,7 +119,7 @@ int linein_start(void)
     audio_pitch_default_parm_set(app_var.pitch_mode);
     linein_file_pitch_mode_init(app_var.pitch_mode);
 #endif
-    musci_vocal_remover_update_parm();
+    music_vocal_remover_update_parm();
     __this->audio_state = APP_AUDIO_STATE_MUSIC;
     __this->volume = app_audio_get_volume(__this->audio_state);
     __this->onoff = 1;
@@ -454,10 +456,38 @@ static void *linein_tx_le_audio_open(void *args)
 {
     int err;
     void *le_audio = NULL;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
 
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (le_audio == NULL) {
+        //这个时候mic广播是没有打开 的
+        le_audio = le_audio_stream_create(params->conn, &params->fmt);
+        err = le_audio_linein_recorder_open((void *)&params->fmt, le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+        //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+        set_local_mix_mic_le_audio(le_audio);
+
+#if LEA_LOCAL_SYNC_PLAY_EN
+        err = le_audio_player_open(le_audio, params);
+        if (err != 0) {
+            ASSERT(0, "player open fail");
+        }
+#endif
+    } else {
+        //广播已经打开
+        err = le_audio_linein_recorder_open((void *)&params->fmt, le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+    }
+    local_le_audio_music_start_deal();
+
+#else
     if (1) {//(get_linein_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
         err = le_audio_linein_recorder_open((void *)&params->fmt, le_audio, params->latency);
         if (err != 0) {
@@ -469,17 +499,19 @@ static void *linein_tx_le_audio_open(void *args)
             ASSERT(0, "player open fail");
         }
 #endif
-        __this->audio_state = APP_AUDIO_STATE_MUSIC;
-        __this->volume = app_audio_get_volume(__this->audio_state);
-        __this->onoff = 1;
+    }
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
-        update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
+    update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
-        update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
+    update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
-    }
+    __this->audio_state = APP_AUDIO_STATE_MUSIC;
+    __this->volume = app_audio_get_volume(__this->audio_state);
+    __this->onoff = 1;
+
 
     return le_audio;
 }
@@ -489,16 +521,17 @@ static int linein_tx_le_audio_close(void *le_audio)
     if (!le_audio) {
         return -EPERM;
     }
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio_linein_recorder_close();
+    local_le_audio_music_stop_deal();
 
-    //关闭广播音频播放
+#else
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
 #endif
     le_audio_linein_recorder_close();
     le_audio_stream_free(le_audio);
 
-    app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1);
-    __this->onoff = 0;
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
@@ -507,6 +540,9 @@ static int linein_tx_le_audio_close(void *le_audio)
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     update_app_auracast_deal_scene(LE_AUDIO_MUSIC_STOP);
 #endif
+#endif
+    app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1);
+    __this->onoff = 0;
 
     return 0;
 }

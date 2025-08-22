@@ -367,11 +367,7 @@ static int tone_player_start(struct tone_player *player)
     }
     jlstream_set_dec_file(player->stream, player, &tone_file_ops);
 
-#if TCFG_INTELLIGENT_DUER
-    err = 5;
-#else
     err = jlstream_start(player->stream);
-#endif
     if (err) {
         goto __exit1;
     }
@@ -897,6 +893,7 @@ void multifile_play_demo(void)
 
 __initcall(__tone_player_init);
 #else
+const struct stream_file_ops tone_file_ops;
 int play_tone_file_callback(const char *file_name, void *priv, tone_player_cb_t callback)
 {
     return 0;
@@ -908,6 +905,25 @@ int play_tone_file(const char *file_name)
 void tone_player_stop()
 {
 
+}
+
+int tone_player_runing()
+{
+    return 0;
+}
+int play_tone_file_alone(const char *file_name)
+{
+    return 0;
+}
+
+void tone_player_free(struct tone_player *player)
+{
+}
+
+
+int tone_player_init(struct tone_player *player, const char *file_name)
+{
+    return 0;
 }
 #endif
 

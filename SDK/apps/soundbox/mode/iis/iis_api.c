@@ -20,6 +20,9 @@
 #include "le_audio_stream.h"
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 
 #if TCFG_APP_IIS_EN
@@ -303,10 +306,49 @@ static void *iis_tx_le_audio_open(void *args)
 {
     int err;
     void *le_audio = NULL;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
 
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (le_audio == NULL) {
+        le_audio = le_audio_stream_create(params->conn, &params->fmt);
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+        y_printf(">>>>>>>>>>>> call le_audio_muti_ch_iis_recorder_open!\n");
+        err = le_audio_muti_ch_iis_recorder_open((void *)&params->fmt, (void *)&params->fmt2, le_audio, params->latency);
+#else
+        err = le_audio_iis_recorder_open((void *)&params->fmt, le_audio, params->latency);
+#endif
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+
+        //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+        set_local_mix_mic_le_audio(le_audio);
+
+#if LEA_LOCAL_SYNC_PLAY_EN
+        err = le_audio_player_open(le_audio, params);
+        if (err != 0) {
+            ASSERT(0, "player open fail");
+        }
+#endif
+
+    } else {
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+        y_printf(">>>>>>>>>>>> call le_audio_muti_ch_iis_recorder_open!\n");
+        err = le_audio_muti_ch_iis_recorder_open((void *)&params->fmt, (void *)&params->fmt2, le_audio, params->latency);
+#else
+        err = le_audio_iis_recorder_open((void *)&params->fmt, le_audio, params->latency);
+#endif
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+    }
+
+    local_le_audio_music_start_deal();
+
+#else
     if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
 
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
@@ -324,11 +366,11 @@ static void *iis_tx_le_audio_open(void *args)
             ASSERT(0, "player open fail");
         }
 #endif
-
-        __this->audio_state = APP_AUDIO_STATE_MUSIC;
-        __this->volume = app_audio_get_volume(__this->audio_state);
-        __this->onoff = 1;
     }
+#endif
+    __this->audio_state = APP_AUDIO_STATE_MUSIC;
+    __this->volume = app_audio_get_volume(__this->audio_state);
+    __this->onoff = 1;
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
@@ -343,6 +385,15 @@ static int iis_tx_le_audio_close(void *le_audio)
         return -EPERM;
     }
 
+#if LE_AUDIO_LOCAL_MIC_EN
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    le_audio_muti_ch_iis_recorder_close();
+#else
+    le_audio_iis_recorder_close();
+#endif
+    local_le_audio_music_stop_deal();
+
+#else
     //关闭广播音频播放
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
@@ -354,6 +405,7 @@ static int iis_tx_le_audio_close(void *le_audio)
     le_audio_iis_recorder_close();
 #endif
     le_audio_stream_free(le_audio);
+#endif
 
     app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1);
     __this->onoff = 0;

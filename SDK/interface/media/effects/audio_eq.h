@@ -4,7 +4,6 @@
 
 #include "typedef.h"
 #include "asm/hw_eq.h"
-#include "media/audio_stream.h"
 #include "system/timer.h"
 #include "system/init.h"
 #include "effects/effects_adj.h"
@@ -229,6 +228,10 @@ struct eq_core_check {
     void *stream;
     int core;
 };
+
+
+int audio_eq_lib_init(void);
+
 /*
  *eq core自动选配,并添加到eq core链表
  * */

@@ -11,7 +11,6 @@
 #include "bk1080/BK1080.h"
 #include "qn8035/QN8035.h"
 #include "fm_inside/fm_inside.h"
-#include "asm/audio_linein.h"
 #include "audio_config.h"
 #include "linein_player.h"
 /* #include "audio_dec/audio_dec_fm.h" */
@@ -281,9 +280,11 @@ void fm_manage_mute(u8 mute)
 }
 void fm_manage_set_scan_status(u8 status)
 {
+#if TCFG_FM_INSIDE_ENABLE
     if (fm_hdl) {
         fm_hdl->set_scan_status(status);
     }
+#endif
 }
 
 #endif

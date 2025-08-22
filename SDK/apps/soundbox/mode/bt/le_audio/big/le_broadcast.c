@@ -30,7 +30,7 @@
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
 #endif
-#if LE_AUDIO_MIX_MIC_EN
+#if LE_AUDIO_MIX_MIC_EN || LE_AUDIO_LOCAL_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
 
@@ -500,6 +500,11 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
     for (i = 0; i < bis_num; i++) {
         params.conn = hdl->bis_hdl[0];
         broadcast_hdl->bis_hdl_info[i].bis_hdl = hdl->bis_hdl[i];
+#if LE_AUDIO_LOCAL_MIC_EN
+        if (get_local_mic_le_audio_en()) {
+            broadcast_hdl->bis_hdl_info[i].recorder = local_mix_mic_le_audio_open(&params);
+        }
+#endif
         //打开广播音频播放
         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
             broadcast_hdl->bis_hdl_info[i].recorder = le_audio_switch_ops->tx_le_audio_open(&params);
@@ -1318,6 +1323,9 @@ int broadcast_close(u8 big_hdl)
                 if (recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                         le_audio_switch_ops->tx_le_audio_close(recorder);
+#if LE_AUDIO_LOCAL_MIC_EN
+                        local_mic_tx_le_audio_close();
+#endif
                     }
                 }
                 spin_lock(&broadcast_lock);
@@ -1556,6 +1564,9 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
                 if (recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                         le_audio_switch_ops->tx_le_audio_close(recorder);
+#if LE_AUDIO_LOCAL_MIC_EN
+                        local_mic_tx_le_audio_close();
+#endif
                     }
                 }
             }
@@ -1630,6 +1641,11 @@ int broadcast_audio_recorder_reset(u16 big_hdl)
             //重新打开新的recorder
             for (i = 0; i < bis_num; i++) {
                 if (!p->bis_hdl_info[i].recorder) {
+#if LE_AUDIO_LOCAL_MIC_EN
+                    if (get_local_mic_le_audio_en()) {
+                        p->bis_hdl_info[i].recorder = local_mix_mic_le_audio_open(&params);
+                    }
+#endif
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
                         params.conn = p->bis_hdl_info[i].bis_hdl;
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
@@ -1709,6 +1725,11 @@ int broadcast_audio_recorder_open(u16 big_hdl)
             //重新打开新的recorder
             for (i = 0; i < bis_num; i++) {
                 if (!p->bis_hdl_info[i].recorder) {
+#if LE_AUDIO_LOCAL_MIC_EN
+                    if (get_local_mic_le_audio_en()) {
+                        p->bis_hdl_info[i].recorder = local_mix_mic_le_audio_open(&params);
+                    }
+#endif
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
                         params.conn = p->bis_hdl_info[i].bis_hdl;
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
@@ -1830,6 +1851,9 @@ int broadcast_audio_all_close(u16 big_hdl)
                     if (recorder) {
                         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                             le_audio_switch_ops->tx_le_audio_close(recorder);
+#if LE_AUDIO_LOCAL_MIC_EN
+                            local_mic_tx_le_audio_close();
+#endif
                         }
                     }
                     spin_lock(&broadcast_lock);
@@ -1870,7 +1894,6 @@ int broadcast_audio_all_close(u16 big_hdl)
 
 int broadcast_audio_all_open(u16 big_hdl)
 {
-
     u8 find = 0;
     struct broadcast_hdl *broadcast_hdl = 0;
     struct le_audio_stream_params params = {0};
@@ -1969,6 +1992,9 @@ int broadcast_audio_all_open(u16 big_hdl)
                 if (!broadcast_hdl->bis_hdl_info[i].recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+#if LE_AUDIO_LOCAL_MIC_EN
+                        local_mix_mic_le_audio_open(&params);
+#endif
 #if LE_AUDIO_MIX_MIC_EN
                         if (get_is_need_resume_le_audio_mix_mic() && is_le_audio_mix_mic_recorder_running() == 0) {
                             if (app_get_current_mode()->name != APP_MODE_MIC) {
@@ -2058,6 +2084,177 @@ int broadcast_audio_all_open(u16 big_hdl)
     return 0;
 }
 
+
+#if LE_AUDIO_LOCAL_MIC_EN
+
+//关闭当前模式的Tx Stream
+void __broadcast_audio_cur_mode_tx_stream_close(u16 big_hdl)
+{
+    if (broadcast_role != BROADCAST_ROLE_TRANSMITTER) {
+        return;
+    }
+    printf(">> Enter: broadcast_audio_cur_mode_tx_stream_close!");
+    u8 i;
+    struct broadcast_hdl *p;
+    void *recorder = 0;
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    spin_lock(&broadcast_lock);
+    list_for_each_entry(p, &broadcast_list_head, entry) {
+        if (p->big_hdl == big_hdl) {
+            //关闭原来的recorder
+            for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                if (p->bis_hdl_info[i].recorder) {
+                    recorder = p->bis_hdl_info[i].recorder;
+                }
+                spin_unlock(&broadcast_lock);
+                if (recorder) {
+                    if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
+                        le_audio_switch_ops->tx_le_audio_close(recorder);
+                    }
+                }
+                spin_lock(&broadcast_lock);
+            }
+        }
+    }
+    spin_unlock(&broadcast_lock);
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+}
+
+
+void __broadcast_audio_cur_mode_tx_stream_open(u16 big_hdl)
+{
+    printf("Enter : broadcast_audio_cur_mode_tx_stream_open!\n");
+    u8 find = 0;
+    struct broadcast_hdl *broadcast_hdl = 0;
+    struct le_audio_stream_params params = {0};
+
+    u8 i = 0;
+    void *recorder = 0;
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    list_for_each_entry(broadcast_hdl, &broadcast_list_head, entry) {
+        if (broadcast_hdl->big_hdl == big_hdl) {
+            find = 1;
+            break;
+        }
+    }
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+
+    le_audio_switch_ops = get_broadcast_audio_sw_ops();
+
+    //关闭本地音频播放
+    if (le_audio_switch_ops && le_audio_switch_ops->local_audio_close) {
+        le_audio_switch_ops->local_audio_close();
+    }
+
+    //普通广播
+    params.fmt.nch = get_big_audio_coding_nch();
+    params.fmt.bit_rate = get_big_audio_coding_bit_rate();
+    params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
+    params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+    params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
+    params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
+    params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+    params.latency = get_big_tx_latency();
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    if (find) {
+        if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+            for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
+                    recorder = le_audio_switch_ops->tx_le_audio_open(&params);
+                }
+            }
+        }
+    }
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+}
+
+//这个函数是用来单独开mic，适用于单独开mic广播而音乐没有打开的情况
+//这个函数是给固定发送端使用的
+//对齐函数：broadcast_audio_all_open
+void __alone_local_mic_tx_le_audio_open(u16 big_hdl)
+{
+    struct broadcast_hdl *broadcast_hdl = NULL;
+    void *recorder = NULL;
+    u8 i = 0;
+    u8 find = 0;
+    struct le_audio_stream_params params = {0};
+    params.fmt.nch = get_big_audio_coding_nch();
+    params.fmt.bit_rate = get_big_audio_coding_bit_rate();
+    params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
+    params.fmt.frame_dms = get_big_audio_coding_frame_duration();
+    params.fmt.sdu_period = get_big_sdu_period_us();
+    params.fmt.isoIntervalUs = get_big_iso_period_us();
+    params.fmt.sample_rate = LE_AUDIO_CODEC_SAMPLERATE;
+    params.fmt.dec_ch_mode = LEA_TX_DEC_OUTPUT_CHANNEL;
+    params.latency = get_big_tx_latency();
+
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    /* spin_lock(&broadcast_lock); */
+    list_for_each_entry(broadcast_hdl, &broadcast_list_head, entry) {
+        if (broadcast_hdl->big_hdl == big_hdl) {
+            find = 1;
+            break;
+        }
+    }
+
+    /* broadcast_mutex_post(&broadcast_mutex, __LINE__); */
+    if (find) {
+        if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+            for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                if (!broadcast_hdl->bis_hdl_info[i].recorder) {
+                    recorder = local_mix_mic_le_audio_open(&params);
+                }
+                spin_lock(&broadcast_lock);
+                broadcast_hdl->bis_hdl_info[i].recorder = recorder;
+                broadcast_hdl->bis_hdl_info[i].init_ok = 1;
+                spin_unlock(&broadcast_lock);
+            }
+        }
+    }
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+}
+
+
+//这个函数是用来单独关mic，适用于单独开mic广播而音乐没有打开的情况
+//这个函数是给固定发送端使用的
+//对齐函数：broadcast_audio_all_close
+void __alone_local_mic_tx_le_audio_close(u16 big_hdl)
+{
+    struct broadcast_hdl *p;
+    void *recorder = NULL;
+    u8 i = 0;
+    broadcast_mutex_pend(&broadcast_mutex, __LINE__);
+    spin_lock(&broadcast_lock);
+    list_for_each_entry(p, &broadcast_list_head, entry) {
+        if (p->big_hdl == big_hdl) {
+            if (broadcast_role == BROADCAST_ROLE_TRANSMITTER) {
+                for (i = 0; i < get_bis_num(BROADCAST_ROLE_TRANSMITTER); i++) {
+                    if (p->bis_hdl_info[i].recorder) {
+                        recorder = p->bis_hdl_info[i].recorder;
+                        if (is_local_le_audio_music_runing()) {
+                            ASSERT(0, "err(%s), 音乐正在跑广播，不适用该函数, 请调用函数：local_mic_tx_le_audio_close!\n", __func__);
+                        }
+                        p->bis_hdl_info[i].recorder = NULL;
+                        p->bis_hdl_info[i].init_ok = 0;
+                    }
+                    spin_unlock(&broadcast_lock);
+                    if (recorder) {
+                        local_mic_tx_le_audio_close();
+                    }
+                    spin_lock(&broadcast_lock);
+                }
+            }
+        }
+    }
+    spin_unlock(&broadcast_lock);
+    broadcast_mutex_post(&broadcast_mutex, __LINE__);
+}
+
+#endif
 #endif
 
 

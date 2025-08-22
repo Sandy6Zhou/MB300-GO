@@ -160,7 +160,7 @@ static int cdc_rx_data(int *msg)
     /* cdc_write_data(usb_id, buf, rlen, num);//固件三部测试使用 */
 
 #if TCFG_CFG_TOOL_ENABLE
-    cfg_tool_data_from_cdc(buf, rlen);
+    cfg_tool_data_from_cdc(buf, rlen, num);
 #endif
     return rlen;
 }
@@ -309,6 +309,7 @@ void usb_start(const usb_dev usbfd)
 
 #if TCFG_USB_SLAVE_CDC_ENABLE
     cdc_set_wakeup_handler(0, usb_cdc_wakeup);
+    cdc_set_wakeup_handler(1, usb_cdc_wakeup);
 #endif
 
 #if TCFG_USB_CUSTOM_HID_ENABLE
@@ -373,6 +374,7 @@ void usb_cdc_background_run(const usb_dev usbfd)
     g_printf("CDC is running in the background");
     usb_device_mode(usbfd, CDC_CLASS);
     cdc_set_wakeup_handler(0, usb_cdc_wakeup);
+    cdc_set_wakeup_handler(1, usb_cdc_wakeup);
 }
 
 int usb_cdc_background_standby(const usb_dev usbfd)

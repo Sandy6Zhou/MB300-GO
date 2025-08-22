@@ -870,7 +870,9 @@ static int app_bt_init()
     if (g_bt_hdl.background.background_working) {
         g_bt_hdl.init_ok = 1;
         bt_background_resume();
+#if TCFG_LE_AUDIO_APP_CONFIG
         le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER);
+#endif
         app_send_message(APP_MSG_ENTER_MODE, APP_MODE_BT);
         return 0;
     }
@@ -904,6 +906,7 @@ static int app_bt_init()
         //协议栈已初始化
 #if TCFG_KBOX_1T3_MODE_EN
         btstack_int_edr();
+        dual_conn_page_device();
 #endif
     }
 
@@ -941,7 +944,9 @@ int bt_mode_try_exit()
     g_bt_hdl.ignore_discon_tone = bt_get_total_connect_dev();
 #endif
 
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_APP_MODE_EXIT);
+#endif
 
     //only need to do once
 #if TCFG_LOCAL_TWS_ENABLE
@@ -1027,6 +1032,7 @@ REGISTER_APP_MODE(bt_mode) = {
 };
 #endif
 
+#if TCFG_APP_BT_EN || TCFG_LE_AUDIO_APP_CONFIG
 int bt_nobackground_status_event_handler(int *msg)
 {
 #if (!TCFG_BT_BACKGROUND_ENABLE)
@@ -1148,6 +1154,6 @@ int btstack_exit_in_other_mode(void)
 #endif
     return 0;
 }
-
+#endif
 
 

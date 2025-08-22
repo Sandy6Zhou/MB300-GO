@@ -43,7 +43,7 @@ void mic_effect_scene_switch();
 
 void music_vocal_remover_switch(void);
 
-void musci_vocal_remover_update_parm();
+void music_vocal_remover_update_parm();
 u8 get_music_vocal_remover_statu(void);
 #endif
 

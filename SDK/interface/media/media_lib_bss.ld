@@ -28,6 +28,8 @@
     *(.btaac_ron_dec.data.bss)
     *(.aac.data.bss)
 	*(.sbc_eng_bss)
+	*(.sbc_bss)
+	*(.sbc_dec.data.bss)
 	*(.bt_audioplc_bss)
 	*(.lc3_dec.data.bss)
 	*(.lc3_enc.data.bss)

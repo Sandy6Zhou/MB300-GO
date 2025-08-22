@@ -15,7 +15,7 @@
 #include "system/includes.h"
 #include "uart.h"
 
-#if CONFIG_UPDATE_MUTIL_CPU_UART
+#if TCFG_UPDATE_UART_IO_EN || CONFIG_UPDATE_MUTIL_CPU_UART
 
 #if 0
 int clk_get(const char *name);

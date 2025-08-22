@@ -24,6 +24,9 @@
 #include "app_le_auracast.h"
 #include "le_broadcast.h"
 #include "rcsp_pc_func.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 #if TCFG_APP_PC_EN
 int pc_app_msg_handler(int *msg)
@@ -58,9 +61,11 @@ int pc_app_msg_handler(int *msg)
         break;
     case APP_MSG_PC_START:
         printf("app msg pc start\n");
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             break;
         }
+#endif
         break;
 #if TCFG_USB_SLAVE_HID_ENABLE
     case APP_MSG_MUSIC_PP:
@@ -162,7 +167,9 @@ static int pc_mode_broadcast_deal_callback(int deal_music_status)
     }
     printf(">>>>>[PC] Enter %s Func! deal_music_status:%d!!\n", __func__, deal_music_status);
     wait_pc_open_broadcast_cb_deal_flag = 0;
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(deal_music_status);
+#endif
     return 0;
 }
 /* --------------------------------------------------------------------------*/
@@ -251,10 +258,37 @@ static void *pc_tx_le_audio_open(void *args)
     int err;
     void *le_audio = NULL;
 #if defined(TCFG_USB_SLAVE_AUDIO_SPK_ENABLE) && TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
+    g_le_audio_flag = 1;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (le_audio == NULL) {
+        //这个时候mic广播是没有打开 的
+        le_audio = le_audio_stream_create(params->conn, &params->fmt);
+        err = le_audio_pc_recorder_open((void *)&params->fmt, le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+        //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+        set_local_mix_mic_le_audio(le_audio);
+#if LEA_LOCAL_SYNC_PLAY_EN
+        err = le_audio_player_open(le_audio, params);
+        if (err != 0) {
+            ASSERT(0, "player open fail");
+        }
+#endif
+    } else {
+        //广播mic已经打开
+        err = le_audio_pc_recorder_open((void *)&params->fmt, le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "recorder open fail");
+        }
+    }
+    local_le_audio_music_start_deal();
+
+#else
     if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
-        g_le_audio_flag = 1;
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
         err = le_audio_pc_recorder_open((void *)&params->fmt, le_audio, params->latency);
         if (err != 0) {
@@ -266,8 +300,8 @@ static void *pc_tx_le_audio_open(void *args)
             ASSERT(0, "player open fail");
         }
 #endif
-
     }
+#endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
@@ -285,6 +319,11 @@ static int pc_tx_le_audio_close(void *le_audio)
         return -EPERM;
     }
     g_le_audio_flag = 0;
+
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio_pc_recorder_close();
+    local_le_audio_music_stop_deal();
+#else
     //关闭广播音频播放
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
@@ -292,6 +331,7 @@ static int pc_tx_le_audio_close(void *le_audio)
     le_audio_pc_recorder_close();
     le_audio_stream_free(le_audio);
     /* app_audio_set_volume(APP_AUDIO_STATE_MUSIC, __this->volume, 1); */
+#endif
 #endif
     return 0;
 }

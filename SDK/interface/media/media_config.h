@@ -2,7 +2,6 @@
 #define LIB_MEDIA_CONFIG_H
 
 
-
 extern const int CONFIG_JLSTREAM_MULTI_THREAD_ENABLE;
 extern const int CONFIG_MULTI_THREAD_SELF_ADAPTION_ENABLE;
 extern const int config_media_24bit_enable;
@@ -10,17 +9,16 @@ extern const int CONFIG_SEAMLESS_RECORDER_ENABLE;
 extern const int config_ch_adapter_32bit_enable;
 extern const int config_mixer_32bit_enable;
 extern const int config_jlstream_fade_32bit_enable;
-extern const int config_audio_vocal_track_synthesis_32bit_enable;
+extern const int config_out_dev_limiter_enable;
 extern const int config_peak_rms_32bit_enable;
+extern const int config_audio_vocal_track_synthesis_32bit_enable;
 extern const int config_jlstream_node_report_enable;
-
 extern const int CONFIG_MAX_ENC_DATA_CACHE_SIZE;
 extern const int CONFIG_LOG_OUTPUT_ENABLE;
 extern const int config_audio_cfg_online_enable;
-extern const int config_audio_cvp_ref_ch_recognize_enable;
 extern const int CONFIG_MEDIA_MEM_DEBUG;
 extern const int config_media_tws_en;
-
+extern const int config_audio_cvp_ref_ch_recognize_enable;
 
 /*
  *******************************************************************
@@ -40,10 +38,12 @@ extern const int config_audio_dac_mute_timeout;
 extern const int config_audio_dac_pa_mode;
 extern const int config_audio_dac_power_mode;
 extern const int config_audio_dac_underrun_time_lea;
+extern const int config_audio_dac_underrun_detect_enable;
 extern const int config_audio_dac_ng_debug;
 extern const int config_audio_dac_enable;
 extern const int config_audio_dac_dma_buf_realloc_enable;
 extern const int CONFIG_DAC_CACHE_MSEC;
+extern const int config_audio_dac_delay_off_ms;
 
 /*
  *******************************************************************
@@ -117,6 +117,10 @@ extern const int const_audio_howling_ahs_data_export;
 extern const int const_audio_howling_ahs_iis_in_dac_out;
 extern const int const_audio_howling_ahs_dual_core;
 
+extern const int virtualbass_noisegate_attack_time;
+extern const int virtualbass_noisegate_release_time;
+extern const int virtualbass_noisegate_hold_time;
+extern const float virtualbass_noisegate_threshold;
 /*
  *******************************************************************
  *						Audio Codec Configs
@@ -128,8 +132,12 @@ extern const u8 config_m4a_id3_enable;
 extern const u8 config_wav_id3_enable;
 extern const u8 config_wma_id3_enable;
 
-extern const int JLA_V2_CODEC_WITH_FRAME_HEADER ;
 extern const unsigned short JLA_V2_FRAMELEN_MASK;
+extern const int JLA_V2_PLC_EN;
+extern const int JLA_V2_PLC_FADE_OUT_START_POINT;
+extern const int JLA_V2_PLC_FADE_OUT_POINTS;
+extern const int JLA_V2_PLC_FADE_IN_POINTS;
+extern const int JLA_V2_CODEC_WITH_FRAME_HEADER;
 /*
  *******************************************************************
  *						Audio Mic Capless Config

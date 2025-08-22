@@ -24,19 +24,31 @@
 
 #if TCFG_USB_SLAVE_CDC_ENABLE
 
-
+#if TCFG_TUNING_WITH_DUAL_DEVICE_ENBALE
+#define CDC_MAX_NUM     2
+#else
 /*      user_config     */
 #define CDC_MAX_NUM     1 //最大 cdc 接口数量
+#endif
 const static u8 cdc_bulk_ep_in_table[CDC_MAX_NUM] = {
     USB_DIR_IN | CDC_DATA_EP_IN,
+#if CDC_MAX_NUM > 1
+    USB_DIR_IN | 2,
+#endif
 };
 const static u8 cdc_bulk_ep_out_table[CDC_MAX_NUM] = {
     USB_DIR_OUT | CDC_DATA_EP_OUT,
+#if CDC_MAX_NUM > 1
+    USB_DIR_OUT | 2,
+#endif
 };
 
 #if CDC_INTR_EP_ENABLE //默认关闭
 const static u8 cdc_intr_ep_in_table[CDC_MAX_NUM] = {
     USB_DIR_IN | CDC_INTR_EP_IN,
+#if CDC_MAX_NUM > 1
+    USB_DIR_IN | CDC_INTR_EP_IN,
+#endif
 };
 #endif
 /*      user_config     */
@@ -204,7 +216,10 @@ static u32 cdc_ep2num(u32 ep)
 }
 void cdc_set_wakeup_handler(u32 num, void (*handle)(struct usb_device_t *usb_device, u32 num))
 {
-    ASSERT(num < CDC_MAX_NUM, "cdc_set_wakeup_handler num:%d > CDC_MAX_NUM:%d", num, CDC_MAX_NUM);
+    if (num >= CDC_MAX_NUM) {
+        return;
+    }
+    /*ASSERT(num < CDC_MAX_NUM, "cdc_set_wakeup_handler num:%d > CDC_MAX_NUM:%d", num, CDC_MAX_NUM);*/
     if (cdc_hdl[num]) {
         cdc_hdl[num]->wakeup_handler = handle;
     }

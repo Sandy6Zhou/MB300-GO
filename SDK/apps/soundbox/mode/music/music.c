@@ -345,7 +345,7 @@ static void music_player_play_success(void *priv, int parm)
     struct file_player *file_player = get_music_file_player();
     music_file_set_pitch(file_player, music_hdl.pitch_mode);
 #endif
-    musci_vocal_remover_update_parm();
+    music_vocal_remover_update_parm();
     //播放WAV APE 格式歌曲，需设置SD卡常活动状态，提高读取速度
     music_set_sd_keep_active(logo);
 
@@ -382,8 +382,10 @@ static void music_player_play_success(void *priv, int parm)
 
 
 #if (TCFG_APP_MUSIC_EN && !RCSP_APP_MUSIC_EN)
+#if RCSP_MODE && RCSP_DEVICE_STATUS_ENABLE
     rcsp_device_status_update(MUSIC_FUNCTION_MASK,
                               BIT(MUSIC_INFO_ATTR_STATUS) | BIT(MUSIC_INFO_ATTR_FILE_NAME) | BIT(MUSIC_INFO_ATTR_FILE_PLAY_MODE));
+#endif
 #endif
 
 }
@@ -473,7 +475,11 @@ static int music_player_scandisk_break(void)
     ///注意：
     ///需要break fsn的事件， 请在这里拦截,
     ///需要结合MUSIC_PLAYER_ERR_FSCAN错误，做相应的处理
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
+    int msg[32];
+#else
     int msg[16] = {0};
+#endif
     const char *logo = NULL;
     char *evt_logo = NULL;
     struct key_event *key_evt = NULL;
@@ -483,7 +489,7 @@ static int music_player_scandisk_break(void)
     if (__this->scandisk_break) {//设备上下线直接打断
         return 1;
     }
-    int res = os_taskq_accept(8, msg);
+    int res = os_taskq_accept(ARRAY_SIZE(msg), msg);
     if (res != OS_TASKQ) {
         return 0;
     }
@@ -526,6 +532,8 @@ static int music_player_scandisk_break(void)
     case MSG_FROM_BT_STACK:
 #if (TCFG_BT_BACKGROUND_ENABLE)
         bt_background_msg_forward_filter(msg);
+#else
+        scandisk_msg_push(msg, sizeof(msg));
 #endif
         break;
     case MSG_FROM_APP:
@@ -911,6 +919,7 @@ static int music_mode_try_exit()
     putchar('l');
     int ret = 0;
     if (!list_empty(&scandisk_msg_head)) {
+        putchar('m');
         return 1;
     }
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \

@@ -219,7 +219,7 @@ int dev_status_event_filter(int *msg)
 #if (TCFG_APP_MUSIC_EN && MUSIC_DEV_ONLINE_START_AFTER_MOUNT_EN)
                 music_task_dev_online_start(add);
 #endif
-#if (TCFG_DEV_UPDATE_IF_NOFILE_ENABLE == 0)
+#if (TCFG_DEV_UPDATE_IF_NOFILE_ENABLE == 0 && TCFG_UPDATE_STORAGE_DEV_EN)
                 if (app_in_mode(APP_MODE_PC) == false) {
                     ///检查设备升级
                     dev_update_check(add);

@@ -118,6 +118,13 @@
 #error "开启 le audio 功能需要使能 TCFG_USER_BLE_ENABLE"
 #endif
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+//存放token信息
+#define CONFIG_FINDMY_INFO_ENABLE      		    1		//配置是否支持FINDMY存储
+#else
+#define CONFIG_FINDMY_INFO_ENABLE      		    0
+#endif
+
 //*********************************************************************************//
 //                                  le_audio 配置                                       //
 //*********************************************************************************//
@@ -257,7 +264,7 @@
 #endif
 
 // 详细功能参考rcsp_cfg.h
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (TME_EN | DMA_EN | GMA_EN | XIMALAYA_EN))||TCFG_INTELLIGENT_DUER)
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (TME_EN | DMA_EN | GMA_EN | XIMALAYA_EN)))
 #define    BT_MIC_EN                 1
 #define    TCFG_ENC_SPEEX_ENABLE     0
 #define    OTA_TWS_SAME_TIME_ENABLE  0     //是否支持TWS同步升级
@@ -527,6 +534,9 @@
 // #define UART_UPDATE_MASTER	1
 // //配置串口升级的角色
 // #define UART_UPDATE_ROLE	UART_UPDATE_SLAVE
+
+#define TCFG_UPDATE_UART_DEV 0x1 //普通IO串口升级选择串口号
+#define CONFIG_UPDATE_MUTIL_CPU_UART_DEV  0x2 //多mcu串口交互升级选择串口号
 
 #if CONFIG_UPDATE_MUTIL_CPU_UART
 #if TCFG_UPDATE_UART_ROLE

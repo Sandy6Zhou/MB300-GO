@@ -597,8 +597,6 @@ int bt_tws_poweroff()
         tws_api_detach(TWS_DETACH_BY_POWEROFF, 5000);   //这里不等完全断开的话，退出蓝牙模式把资源全部释放之后如果还没断完，底层的状态就乱了
     }
 
-    tws_profile_exit();
-
     if (tws_api_get_tws_state() & TWS_STA_SIBLING_DISCONNECTED) {
         return 1;
     }

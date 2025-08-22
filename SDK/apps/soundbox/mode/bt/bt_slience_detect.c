@@ -15,6 +15,8 @@
 #include "app_main.h"
 #include "a2dp_player.h"
 
+#if TCFG_APP_BT_EN
+
 struct detect_handler {
     u8 codec_type;
     u8 unmute_packet_cnt;
@@ -325,4 +327,4 @@ int bt_slience_get_detect_addr(u8 *bt_addr)
     return 0;
 }
 
-
+#endif

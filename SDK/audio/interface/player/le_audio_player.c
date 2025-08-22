@@ -9,6 +9,9 @@
 #include "le_audio_player.h"
 #include "le_audio_stream.h"
 #include "uac_stream.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
@@ -243,7 +246,7 @@ static void le_audio_player_callback(void *private_data, int event)
     switch (event) {
     case STREAM_EVENT_START:
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
-        musci_vocal_remover_update_parm();
+        music_vocal_remover_update_parm();
 #endif
 #if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
         int ret = syscfg_read(CFG_WIRELESS_MIC0_VOLUME + player->le_audio_num, &player->dvol, 2);
@@ -299,6 +302,13 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
     if (!player) {
         return -ENOMEM;
     }
+#if LE_AUDIO_LOCAL_MIC_EN
+    if (player->inused == 1) {
+        printf(">> %s le_audio_player_open, player is used!, return!\n", __func__);
+        return 0;
+    }
+#endif
+
     player->le_audio = conn;
     player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_LE_AUDIO_SINK);
     if (!player->stream) {
@@ -381,6 +391,13 @@ void le_audio_player_close(u8 *conn)
     if (player->le_audio != conn) {
         return;
     }
+
+#if LE_AUDIO_LOCAL_MIC_EN
+    if (get_local_le_audio_status() != LOCAL_MIX_MIC_CLOSE_MUSIC_CLOSE) {
+        printf(">> err, %s, %d, local_le_audio_status() != LOCAL_MIX_MIC_CLOSE_MUSIC_CLOSE\n", __func__, __LINE__);
+        return;
+    }
+#endif
 
 #if (TCFG_KBOX_1T3_MODE_EN || WIRELESS_MIC_PRODUCT_MODE)
     le_audio_player_handle_close(conn);

@@ -761,7 +761,7 @@ u8 qn8035_iic_uninit(void *priv)
 {
     fm_dev_info = (struct _fm_dev_info *)priv;
 
-    int ret = hw_iic_uninit(fm_dev_info->iic_hdl);
+    int ret = hw_iic_deinit(fm_dev_info->iic_hdl);
 
     return 1;
 }

@@ -35,7 +35,7 @@
 #include "btstack_rcsp_user.h"
 #include "bt_key_func.h"
 #include "le_audio_common.h"
-#if LE_AUDIO_MIX_MIC_EN
+#if LE_AUDIO_MIX_MIC_EN || LE_AUDIO_LOCAL_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
 
@@ -124,12 +124,67 @@ void app_common_key_msg_handler(int *msg)
         break;
 
     case APP_MSG_LE_AUDIO_MIX_MIC_ON_OFF:
-#if LE_AUDIO_MIX_MIC_EN && (LE_AUDIO_MIX_MIC_EFFECT_EN == 0)
         y_printf(">>>>>>>>>>>>>>>>>>>>> App Msg LE Audio Mix Mic On Off!\n");
+#if LE_AUDIO_MIX_MIC_EN && (LE_AUDIO_MIX_MIC_EFFECT_EN == 0)
         if (is_le_audio_mix_mic_recorder_running()) {
             le_audio_mix_mic_close();
         } else {
             le_audio_mix_mic_open();
+        }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) && LE_AUDIO_LOCAL_MIC_EN
+#if LEA_BIG_FIX_ROLE == LEA_ROLE_AS_RX
+        break;
+#endif
+        int local_le_audio_mic_status = get_local_le_audio_status();
+        if (get_local_mic_le_audio_en()) {	//close
+            y_printf(">> ** close tx mic!");
+            set_local_mic_le_audio_en(0);
+            //广播mic要关闭
+            if (is_local_mix_mic_le_audio_runing()) {
+#if (LEA_BIG_FIX_ROLE == 0)
+                //如果不固定角色
+                if (local_le_audio_mic_status == LOCAL_MIX_MIC_OPEN_MUSIC_CLOSE) {
+                    //切换广播角色 为接收端
+                    if (get_broadcast_role() == 1) {
+                        update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
+                        //进入接收端
+                        le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+                    }
+                } else if (local_le_audio_mic_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN) {
+                    local_mic_tx_le_audio_close();
+                }
+#else 	//固定为发送端
+                /* le_audio_scene_deal(LE_AUDIO_MUSIC_STOP); */
+                if (local_le_audio_mic_status == LOCAL_MIX_MIC_OPEN_MUSIC_CLOSE) {
+                    alone_local_mic_tx_le_audio_close();
+                } else if (local_le_audio_mic_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN) {
+                    local_mic_tx_le_audio_close();
+                }
+#endif
+            }
+        } else {		//open
+            y_printf(">> ** open tx mic!");
+            set_local_mic_le_audio_en(1);
+            //广播mic要打开
+            if (get_broadcast_role() == 0) {
+                printf(">> will open Broadcast!\n");
+                //如果没有开广播，那就打开广播
+                app_send_message(APP_MSG_LE_BROADCAST_SW, 0);
+            } else if (get_broadcast_role() == LEA_ROLE_AS_RX) {
+                //此时是接收端
+                printf("Broadcast Rx->Tx open mic - %d\n", __LINE__);
+                le_audio_scene_deal(LE_AUDIO_MUSIC_START);      //广播不固定接收端发送端时，进入搜台前要切成发送端
+
+            } else {
+                //此时是发送端
+                if (is_local_le_audio_music_runing()) {
+                    printf("Boradst Tx, music runing will open mic\n");
+                    local_mix_mic_le_audio_open(NULL);
+                } else {
+                    printf("Boradst Tx, music closed will open mic\n");
+                    alone_local_mic_tx_le_audio_open();
+                }
+            }
         }
 #endif
         break;

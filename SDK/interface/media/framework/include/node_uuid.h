@@ -205,4 +205,8 @@
 #define NODE_UUID_VOCAL_TRACK_SEPARATION_8TO2  0x3198//声道拆分8转2
 #define NODE_UUID_NF_SUPPRESSOR            0x9F3F
 
+#define NODE_UUID_VIBRATO                  0x40DC//人声高音颤音
+#define NODE_UUID_HARMONY                  0xAE43//谐波
+#define NODE_UUID_TREMOLO                  0XFB27
+
 #endif

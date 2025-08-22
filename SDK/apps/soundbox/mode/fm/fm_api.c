@@ -1149,10 +1149,43 @@ static void *fm_tx_le_audio_open(void *args)
 {
     int err;
     void *le_audio = NULL;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
+    u8 ret =  fm_get_scan_flag();
 
-    if (!fm_get_scan_flag()) {//(get_fm_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (le_audio == NULL) {
+        if (!ret) {
+            le_audio = le_audio_stream_create(params->conn, &params->fmt);
+            err = le_audio_fm_recorder_open((void *)&params->fmt, le_audio, params->latency);
+            if (err != 0) {
+                ASSERT(0, "recorder open fail");
+            }
+
+            //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+            set_local_mix_mic_le_audio(le_audio);
+#if LEA_LOCAL_SYNC_PLAY_EN
+            err = le_audio_player_open(le_audio, params);
+            if (err != 0) {
+                ASSERT(0, "player open fail");
+            }
+#endif
+        }
+    } else {
+        if (!ret) {
+            err = le_audio_fm_recorder_open((void *)&params->fmt, le_audio, params->latency);
+            if (err != 0) {
+                ASSERT(0, "recorder open fail");
+            }
+        }
+    }
+
+    local_le_audio_music_start_deal();
+
+
+#else
+    if (!ret) {//(get_fm_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
         //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
         err = le_audio_fm_recorder_open((void *)&params->fmt, le_audio, params->latency);
         if (err != 0) {
@@ -1165,6 +1198,7 @@ static void *fm_tx_le_audio_open(void *args)
         }
 #endif
     }
+#endif
 
     if (__this->fm_dev_mute) {
         fm_app_mute(0);
@@ -1179,12 +1213,17 @@ static int fm_tx_le_audio_close(void *le_audio)
         return -EPERM;
     }
 
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio_fm_recorder_close();
+    local_le_audio_music_stop_deal();
+#else
     //关闭广播音频播放
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
 #endif
     le_audio_fm_recorder_close();
     le_audio_stream_free(le_audio);
+#endif
 
     return 0;
 }

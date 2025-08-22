@@ -5,7 +5,7 @@
 #pragma code_seg(".fm_file.text")
 #endif
 #include "source_node.h"
-#include "asm/audio_adc.h"
+#include "audio_adc.h"
 #include "media/audio_splicing.h"
 #include "fm_file.h"
 #include "fm_manage.h"
@@ -287,7 +287,11 @@ static void adc_ioc_get_fmt(struct fm_file_hdl *hdl, struct stream_fmt *fmt)
         //外挂FM
         fmt->coding_type = AUDIO_CODING_PCM;
         fmt->sample_rate    = FM_ADC_SAMPLE_RATE;
+#if AUDIO_ADC_MAX_NUM > 1
+        fmt->channel_mode   = AUDIO_CH_LR;
+#else
         fmt->channel_mode   = AUDIO_CH_L;
+#endif
         hdl->sample_rate = fmt->sample_rate;
         if (adc_hdl.bit_width == ADC_BIT_WIDTH_24) {
             fmt->bit_wide = DATA_BIT_WIDE_24BIT;

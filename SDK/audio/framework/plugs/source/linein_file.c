@@ -5,7 +5,7 @@
 #pragma code_seg(".linein_file.text")
 #endif
 #include "source_node.h"
-#include "asm/audio_adc.h"
+#include "audio_adc.h"
 #include "media/audio_splicing.h"
 #include "linein_file.h"
 #include "effects/effects_adj.h"
@@ -122,6 +122,7 @@ static void adc_linein_output_handler(void *_hdl, s16 *data, int len)
         len *= hdl->ch_num;
         if (hdl->mute_en) {	//mute ADC
             memset((u8 *)frame->data, 0x0, len);
+            putchar('0');
         }
         if (hdl->output_fade_in) {
             if (adc_hdl.bit_width == ADC_BIT_WIDTH_16) {
@@ -173,6 +174,7 @@ static void *linein_init(void *source_node, struct stream_node *node)
             hdl->ch_num++;
         }
     }
+    adc_hdl.bit_width = audio_general_in_dev_bit_width();
 
     adc_file_log("adc ch_num %d\n", hdl->ch_num);
     return hdl;
@@ -249,6 +251,7 @@ static int linein_ioctl(void *_hdl, int cmd, int arg)
             hdl->output_fade_in = 1;
             hdl->start = 1;
             hdl->dump_cnt = 0;
+            hdl->mute_en = 0;
             int linein_en_map = 0;
             for (int i = 0; i < AUDIO_ADC_LINEIN_MAX_NUM; i++) {
                 if (linein_cfg_g.mic_en_map & BIT(i)) {
@@ -292,6 +295,15 @@ static int linein_ioctl(void *_hdl, int cmd, int arg)
             audio_adc_del_output_handler(&adc_hdl, &hdl->adc_output);
         }
         break;
+    case NODE_IOC_SOURCE_MUTE_EN:
+        if (hdl->start) {
+            hdl->mute_en = arg;
+        }
+        break;
+    case NODE_IOC_GET_SOURCE_MUTE_EN:
+        ret = hdl->mute_en;
+        break;
+
     case NODE_IOC_SET_PARAM:
         ret = linein_file_ioc_update_parm(hdl, arg);
         break;
@@ -299,6 +311,7 @@ static int linein_ioctl(void *_hdl, int cmd, int arg)
 
     return ret;
 }
+
 
 static void linein_release(void *_hdl)
 {

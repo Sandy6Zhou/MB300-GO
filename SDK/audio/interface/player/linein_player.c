@@ -13,6 +13,7 @@
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
+#include "audio_effect_demo.h"
 struct linein_player {
     struct jlstream *stream;
     s8 linein_pitch_mode;
@@ -30,6 +31,9 @@ static void linein_player_callback(void *private_data, int event)
     case STREAM_EVENT_START:
 #if AUDIO_VBASS_LINK_VOLUME
         vbass_link_volume();
+#endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
 #endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
@@ -202,3 +206,31 @@ void linein_file_pitch_mode_init(enum _pitch_level pitch_mode)
         player->linein_pitch_mode = pitch_mode;
     }
 }
+
+void linein_app_mute_en(int en)
+{
+    if (g_linein_player && g_linein_player->stream) {
+        jlstream_node_ioctl(g_linein_player->stream, NODE_UUID_SOURCE, NODE_IOC_SOURCE_MUTE_EN, en);
+    } else {
+        void *stream = get_le_audio_linein_recorder_stream();
+        if (stream) {
+            jlstream_node_ioctl(stream, NODE_UUID_SOURCE, NODE_IOC_SOURCE_MUTE_EN, en);
+        }
+    }
+}
+
+int get_linein_app_mute_en(void)
+{
+    int ret = 0;
+    if (g_linein_player && g_linein_player->stream) {
+        ret = jlstream_node_ioctl(g_linein_player->stream, NODE_UUID_SOURCE, NODE_IOC_GET_SOURCE_MUTE_EN, 0);
+    } else {
+        void *stream = get_le_audio_linein_recorder_stream();
+        if (stream) {
+            ret = jlstream_node_ioctl(stream, NODE_UUID_SOURCE, NODE_IOC_GET_SOURCE_MUTE_EN, 0);
+        }
+    }
+    return ret;
+}
+
+

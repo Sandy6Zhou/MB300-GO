@@ -20,6 +20,7 @@ void le_audio_linein_recorder_close(void);
 
 int le_audio_spdif_recorder_open(void *params, void *le_audio, int latency);
 void le_audio_spdif_recorder_close(void);
+u8 is_le_audio_spdif_open(void);
 
 int le_audio_iis_recorder_open(void *params, void *le_audio, int latency);
 void le_audio_iis_recorder_close(void);

@@ -47,6 +47,8 @@ const int config_audio_dac_power_on_mode = TCFG_AUDIO_DAC_POWER_ON_MODE;
 #endif
 #ifdef TCFG_AUDIO_DAC_LIGHT_CLOSE_ENABLE
 const int config_audio_dac_power_off_lite = TCFG_AUDIO_DAC_LIGHT_CLOSE_ENABLE;
+#else
+const int config_audio_dac_power_off_lite = 0;
 #endif
 #if TCFG_CFG_TOOL_ENABLE
 const int config_audio_cfg_online_enable = 1;
@@ -193,7 +195,7 @@ const int butterworth_iir_filter_coeff_type_select = 1;//虚拟低音根据此�
 
 const int virtual_bass_pro_soft_crossover = 0;//控制虚拟低音pro 中的分频器是用软件运行或者硬件运行  1 软件EQ  0 硬件EQ 默认硬件EQ
 const int virtual_bass_pro_soft_eq = 1;       //控制虚拟低音pro 中的EQ是用软件运行或者硬件运行 1软件 0硬件 默认1
-
+const int virtual_bass_eq_hard_select = 0; //虚拟低音使用的eq类型 0:使用软件eq  1:使用硬件eq
 
 const int config_audio_eq_xfade_enable = 1;
 const float config_audio_eq_xfade_time = 0;//0.4f;//0：一帧fade完成 非0：连续多帧fade，过度更加平滑，fade过程算力会相应增加(fade时间 范围(0~1)单位:秒)
@@ -230,17 +232,49 @@ const  int echo_run_mode                 = TCFG_AUDIO_EFX_98A4_RUN_MODE;
 const  int echo_run_mode                 = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
 #endif
 
-#ifdef TCFG_AUDIO_EFX_7293_RUN_MODE
-const  int voicechanger_run_mode         = TCFG_AUDIO_EFX_7293_RUN_MODE;
+const  int voicechanger_run_mode         = 0
+#if defined(TCFG_AUDIO_EFX_7293_RUN_MODE)
+        | TCFG_AUDIO_EFX_7293_RUN_MODE
+#endif
+#if defined(TCFG_AUDIO_EFX_AE43_RUN_MODE)//harmony
+        | TCFG_AUDIO_EFX_AE43_RUN_MODE
+#endif
+#if !defined(TCFG_AUDIO_EFX_7293_RUN_MODE) && !defined(TCFG_AUDIO_EFX_AE43_RUN_MODE)
+        | EFx_BW_16t16 | EFx_BW_32t32//变声位宽控制
+#endif
+        ;
+#if TCFG_HARMONY_NODE_ENABLE
+const int pitchshift_have_modeHarmony = 1;//1:harmony节点spectrum的模式支持度的配置，不过会增加它做为变声模式的一些运算, 0:反之
 #else
-const  int voicechanger_run_mode         = EFx_BW_16t16 | EFx_BW_32t32;//变声位宽控制
+const int pitchshift_have_modeHarmony = 0;
 #endif
 
-#ifdef TCFG_AUDIO_EFX_C07A_RUN_MODE
-const  int autotune_run_mode             = TCFG_AUDIO_EFX_C07A_RUN_MODE;
+
+#ifdef TCFG_AUDIO_EFX_40DC_RUN_MODE
+const int  vibrato_run_mode = TCFG_AUDIO_EFX_40DC_RUN_MODE;
 #else
-const  int autotune_run_mode             = EFx_BW_16t16 | EFx_BW_32t32;//autoTune位宽控制
+const int  vibrato_run_mode = EFx_BW_32t32 | EFx_BW_16t16;
 #endif
+
+const  int autotune_run_mode             = 0
+#if defined(TCFG_AUDIO_EFX_C07A_RUN_MODE)
+        | TCFG_AUDIO_EFX_C07A_RUN_MODE
+#endif
+#if defined(TCFG_AUDIO_EFX_AE43_RUN_MODE)//harmony
+        | TCFG_AUDIO_EFX_AE43_RUN_MODE
+#endif
+#if !defined(TCFG_AUDIO_EFX_7293_RUN_MODE) && !defined(TCFG_AUDIO_EFX_AE43_RUN_MODE)
+        | EFx_BW_16t16 | EFx_BW_32t32//autoTune位宽控制
+#endif
+        ;
+
+#if TCFG_AUDIO_EFX_FB27_RUN_MODE
+const int treomolo_run_mode = TCFG_AUDIO_EFX_FB27_RUN_MODE;
+#else
+const int treomolo_run_mode =  EFx_BW_16t16 | EFx_BW_32t32;
+#endif
+
+
 
 #ifdef TCFG_AUDIO_EFX_24AB_RUN_MODE
 const  int reverb_run_mode               = TCFG_AUDIO_EFX_24AB_RUN_MODE;
@@ -439,6 +473,8 @@ const int const_audio_howling_ahs_dual_core = 1;
  */
 const int audio_effect_realloc_reserve_mem = (13 * 1024);
 
+const int howling_freqshift_lowdelay = 0;//0:fir分支，跟以前效果一致, 1:使用iir分支来节省延时
+
 /*
  *******************************************************************
  *						Audio Mic Capless Config
@@ -465,6 +501,13 @@ const char log_tag_const_c_ALINK  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_i_ALINK  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_ALINK  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_ALINK  = CONFIG_DEBUG_LIB(TRUE);
+
+/*vbass noisegate 参数配置*/
+const int virtualbass_noisegate_attack_time = 50;
+const int virtualbass_noisegate_release_time = 30;
+const int virtualbass_noisegate_hold_time = 15;
+const float virtualbass_noisegate_threshold = -85.0f;
+
 
 __attribute__((weak))
 int get_system_stream_bit_width(void *par)

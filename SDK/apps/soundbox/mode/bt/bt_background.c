@@ -333,7 +333,11 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
         app_set_a2dp_play_status(event->args, 0);
         bt_stop_a2dp_slience_detect(event->args);
 #if TCFG_USER_TWS_ENABLE
-        tws_a2dp_play_send_cmd(CMD_A2DP_CLOSE, event->args, 6, 1);
+        if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
+            tws_a2dp_play_send_cmd(CMD_A2DP_CLOSE, event->args, 6, 1);
+        } else {
+            tws_a2dp_player_close(event->args);
+        }
 #else
         a2dp_play_close(event->args);
 #endif

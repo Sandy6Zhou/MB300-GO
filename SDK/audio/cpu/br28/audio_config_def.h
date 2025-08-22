@@ -130,6 +130,7 @@
 //**************************************
 #define AUDIO_VBASS_LINK_VOLUME     0 //虚拟低音与音量联动调节
 #define AUDIO_EQ_LINK_VOLUME        0 //EQ与音量联动调节
+#define AUDIO_AUTODUCK_LINK_VOLUME  0 //自动闪避与音量联动调节
 //人声消除串在每个模式的数据流中
 #define AUD_VOCAL_REMOVE_SUB_PATH_ENABLE      0
 #define TCFG_DEC_ENGINE_SOUND_ENABLE  0 //摩托车引擎声使能
@@ -276,17 +277,6 @@
 #define BT_MUSIC_VOL_LEAVE_MAX	16		/*高级音频音量等级*/
 #define BT_CALL_VOL_LEAVE_MAX	15		/*通话音量等级*/
 // #define BT_CALL_VOL_STEP		(-2.0f)	[>通话音量等级衰减步进<]
-
-/*
- *audio state define
- */
-#define APP_AUDIO_STATE_IDLE        0
-#define APP_AUDIO_STATE_MUSIC       1
-#define APP_AUDIO_STATE_CALL        2
-#define APP_AUDIO_STATE_WTONE       3
-#define APP_AUDIO_STATE_KTONE       4
-#define APP_AUDIO_STATE_RING       	5
-#define APP_AUDIO_CURRENT_STATE     6
 
 #define TONE_BGM_FADEOUT            0   //播叠加提示音时是否将背景音淡出
 

@@ -121,6 +121,7 @@ struct a2dp_stream_control {
     u8 jl_dongle;
     u8 overrun_detect_enable;
     s8 link_rssi;
+    u8 repair_frame[2];
     u16 timer;
     u16 seqn;
     u16 overrun_seqn;
@@ -138,8 +139,6 @@ struct a2dp_stream_control {
     u32 underrun_time;
     u32 codec_type;
     u32 frame_time;
-    struct a2dp_media_frame frame;
-    int frame_len;
     void *stream;
     void *sample_detect;
     u32 next_timestamp;
@@ -344,7 +343,7 @@ int a2dp_stream_max_buf_size(u32 codec_type)
     return max_buf_size;
 }
 
-void a2dp_stream_bandwidth_detect_handler(void *_ctrl, int pcm_frames, int sample_rate)
+void a2dp_stream_bandwidth_detect_handler(void *_ctrl, int frame_len, int pcm_frames, int sample_rate)
 {
     struct a2dp_stream_control *ctrl = (struct a2dp_stream_control *)_ctrl;
     int max_latency = 0;
@@ -353,11 +352,11 @@ void a2dp_stream_bandwidth_detect_handler(void *_ctrl, int pcm_frames, int sampl
         return;
     }
 
-    if (ctrl->frame_len) {
+    if (frame_len) {
         int max_buf_size = a2dp_stream_max_buf_size(ctrl->codec_type);
-        max_latency = (max_buf_size * pcm_frames / ctrl->frame_len) * 1000 / sample_rate * 8 / 10;
+        max_latency = (max_buf_size * pcm_frames / frame_len) * 1000 / sample_rate * 8 / 10;
 #if A2DP_STREAM_INFO_DEBUG_ENABLE
-        ctrl->bit_rate = ctrl->frame_len * 10000 / (pcm_frames * 10000 / sample_rate) * 8;
+        ctrl->bit_rate = frame_len * 10000 / (pcm_frames * 10000 / sample_rate) * 8;
 #endif
         if (max_latency < ctrl->max_capacity) {
             ctrl->max_capacity = max_latency;
@@ -649,6 +648,8 @@ void *a2dp_stream_control_plan_select(void *stream, int low_latency, u32 codec_t
         break;
     }
 
+    ctrl->repair_frame[0] = 0x02;
+    ctrl->repair_frame[1] = 0x00;
     ctrl->max_capacity = 2 * ctrl->adaptive_max_latency;
     memcpy(ctrl->bt_addr, bt_addr, 6);
     ctrl->rf_quality = 5;
@@ -728,28 +729,11 @@ static int a2dp_stream_underrun_handler(struct a2dp_stream_control *ctrl, struct
         ctrl->stream_error = A2DP_STREAM_UNDERRUN;
         a2dp_stream_underrun_adaptive_handler(ctrl);
     }
-    memcpy(frame, &ctrl->frame, sizeof(ctrl->frame));
     ctrl->repair_num++;
+    frame->packet = ctrl->repair_frame;
 
-    return ctrl->frame_len;
+    return sizeof(ctrl->repair_frame);
 }
-
-static void a2dp_stream_control_free_frames(struct a2dp_stream_control *ctrl, struct a2dp_media_frame *frame)
-{
-    if (frame && frame->packet) {
-        a2dp_media_free_packet(ctrl->stream, frame->packet);
-        if ((void *)frame->packet == (void *)ctrl->frame.packet) {
-            ctrl->frame.packet = NULL;
-        }
-    }
-
-    if (ctrl->frame.packet) {
-        a2dp_media_free_packet(ctrl->stream, ctrl->frame.packet);
-        ctrl->frame.packet = NULL;
-    }
-    ctrl->frame_len = 0;
-}
-
 
 static int a2dp_stream_overrun_handler(struct a2dp_stream_control *ctrl, struct a2dp_media_frame *frame, int *len)
 {
@@ -769,9 +753,6 @@ static int a2dp_stream_overrun_handler(struct a2dp_stream_control *ctrl, struct 
         if (rlen <= 0) {
             break;
         }
-        a2dp_stream_control_free_frames(ctrl, NULL);
-        memcpy(&ctrl->frame, frame, sizeof(ctrl->frame));
-        ctrl->frame_len = rlen;
         *len = rlen;
         putchar('n');
 #if A2DP_STREAM_INFO_DEBUG_ENABLE
@@ -781,34 +762,43 @@ static int a2dp_stream_overrun_handler(struct a2dp_stream_control *ctrl, struct 
         return 1;
     }
 
-    memcpy(frame, &ctrl->frame, sizeof(ctrl->frame));
-    *len = ctrl->frame_len;
+    *len = sizeof(ctrl->repair_frame);
+    frame->packet = ctrl->repair_frame;
     putchar('o');
     return 0;
 }
 
 static int a2dp_stream_missed_handler(struct a2dp_stream_control *ctrl, struct a2dp_media_frame *frame, int *len)
 {
-    memcpy(frame, &ctrl->frame, sizeof(ctrl->frame));
-    *len = ctrl->frame_len;
+    printf("missed num : %d\n", ctrl->missed_num);
     if (--ctrl->missed_num == 0) {
         return 1;
     }
+
+    *len = sizeof(ctrl->repair_frame);
+    frame->packet = ctrl->repair_frame;
     return 0;
 }
 
 static int a2dp_stream_error_filter(struct a2dp_stream_control *ctrl, struct a2dp_media_frame *frame, int len)
 {
     int err = 0;
+    u8 repair = 0;
 
-    int header_len = a2dp_media_get_rtp_header_len(ctrl->codec_type, frame->packet, len);
-    if (header_len >= len) {
-        printf("##A2DP header error : %d\n", header_len);
-        a2dp_stream_control_free_frames(ctrl, frame);
-        return -EFAULT;
+    if (len == 2) {
+        repair = 1;
     }
 
-    u16 seqn = RB16(frame->packet + 2);
+    if (!repair) {
+        int header_len = a2dp_media_get_rtp_header_len(ctrl->codec_type, frame->packet, len);
+        if (header_len >= len) {
+            printf("##A2DP header error : %d\n", header_len);
+            a2dp_media_free_packet(ctrl->stream, frame->packet);
+            return -EFAULT;
+        }
+    }
+
+    u16 seqn = repair ? ctrl->seqn : RB16(frame->packet + 2);
     if (ctrl->first_in) {
         ctrl->first_in = 0;
         goto __exit;
@@ -849,8 +839,6 @@ static int a2dp_stream_error_filter(struct a2dp_stream_control *ctrl, struct a2d
 
 __exit:
     ctrl->seqn = seqn;
-    memcpy(&ctrl->frame, frame, sizeof(ctrl->frame));
-    ctrl->frame_len = len;
     return err;
 }
 
@@ -890,8 +878,16 @@ static void a2dp_stream_info_print(struct a2dp_stream_control *ctrl)
 #endif
 }
 
-int a2dp_get_frame_and_check_errors(struct a2dp_stream_control *ctrl, struct a2dp_media_frame *frame, int *len)
+
+int a2dp_stream_control_pull_frame(void *_ctrl, struct a2dp_media_frame *frame, int *len)
 {
+    struct a2dp_stream_control *ctrl = (struct a2dp_stream_control *)_ctrl;
+
+    if (!ctrl) {
+        *len = 0;
+        return 0;
+    }
+
     int rlen = 0;
     int err = 0;
     u8 new_packet = 0;
@@ -903,7 +899,7 @@ try_again:
         break;
     case A2DP_STREAM_MISSED:
         new_packet = a2dp_stream_missed_handler(ctrl, frame, len);
-        if (frame->packet) {
+        if (!new_packet) {
             break;
         }
     //注意：这里不break是因为很有可能由于位流的错误导致补包无法再正常补上
@@ -912,12 +908,6 @@ try_again:
         if (rlen <= 0) {
             rlen = a2dp_stream_underrun_handler(ctrl, frame);
         } else {
-            if (ctrl->frame.packet) {
-                a2dp_stream_rx_interval_detect(ctrl, frame); /*for Qualcomm wifi&bluetooth coexist*/
-                a2dp_media_free_packet(ctrl->stream, ctrl->frame.packet);
-                ctrl->frame.packet = NULL;
-            }
-            ctrl->frame_len = 0;
             new_packet = 1;
         }
         *len = rlen;
@@ -930,6 +920,7 @@ try_again:
     err = a2dp_stream_error_filter(ctrl, frame, *len);
     if (err) {
         if (-err == EAGAIN) {
+            a2dp_media_put_packet(ctrl->stream, frame->packet);
             goto try_again;
         }
         *len = 0;
@@ -952,32 +943,12 @@ try_again:
     return 0;
 }
 
-int a2dp_stream_control_pull_frame(void *_ctrl, struct a2dp_media_frame *frame, int *len)
-{
-    struct a2dp_stream_control *ctrl = (struct a2dp_stream_control *)_ctrl;
-
-    if (!ctrl) {
-        *len = 0;
-        return 0;
-    }
-
-    switch (ctrl->plan) {
-    default:
-        return a2dp_get_frame_and_check_errors(ctrl, frame, len);
-    }
-
-    return 0;
-}
-
 void a2dp_stream_control_free_frame(void *_ctrl, struct a2dp_media_frame *frame)
 {
     struct a2dp_stream_control *ctrl = (struct a2dp_stream_control *)_ctrl;
 
-    switch (ctrl->plan) {
-    default:
-        if (ctrl->frame.packet == frame->packet) {
-            ctrl->frame_free = 1;
-        }
+    if ((u8 *)frame->packet != (u8 *)ctrl->repair_frame) {
+        a2dp_media_free_packet(ctrl->stream, frame->packet);
     }
 }
 
@@ -1008,8 +979,6 @@ void a2dp_stream_control_free(void *_ctrl)
     if (!ctrl) {
         return;
     }
-
-    a2dp_stream_control_free_frames(ctrl, NULL);
 
     local_irq_disable();
     list_del(&ctrl->entry);

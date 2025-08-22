@@ -815,6 +815,12 @@ static int dual_conn_hci_event_handler(int *_event)
         return 0;
     }
 #endif
+
+#if (TCFG_BT_BACKGROUND_ENABLE == 0 && TCFG_KBOX_1T3_MODE_EN)
+    if (!app_in_mode(APP_MODE_BT)) {
+        return 0;
+    }
+#endif
     int is_remote_test = bt_get_remote_test_flag();
 
     switch (event->event) {

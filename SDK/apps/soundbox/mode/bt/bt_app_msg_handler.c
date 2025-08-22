@@ -198,9 +198,11 @@ int bt_app_msg_handler(int *msg)
         }
         set_music_device_volume(dev_vol);
         set_g_play_addr(bt_addr);
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
             break;
         }
+#endif
         int err = a2dp_player_open(bt_addr);
         if (err == -EBUSY) {
             printf("bt_app_msg_handler open a2dp_player failed\n");

@@ -6,7 +6,7 @@
 #endif
 #include "source_node.h"
 #include "audio_dai/audio_pdm.h"
-#include "asm/audio_adc.h"
+#include "audio_adc.h"
 #include "app_config.h"
 #include "audio_config.h"
 #include "audio_cvp.h"

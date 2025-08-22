@@ -28,6 +28,8 @@ struct source_node_plug {
 };
 
 
+extern const struct source_node_plug source_node_plug_begin[];
+extern const struct source_node_plug source_node_plug_end[];
 
 #define REGISTER_SOURCE_NODE_PLUG(plug) \
     const struct source_node_plug plug sec(.source_node_plug)

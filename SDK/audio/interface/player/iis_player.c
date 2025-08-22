@@ -22,7 +22,7 @@ static void iis_player_callback(void *private_data, int event)
     switch (event) {
     case STREAM_EVENT_START:
 #ifdef TCFG_VOCAL_REMOVER_NODE_ENABLE
-        musci_vocal_remover_update_parm();
+        music_vocal_remover_update_parm();
 #endif
         break;
     }

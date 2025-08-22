@@ -1,8 +1,7 @@
 #ifndef __AUDIO_GAIN_PORCESS__H
 #define __AUDIO_GAIN_PORCESS__H
 
-#include "media/audio_stream.h"
-#include "media_config.h"
+#include "generic/typedef.h"
 
 #ifndef RUN_NORMAL
 #define RUN_NORMAL  0

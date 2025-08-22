@@ -13,25 +13,26 @@
 #define WRITE_MODE_FORCE            1
 
 struct audio_cfifo {
+    u8 bit_wide;
+    u8 data_saturation_disable;/*fifo数据饱和处理*/
     u8 sample_channel;          /*fifo采样声道数*/
-    s16 *addr;                  /*fifo首地址*/
     u16 sample_size;            /*fifo采样长度*/
     u16 wp;                     /*fifo写偏移*/
     u16 rp;                     /*fifo读偏移*/
     u16 lock_rp;                /*fifo不可擦写的已读偏移*/
     u16 free_samples;           /*fifo可写入样点个数*/
     s16 unread_samples;         /*fifo未读样点个数*/
+    s16 *addr;                  /*fifo首地址*/
     int sample_rate;            /*fifo对应的音频采样率*/
     u32 sw_ptr;
     u32 hw_ptr;
     struct list_head head;      /*子通道数据链表头*/
     spinlock_t lock;
-    u8 bit_wide;
-    u8 data_saturation_disable;/*fifo数据饱和处理*/
 };
 
 struct audio_cfifo_channel {
-    u8  write_mode;             /*写入模式*/
+    u8 bit_wide;
+    u8 write_mode;             /*写入模式*/
     u16 delay_time;             /*最大延时(ms)*/
     u16 rsp;                    /*读偏移*/
     u16 wsp;                    /*写偏移*/
@@ -41,7 +42,6 @@ struct audio_cfifo_channel {
     u32 hw_ptr;
     struct audio_cfifo *fifo;   /*主fifo指针*/
     struct list_head entry;     /*通道接入entry*/
-    u8 bit_wide;
 };
 
 /*************************************************************************

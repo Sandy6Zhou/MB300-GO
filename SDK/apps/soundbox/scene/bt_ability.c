@@ -14,6 +14,8 @@
 #include "bt_slience_detect.h"
 #include "low_latency.h"
 
+#if TCFG_APP_BT_EN
+
 #if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
 #include "dma_platform_api.h"
 #endif
@@ -1284,40 +1286,4 @@ APP_MSG_HANDLER(scene_btstack_2_esco_preempted_handler) = {
     .handler    = btstack_2_esco_preempted_msg_handler,
 };
 
-static int bthci_msg_handler(int *msg)
-{
-    u8 *event = (u8 *)msg;
-
-    printf("hci_event_happen: %d\n", event[0]);
-
-    scene_mgr_event_match(UUID_BT, BT_HCI_EVENT | event[0], event);
-    return 0;
-}
-/* APP_MSG_HANDLER(bthci_msg_entry) = { */
-/*     .owner      = 0xff, */
-/*     .from       = MSG_FROM_BT_HCI, */
-/*     .handler    = bthci_msg_handler, */
-/* }; */
-
-
-
-static int bt_app_msg_handler(int *msg)
-{
-    if (msg[0] == APP_MSG_BT_A2DP_START) {
-        struct bt_event event;
-        memcpy(event.args, msg + 1, 6);
-        scene_mgr_event_match(UUID_BT, BT_APP_MSG_A2DP_START, &event);
-    }
-    return 0;
-}
-/* APP_MSG_HANDLER(bt_app_msg_entry) = { */
-/*     .owner      = 0xff, */
-/*     .from       = MSG_FROM_APP, */
-/*     .handler    = bt_app_msg_handler, */
-/* }; */
-
-
-
-
-
-
+#endif

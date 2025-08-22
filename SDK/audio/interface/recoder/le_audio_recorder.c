@@ -17,7 +17,7 @@
 #include "spdif_file.h"
 #include "fm_file.h"
 #include "media/sync/audio_syncts.h"
-#include "asm/dac.h"
+#include "audio_dac.h"
 #include "audio_cvp.h"
 #include "app_main.h"
 #include "volume_node.h"
@@ -72,7 +72,7 @@ static struct le_audio_fm_recorder *g_fm_recorder = NULL;
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
 struct le_audio_iis_recorder {
     void *stream;
 };
@@ -271,6 +271,10 @@ void le_audio_a2dp_recorder_close(u8 *btaddr)
     }
 
     if (a2dp_recorder->stream) {
+#if LE_AUDIO_LOCAL_MIC_EN
+        printf(">> %s jlstream stop!\n", __func__);
+        jlstream_node_ioctl(g_a2dp_recorder->stream, NODE_UUID_MIXER, NODE_IOC_STOP, 1);
+#endif
         jlstream_stop(a2dp_recorder->stream, 0);
         jlstream_release(a2dp_recorder->stream);
     }
@@ -307,6 +311,15 @@ static void aux_recorder_callback(void *private_data, int event)
 {
     printf("le audio aux recorder callback : %d\n", event);
 }
+
+void *get_le_audio_linein_recorder_stream(void)
+{
+    if (g_aux_recorder) {
+        return g_aux_recorder->stream;
+    }
+    return NULL;
+}
+
 int le_audio_linein_recorder_open(void *params, void *le_audio, int latency)
 {
     if (g_aux_recorder) {
@@ -382,7 +395,7 @@ void le_audio_linein_recorder_close(void)
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
 
 static void muti_ch_iis_recorder_callback(void *private_data, int event)
 {
@@ -392,9 +405,18 @@ static void muti_ch_iis_recorder_callback(void *private_data, int event)
 int le_audio_muti_ch_iis_recorder_open(void *params_ch0, void *params_ch1, void *le_audio, int latency)
 {
     int err = 0;
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    struct le_audio_stream_params *lea_params_0 = params_ch0;
+    struct le_audio_stream_params *lea_params_1 = params_ch1;
+
+    struct le_audio_stream_format *le_audio_fmt_ch0 = &lea_params_0->fmt;
+    struct le_audio_stream_format *le_audio_fmt_ch1 = &lea_params_1->fmt;
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
+#else
     struct le_audio_stream_format *le_audio_fmt_ch0 = (struct le_audio_stream_format *)params_ch0;
     struct le_audio_stream_format *le_audio_fmt_ch1 = (struct le_audio_stream_format *)params_ch1;
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"iis_le_audio");
+#endif
     struct stream_enc_fmt fmt_ch0 = {
         .coding_type = le_audio_fmt_ch0->coding_type,
         .channel = le_audio_fmt_ch0->nch,
@@ -422,32 +444,72 @@ int le_audio_muti_ch_iis_recorder_open(void *params_ch0, void *params_ch1, void 
         return -ENOMEM;
     }
     jlstream_set_callback(g_muti_ch_iis_recorder->stream, NULL, muti_ch_iis_recorder_callback);
-    jlstream_set_scene(g_muti_ch_iis_recorder->stream, STREAM_SCENE_MUTI_CH_IIS);
 
-    jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS0_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
-    jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS1_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
-
-    /* err = jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio); */
-    err = jlstream_ioctl(g_muti_ch_iis_recorder->stream, NODE_IOC_SET_BTADDR, (int)le_audio);
     if (latency == 0) {
         latency = 100000;
     }
-    //设置中断点数
-    jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);
+    //延时设置
+
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    if (lea_params_0->service_type == LEA_SERVICE_WL_MIC) {
+        //printf("LEA Recoder:WL_MIC_MULT_IIS\n");
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_CAPTURE_SYNC, NODE_IOC_SET_PARAM, latency);
+        jlstream_set_scene(g_muti_ch_iis_recorder->stream, STREAM_SCENE_WIRELESS_MIC);
+        //设置中断点数
+        u16 irq_point = 0;
+#if (defined(TCFG_ADC_IRQ_INTERVAL) &&  TCFG_ADC_IRQ_INTERVAL) //根据配置设置中断点数
+#if (defined(TCFG_AUDIO_ADC_SAMPLE_RATE) &&  TCFG_AUDIO_ADC_SAMPLE_RATE)
+        irq_point =  TCFG_AUDIO_ADC_SAMPLE_RATE * TCFG_ADC_IRQ_INTERVAL / 1000000;  //sr * interval(us) / 1000000
+#else
+        irq_point =  fmt.sample_rate * TCFG_ADC_IRQ_INTERVAL / 1000000; //sr * interval(us) / 1000000
+#endif
+#else
+        irq_point =  AUDIO_IIS_IRQ_POINTS;//fmt.sample_rate * 1000 / 1000000; //默认1ms 的中断,//sr * interval(us) / 1000000
+#endif
+
+#if TCFG_LLNS_DNS_NODE_ENABLE
+        if (LLNS_DNS_SUPPORT_SAMPLE_RATE) {
+            jlstream_node_ioctl(g_muti_ch_iis_recorderr->stream, NODE_UUID_LLNS_DNS, NODE_IOC_SET_PRIV_FMT, LLNS_DNS_SUPPORT_SAMPLE_RATE); //当前LLNS_DNS降噪节点只支持32k
+        }
+#endif
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, irq_point);
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS0_RX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS1_RX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        err = jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio);
+        err = jlstream_ioctl(g_muti_ch_iis_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt_ch1);
+    } else
+
+#endif
+    {
+
+        jlstream_set_scene(g_muti_ch_iis_recorder->stream, STREAM_SCENE_MUTI_CH_IIS);
+
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS0_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_IIS1_TX, NODE_IOC_SET_PARAM, AUDIO_NETWORK_LOCAL);
+
+        /* err = jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)le_audio); */
+        err = jlstream_ioctl(g_muti_ch_iis_recorder->stream, NODE_IOC_SET_BTADDR, (int)le_audio);
+
+        //设置中断点数
+        jlstream_node_ioctl(g_muti_ch_iis_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_IIS_IRQ_POINTS);
+        /*节点名字与数据流节点对应*/
+        char *lea_enc_node_name = "LEA_ENC_CH0";
+        char *lea_sync_node_name = "LEA_Sync_CH0";
+        char *lea_source_node_name = "LEA_Source_CH0";
+        jlstream_set_node_specify_param(NODE_UUID_ENCODER, lea_enc_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch0, sizeof(fmt_ch0));
+        jlstream_set_node_specify_param(NODE_UUID_LE_AUDIO_SOURCE, lea_source_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch0, sizeof(fmt_ch0));
+        jlstream_set_node_param(NODE_UUID_CAPTURE_SYNC, lea_sync_node_name, &latency, sizeof(int));
+
+        /*节点名字与数据流节点对应*/
+        lea_enc_node_name = "LEA_ENC_CH1";
+        lea_sync_node_name = "LEA_Sync_CH1";
+        lea_source_node_name = "LEA_Source_CH1";
+        jlstream_set_node_specify_param(NODE_UUID_ENCODER, lea_enc_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch1, sizeof(fmt_ch1));
+        jlstream_set_node_specify_param(NODE_UUID_LE_AUDIO_SOURCE, lea_source_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch1, sizeof(fmt_ch1));
+        jlstream_set_node_param(NODE_UUID_CAPTURE_SYNC, lea_sync_node_name, &latency, sizeof(int));
+    }
+
     /*节点名字与数据流节点对应*/
-    char *lea_enc_node_name = "LEA_ENC_CH0";
-    char *lea_sync_node_name = "LEA_Sync_CH0";
-    char *lea_source_node_name = "LEA_Source_CH0";
-    jlstream_set_node_specify_param(NODE_UUID_ENCODER, lea_enc_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch0, sizeof(fmt_ch0));
-    jlstream_set_node_specify_param(NODE_UUID_LE_AUDIO_SOURCE, lea_source_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch0, sizeof(fmt_ch0));
-    jlstream_set_node_param(NODE_UUID_CAPTURE_SYNC, lea_sync_node_name, &latency, sizeof(int));
-    /*节点名字与数据流节点对应*/
-    lea_enc_node_name = "LEA_ENC_CH1";
-    lea_sync_node_name = "LEA_Sync_CH1";
-    lea_source_node_name = "LEA_Source_CH1";
-    jlstream_set_node_specify_param(NODE_UUID_ENCODER, lea_enc_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch1, sizeof(fmt_ch1));
-    jlstream_set_node_specify_param(NODE_UUID_LE_AUDIO_SOURCE, lea_source_node_name, NODE_IOC_SET_ENC_FMT, &fmt_ch1, sizeof(fmt_ch1));
-    jlstream_set_node_param(NODE_UUID_CAPTURE_SYNC, lea_sync_node_name, &latency, sizeof(int));
     if (err == 0) {
         err = jlstream_start(g_muti_ch_iis_recorder->stream);
     }
@@ -473,7 +535,11 @@ void le_audio_muti_ch_iis_recorder_close(void)
 
     free(iis_recorder);
     g_muti_ch_iis_recorder = NULL;
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
+    jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
+#else
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"iis_le_audio");
+#endif
 }
 
 
@@ -705,10 +771,22 @@ void le_audio_pc_recorder_close(void)
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && TCFG_AUDIO_SPDIF_ENABLE
+
+u8 is_le_audio_spdif_open(void)
+{
+    return (g_spdif_recorder == NULL) ? 0 : 1;
+}
+
 static void spdif_recorder_callback(void *private_data, int event)
 {
     printf("le audio spdif recorder callback : %d\n", event);
 }
+
+u8 is_le_audio_spdif_open(void)
+{
+    return (g_spdif_recorder == NULL) ? 0 : 1;
+}
+
 int le_audio_spdif_recorder_open(void *params, void *le_audio, int latency)
 {
     if (g_spdif_recorder) {

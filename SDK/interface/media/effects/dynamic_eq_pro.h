@@ -18,7 +18,6 @@ typedef struct _dynamic_eq_pro_tool_set {
 
 
 struct dynamic_eq_pro {
-    struct audio_stream_entry entry;	//音频流入口
     void *workbuf;                      //算法运行buf
     DynamicEQProEffectParam *effectParam;
     DynamicEQProParam parm;                //算法相关配置参数

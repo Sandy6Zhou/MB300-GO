@@ -511,8 +511,7 @@ u8 bk1080_iic_uninit(void *priv)
 {
     fm_dev_info = (struct _fm_dev_info *)priv;
 
-    int ret = soft_iic_uninit(fm_dev_info->iic_hdl);
-
+    int ret = soft_iic_deinit(fm_dev_info->iic_hdl);
     return 1;
 }
 

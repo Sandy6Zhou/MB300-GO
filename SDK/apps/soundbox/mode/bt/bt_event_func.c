@@ -648,6 +648,8 @@ enum {
     BIP_DATA_STATUS_CONTINUE,		//继续包(中间包)
     BIP_DATA_STATUS_STOP,			//结束包
     BIP_DATA_STATUS_ERR,			//错误包，可能是不支持，或者音乐软件未打开
+    BIP_DATA_STATUS_ERR_GET,			//重复获取
+    BIP_DATA_STATUS_GET_NULL,			//上一个获取中，获取无图片歌曲
 };
 enum {
     BIP_FILE_STATUS_ERR,			//文件不存在

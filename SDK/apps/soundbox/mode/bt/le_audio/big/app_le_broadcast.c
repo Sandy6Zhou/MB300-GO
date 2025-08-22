@@ -44,6 +44,9 @@
 #include "surround_sound.h"
 #endif
 
+#if LE_AUDIO_MIX_MIC_EN || LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
 
@@ -578,6 +581,12 @@ static bool is_broadcast_as_transmitter()
     return false;
 #endif
 
+#if LE_AUDIO_LOCAL_MIC_EN
+    if (get_local_mic_le_audio_en()) {
+        return true;
+    }
+#endif
+
     //当前处于蓝牙模式并且已连接手机设备时，
     //(1)播歌作为广播发送设备；
     //(2)暂停作为广播接收设备。
@@ -1064,7 +1073,6 @@ int app_broadcast_switch(void)
     //无线环绕声目前只支持IIS、Surround Sound模式下的广播
     if (mode) {
         if (surround_sound_broadcast_limit(mode->name) != 0) {
-            ;
             //不支持打开广播
             return -EPERM;
         }
@@ -1119,7 +1127,15 @@ int app_broadcast_switch(void)
 /* ----------------------------------------------------------------------------*/
 int update_app_broadcast_deal_scene(int scene)
 {
+#if LE_AUDIO_LOCAL_MIC_EN
+    if (scene == LE_AUDIO_MUSIC_STOP) {
+        if (get_local_le_audio_status() == LOCAL_MIX_MIC_CLOSE_MUSIC_CLOSE) {
+            cur_deal_scene = scene;
+        }
+    }
+#else
     cur_deal_scene = scene;
+#endif
     return 0;
 }
 
@@ -1219,20 +1235,48 @@ int app_broadcast_deal(int scene)
             if (app_big_hdl_info[i].used && (app_big_hdl_info[i].big_status == APP_BROADCAST_STATUS_START)) {
                 //(1)当处于广播开启并且作为接收设备时，挂起广播，播放当前手机音乐；
                 //(2)当前广播处于挂起状态时，恢复广播并作为发送设备。
+#if LE_AUDIO_LOCAL_MIC_EN
+                if (is_local_mix_mic_le_audio_runing()) {
+                    //mic 已经打开了
+                    printf("-- local mic is opened!\n");
+                    if (get_local_le_audio_status() == LOCAL_MIX_MIC_OPEN_MUSIC_CLOSE && get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
+                        broadcast_audio_cur_mode_tx_stream_open();
+                        ret = 1;
+                        break;
+                    }
+                } else {
+                    printf("-- local mic is close!\n");
+                    if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
+                        app_broadcast_suspend();
+                    } else if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
+                        ret = 1;
+                    }
+                }
+#else
                 if (get_broadcast_role() == BROADCAST_ROLE_RECEIVER) {
                     app_broadcast_suspend();
                 } else if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
                     ret = 1;
                 }
                 break;
+#endif
             }
         }
 #else
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
+#if LE_AUDIO_LOCAL_MIC_EN
+            if (is_local_mix_mic_le_audio_runing()) {
+                printf("--[fix role] local mic is opened!\n");
+                if (get_local_le_audio_status() == LOCAL_MIX_MIC_OPEN_MUSIC_CLOSE) {
+                    broadcast_audio_cur_mode_tx_stream_open();
+                }
+            }
+#else
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色重启广播数据流
                 broadcast_audio_all_open(app_big_hdl_info[i].big_hdl);
             }
+#endif
             ret = 1;
             break;
         }
@@ -1262,13 +1306,44 @@ int app_broadcast_deal(int scene)
         }
 #if (LEA_BIG_FIX_ROLE == 0)
         //当前处于广播挂起状态时，停止手机播放，恢复广播并接收其他设备的音频数据
+#if LE_AUDIO_LOCAL_MIC_EN
+        int local_le_audio_status = get_local_le_audio_status();
+        printf("-- %s, %d, get_local_le_audio_status: %d\n", __func__, __LINE__, local_le_audio_status);
+        if (local_le_audio_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN && get_local_mic_le_audio_en() == 0) {
+            printf("-- cur music and mic is open, will stop one: mic!\n");
+            local_mic_tx_le_audio_close();
+        } else if (local_le_audio_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN && get_local_mic_le_audio_en() == 1) {
+            printf("-- cur music and mic is open, will stop one: music!\n");
+            broadcast_audio_cur_mode_tx_stream_close();
+            ret = 1;
+        } else {
+            app_broadcast_suspend();
+        }
+#else
         app_broadcast_suspend();
+#endif
 #else
         if (get_broadcast_role() == BROADCAST_ROLE_TRANSMITTER) {
+#if LE_AUDIO_LOCAL_MIC_EN
+            int local_le_audio_status = get_local_le_audio_status();
+            printf("-- %s, %d, get_local_le_audio_status: %d\n", __func__, __LINE__, local_le_audio_status);
+
+            if (local_le_audio_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN && get_local_mic_le_audio_en() == 0) {
+                printf("-- cur music and mic is open, will stop one: mic!\n");
+                local_mic_tx_le_audio_close();
+            } else if (local_le_audio_status == LOCAL_MIX_MIC_OPEN_MUSIC_OPEN && get_local_mic_le_audio_en() == 1) {
+                printf("-- cur music and mic is open, will stop one: music!\n");
+                broadcast_audio_cur_mode_tx_stream_close();
+            } else if (local_le_audio_status == LOCAL_MIX_MIC_OPEN_MUSIC_CLOSE && get_local_mic_le_audio_en() == 0) {
+                printf("-- MUSIC STOP,  le_audio alone, will stop one: mic %d\n", __LINE__);
+                alone_local_mic_tx_le_audio_close();
+            }
+#else
             for (i = 0; i < BIG_MAX_NUMS; i++) {
                 //固定收发角色暂停播放时关闭广播数据流
                 broadcast_audio_all_close(app_big_hdl_info[i].big_hdl);
             }
+#endif
             ret = 1;
             break;
         }
@@ -1881,5 +1956,63 @@ u8 get_bis_switch_onoff(void)
     return bis_switch_onoff;
 }
 
+#if LE_AUDIO_LOCAL_MIC_EN
+
+void broadcast_audio_cur_mode_tx_stream_open(void)
+{
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
+    printf(">>>>> Func:%s, Line:%d, addr:%x\n", __func__, __LINE__, rets);
+    int i = 0;
+    for (i = 0; i < BIG_MAX_NUMS; i++) {
+        //固定收发角色重启广播数据流
+        __broadcast_audio_cur_mode_tx_stream_open(app_big_hdl_info[i].big_hdl);
+    }
+    update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
+}
+
+void broadcast_audio_cur_mode_tx_stream_close(void)
+{
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
+    printf(">>>>> Func:%s, Line:%d, addr:%x\n", __func__, __LINE__, rets);
+    int i = 0;
+    for (i = 0; i < BIG_MAX_NUMS; i++) {
+        //固定收发角色重启广播数据流
+        __broadcast_audio_cur_mode_tx_stream_close(app_big_hdl_info[i].big_hdl);
+    }
+    if (get_local_le_audio_status() == LOCAL_MIX_MIC_CLOSE_MUSIC_CLOSE) {
+        update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
+    }
+}
+
+
+void alone_local_mic_tx_le_audio_close(void)
+{
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
+    if (is_local_le_audio_music_runing()) {
+        ASSERT(0, "err(%s), 音乐正在跑广播，不适用该函数, 请调用函数：local_mic_tx_le_audio_close! addr: %x\n", __func__, rets);
+    }
+    for (u8 i = 0; i < BIG_MAX_NUMS; i++) {
+        __alone_local_mic_tx_le_audio_close(app_big_hdl_info[i].big_hdl);
+    }
+}
+
+void alone_local_mic_tx_le_audio_open(void)
+{
+    u32 rets;//, reti;
+    __asm__ volatile("%0 = rets":"=r"(rets));
+    if (is_local_le_audio_music_runing()) {
+        ASSERT(0, "err(%s), 音乐正在跑广播，不适用该函数, 请调用函数：local_mix_mic_le_audio_open! addr: %x\n", __func__, rets);
+    }
+    for (u8 i = 0; i < BIG_MAX_NUMS; i++) {
+        __alone_local_mic_tx_le_audio_open(app_big_hdl_info[i].big_hdl);
+    }
+}
+
+
+
+#endif
 #endif
 

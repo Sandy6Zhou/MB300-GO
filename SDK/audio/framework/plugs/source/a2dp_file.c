@@ -20,6 +20,7 @@
 #include "media/codec/sbc_codec.h"
 
 #define A2DP_TIMESTAMP_ENABLE       1
+#define A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE	0
 
 struct a2dp_file_params {
     u8 edr_to_local_time;
@@ -40,6 +41,7 @@ struct a2dp_file_hdl {
     u8 chconfig_id;
     u8 channel_num;
     u16 seqn;
+    u16 pcm_frames;
     u32 base_time;
     u32 timestamp;
     u32 ts_sample_rate;
@@ -56,11 +58,10 @@ struct a2dp_file_hdl {
     u8 handshake_state;
     u32 request_timeout;
     u32 handshake_timeout;
-    /*struct stream_frame *reassembled_frame;*/
 
     u8 link_jl_dongle; //连接jl_dongle
     u8 rtp_ts_en; //使用rtp的时间戳
-    u16 jl_dongle_latency ;
+    u16 jl_dongle_latency;
     u8 edr_to_local_time;
     u8 timestamp_enable;
     u8 reset_frame_clkn;
@@ -225,7 +226,9 @@ pull_frame:
         memcpy(&_frame, &hdl->frame, sizeof(struct a2dp_media_frame));
     }
 
-    hdl->seqn = RB16((u8 *)_frame.packet + 2);
+    if (stream_error != FRAME_FLAG_FILL_PACKET) {
+        hdl->seqn = RB16((u8 *)_frame.packet + 2);
+    }
     int err = a2dp_stream_ts_enable_detect(hdl, _frame.packet, &drop_state);
     if (err) {
         if (drop_state == A2DP_TWS_ALIGN_STATE_UNDERRUN || drop_state == A2DP_TWS_ALIGN_STATE_BUF_OVERFLOW) {
@@ -243,10 +246,15 @@ pull_frame:
         return NODE_STA_RUN | NODE_STA_SOURCE_NO_DATA;
     }
 
-    int head_len = a2dp_media_get_rtp_header_len(hdl->media_type, _frame.packet, len);
+    int head_len = 0;
+    if (stream_error != FRAME_FLAG_FILL_PACKET) {
+        head_len = a2dp_media_get_rtp_header_len(hdl->media_type, _frame.packet, len);
+    }
 
     struct stream_frame *frame;
     int frame_len = len - head_len;
+    int pcm_frames = a2dp_get_packet_pcm_frames(hdl, _frame.packet + head_len, frame_len);
+
     frame = jlstream_get_frame(hdl->node->oport, frame_len);
     if (frame == NULL) {
         return NODE_STA_RUN;
@@ -254,9 +262,7 @@ pull_frame:
     frame->len          = frame_len;
     frame->timestamp    = _frame.clkn;
     frame->flags        |= (stream_error);
-    a2dp_frame_pack_timestamp(hdl, frame, _frame.packet + 4,  //时间戳的地址
-                              a2dp_get_packet_pcm_frames(hdl,
-                                      _frame.packet + head_len, frame_len));
+    a2dp_frame_pack_timestamp(hdl, frame, _frame.packet + 4, pcm_frames);
 
     a2dp_tws_media_try_handshake_ack(1, hdl->seqn, _frame.clkn);
 
@@ -266,6 +272,10 @@ pull_frame:
         a2dp_stream_control_free_frame(hdl->stream_ctrl, &_frame);
     } else {
         a2dp_media_free_packet(hdl->file, _frame.packet);
+    }
+
+    if (!(frame->flags & FRAME_FLAG_FILL_PACKET)) {
+        a2dp_stream_bandwidth_detect_handler(hdl->stream_ctrl, len, pcm_frames, hdl->sample_rate);
     }
     hdl->frame_len = 0;
     hdl->start = 1;
@@ -378,11 +388,25 @@ __again:
         /* u8 ch = ((frame[5] & 0x3) << 2) | ((frame[6] & 0xC0) >> 6); */
         fmt->channel_mode = AUDIO_CH_LR;
         fmt->sample_rate  = aac_sample_rates[sr];
+        printf("AAC param,sr=%d,channel_mode:0x%x", fmt->sample_rate, fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "AAC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
     } else if (frame[0] == 0x20) {			//特殊LATM aac格式
         u8 sr = ((frame[2] & 0x7) << 1) | ((frame[3] & 0x80) >> 7);
         /* u8 ch = ((frame[3] & 0x78) >> 3) ; */
         fmt->channel_mode = AUDIO_CH_LR;
         fmt->sample_rate = aac_sample_rates[sr];
+        printf("LATM AAC param,sr=%d,channel_mode:0x%x", fmt->sample_rate, fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "AAC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
 #endif
     } else if (frame[0] == 0x9C) {          //sbc 格式
         /*
@@ -405,6 +429,13 @@ __again:
             fmt->channel_mode = AUDIO_CH_LR;
         }
         fmt->sample_rate  = sbc_sample_rates[sr];
+        printf("SBC param,sr=%d,channel_mode:%x", fmt->sample_rate, fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "SBC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
 #if (defined(TCFG_BT_SUPPORT_LDAC) && TCFG_BT_SUPPORT_LDAC)
     } else if (frame[1] == 0xAA) {
         u8 sr = (frame[2] >> (8 - 3)) & 0x7;
@@ -563,6 +594,9 @@ static int a2dp_get_packet_pcm_frames(struct a2dp_file_hdl *hdl, u8 *data, int l
     u32 frames = 0;
     u8 codec_type = hdl->media_type;
 
+    if (len == 2 && (data[0] == 0x02 && data[1] == 0x00)) {
+        return hdl->pcm_frames;
+    }
     switch (hdl->media_type) {
     case A2DP_CODEC_SBC:
         frames = sbc_get_packet_pcm_frames(data, len);//frame_num * 128 * (unit);
@@ -752,7 +786,7 @@ static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_f
     /*printf("drift : %d\n", frame->d_sample_rate);*/
     /*printf("-%u, %u, %u-\n", timestamp, bt_edr_conn_master_to_local_time(hdl->bt_addr, timestamp), local_time);*/
     hdl->dts += pcm_frames;
-    a2dp_stream_bandwidth_detect_handler(hdl->stream_ctrl, pcm_frames, hdl->sample_rate);
+    hdl->pcm_frames = pcm_frames;
 }
 
 static int a2dp_stream_ts_enable_detect(struct a2dp_file_hdl *hdl, u8 *packet, int *drop_state)

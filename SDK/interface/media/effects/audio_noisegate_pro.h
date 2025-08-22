@@ -1,7 +1,6 @@
 #ifndef _AUDIO_NOISEGATE_PRO_H_
 #define _AUDIO_NOISEGATE_PRO_H_
 
-#include "media/audio_stream.h"
 #include "effects/noisegate_pro_api.h"
 
 struct noisegate_pro_tool_update_parm {

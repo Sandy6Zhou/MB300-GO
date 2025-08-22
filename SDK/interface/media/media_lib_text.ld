@@ -109,6 +109,9 @@
 
     *(.sbc_code)
     *(.sbc_const)
+	*(.sbc_dec.text.cache.L2.const)
+	*(.sbc_dec.text.cache.L2.run)
+
     *(.sbc_eng_code)
     *(.sbc_eng_const)
     *(.bt_aac_dec.text)

@@ -7,7 +7,7 @@
 #include "btstack/le/ble_api.h"
 #include "btstack/le/att.h"
 
-#define ATT_OVER_EDR_DEMO_EN          1//enalbe att_over_edr_demo
+#define ATT_OVER_EDR_DEMO_EN          0//enalbe att_over_edr_demo
 
 /*
 开启功能需要在apps/common/config/bt_profile_config.c中修改

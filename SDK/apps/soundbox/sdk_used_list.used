@@ -7,6 +7,9 @@
 source_node_adapter
 
 
+
+
+
 mixer_node_adapter
 
 
@@ -37,7 +40,7 @@ key_tone_file_plug
 
 
 sbc_hwaccel
-sbc_decoder_plug
+sbc_decoder_hw_plug
 msbc_decoder_plug
 
 

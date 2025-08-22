@@ -56,6 +56,18 @@ enum audio_module {
     AUD_MODULE_VIRTUAL_BASS_PRO_TMPBUF,
     AUD_MODULE_MIXER,
     AUD_MODULE_LHDC_X,
+    AUD_MODULE_SPECTRUM,
+    AUD_MODULE_SPECTRUM_ADV,
+    AUD_MODULE_INDICATOR,
+    AUD_MODULE_MUSIC_PLC,
+    AUD_MODULE_VIBRATO,
+    AUD_MODULE_VIBRATO_TMP,
+    AUD_MODULE_HARMONY,
+    AUD_MODULE_HARMONY_TMP,
+    AUD_MODULE_TREMOLO,
+    AUD_MODULE_TREMOLO_TMP,
+
+
     //Codec Modules
     AUD_MODULE_AAC,
     AUD_MODULE_AAC_ENERGY,
@@ -119,6 +131,17 @@ static const char *mm_module[] = {
     "VbassProTmp",
     "Mixer",
     "LHDC_X",
+    "Spectrum",
+    "SpectrumAdv",
+    "Indicator",
+    "MusicPLC",
+    "Vibrato",
+    "VibratoTmp",
+    "Harmony",
+    "HarmonyTmp",
+    "Tremolo",
+    "TremoloTmp",
+
     //Codec Modules
     "AAC_Dec",
     "AACEnergy",

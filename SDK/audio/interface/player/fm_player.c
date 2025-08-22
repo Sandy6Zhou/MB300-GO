@@ -14,6 +14,7 @@
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
+#include "audio_effect_demo.h"
 struct fm_player {
     struct jlstream *stream;
     s8 fm_pitch_mode;
@@ -29,13 +30,16 @@ static void fm_player_callback(void *private_data, int event)
     switch (event) {
     case STREAM_EVENT_START:
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
-        musci_vocal_remover_update_parm();
+        music_vocal_remover_update_parm();
 #endif
 #if AUDIO_VBASS_LINK_VOLUME
         vbass_link_volume();
 #endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
+#endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
 #endif
         break;
     }

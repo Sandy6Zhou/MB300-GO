@@ -119,7 +119,9 @@ void phone_second_call_ring_play_start(void *priv)
 
 int bt_phone_income(u8 after_conn, u8 *bt_addr)
 {
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_PHONE_START);
+#endif
 
 #if TCFG_BT_INBAND_RING
 #else
@@ -205,14 +207,18 @@ int bt_phone_hangup(u8 *bt_addr)
             }
         }
     }
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_PHONE_STOP);
+#endif
 
     return 0;
 
 }
 static int bt_phone_out(u8 *bt_addr)
 {
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_PHONE_START);
+#endif
 
     esco_dump_packet = ESCO_DUMP_PACKET_CALL;
     g_bt_hdl.phone_income_flag = 0;
@@ -278,7 +284,9 @@ static void esco_smart_voice_detect_handler(void)
 
 int bt_phone_esco_play(u8 *bt_addr)
 {
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_PHONE_START);
+#endif
 
     puts("<<<<<<<<<<<esco_dec_stat\n");
     mem_stats();
@@ -345,7 +353,9 @@ int bt_phone_esco_stop(u8 *bt_addr)
         return 0;
     }
     pbg_user_mic_fixed_deal(0);
+#if TCFG_LE_AUDIO_APP_CONFIG
     le_audio_scene_deal(LE_AUDIO_PHONE_STOP);
+#endif
 
     return 0;
 
@@ -357,16 +367,20 @@ int bt_phone_last_call_type(u8 *bt_addr, u8 bt_value)
 }
 int bt_phone_siri(u8 *bt_addr, u8 bt_value)
 {
+#if TCFG_LE_AUDIO_APP_CONFIG
     if (bt_value) {
         le_audio_scene_deal(LE_AUDIO_PHONE_START);
     }
+#endif
 
     app_var.siri_stu = bt_value;
     esco_dump_packet = ESCO_DUMP_PACKET_DEFAULT;
 
+#if TCFG_LE_AUDIO_APP_CONFIG
     if (!bt_value) {
         le_audio_scene_deal(LE_AUDIO_PHONE_STOP);
     }
+#endif
 
     return 0;
 }

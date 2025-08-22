@@ -129,12 +129,7 @@ static int get_pipeline_uuid(const char *name)
     }
     if (!strcmp(name, "ai_rx_media")) {
         clock_alloc("ai_rx", 48 * 1000000UL);
-
-#if TCFG_INTELLIGENT_DUER
-        return PIPELINE_UUID_MEDIA; //小度用媒体的pipeline_uuid
-#else
         return PIPELINE_UUID_A2DP;
-#endif
     }
 
     if (!strcmp(name, "mic_effect")) {
@@ -648,9 +643,11 @@ int jlstream_event_notify(enum stream_event event, int arg)
         ret = get_switch_node_callback((const char *)arg);
         break;
 #endif
+#if TCFG_CHANNEL_MERGE_NODE_ENABLE
     case STREAM_EVENT_GET_MERGER_CALLBACK:
         ret = get_merge_node_callback((const char *)arg);
         break;
+#endif
     default:
         break;
     }

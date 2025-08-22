@@ -1,4 +1,5 @@
 
+
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma bss_seg(".spdif.data.bss")
 #pragma data_seg(".spdif.data")
@@ -33,6 +34,9 @@
 #include "bt_key_func.h"
 #include "btstack_rcsp_user.h"
 #include "app_le_auracast.h"
+#if LE_AUDIO_LOCAL_MIC_EN
+#include "le_audio_mix_mic_recorder.h"
+#endif
 
 struct spdif_ctl {
     struct spdif_file_cfg *p_spdif_cfg;	//spdif的配置参数信息
@@ -85,6 +89,19 @@ int spdif_app_msg_handler(int *msg)
         if (!get_le_audio_curr_role()) {
             // 非广播
         } else {
+#if LE_AUDIO_LOCAL_MIC_EN
+            if (is_local_mix_mic_le_audio_runing() == 0) {
+                if (get_le_audio_curr_role() == 2) {
+                    //如果此时是接收端, 则需要转为发送端
+                    app_spdif_hd.mute_mark = 0;
+                } else {
+                    //如果此时是发送端, 则需要转为接收端
+                    app_spdif_hd.mute_mark = 1;
+                }
+            } else {
+                //mic 还在广播
+            }
+#else
             if (get_le_audio_curr_role() == 2) {
                 //如果此时是接收端, 则需要转为发送端
                 app_spdif_hd.mute_mark = 0;
@@ -92,10 +109,9 @@ int spdif_app_msg_handler(int *msg)
                 //如果此时是发送端, 则需要转为接收端
                 app_spdif_hd.mute_mark = 1;
             }
+#endif
         }
 #endif
-#endif
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
         if (get_le_audio_curr_role()) {
             le_audio_spdif_volume_pp();
         }
@@ -111,9 +127,11 @@ int spdif_app_msg_handler(int *msg)
     case APP_MSG_MUSIC_PREV:
         break;
     case APP_MSG_SPDIF_START:
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             /* break; */
         }
+#endif
 
         if ((uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff) && app_spdif_hd.p_spdif_cfg->hdmi_det_mode == HDMI_DET_UNUSED) {
             hdmi_cec_init(uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port), 0);
@@ -507,20 +525,100 @@ static int spdif_local_audio_close(void)
 
 static void *spdif_tx_le_audio_open(void *args)
 {
-    int err;
+    int err = -1;
     void *le_audio = NULL;
+    struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
+    struct le_audio_stream_format *le_audio_fmt = &params->fmt;
+    memcpy(&app_spdif_hd.params, params, sizeof(struct le_audio_stream_params));
     y_printf(">>>>>>>>>>>>>>> spdif_tx_le_audio_open!\n");
-    if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
-        if ((uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff) && app_spdif_hd.p_spdif_cfg->hdmi_det_mode == HDMI_DET_UNUSED) {
-            hdmi_cec_init(uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port), 0);
-        }
-        //打开广播音频播放
-        struct le_audio_stream_params *params = (struct le_audio_stream_params *)args;
+    if ((uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port) != 0xff) && app_spdif_hd.p_spdif_cfg->hdmi_det_mode == HDMI_DET_UNUSED) {
+        hdmi_cec_init(uuid2gpio(app_spdif_hd.p_spdif_cfg->cec_io_port), 0);
+    }
+
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio = get_local_mix_mic_le_audio();
+    if (le_audio == NULL) {
         le_audio = le_audio_stream_create(params->conn, &params->fmt);
-        struct le_audio_stream_format *le_audio_fmt = &params->fmt;
-        memcpy(&app_spdif_hd.params, params, sizeof(struct le_audio_stream_params));
+        app_spdif_hd.le_audio = le_audio;
+        //将le_audio 句柄赋值回local mic 的 g_le_audio 句柄
+        set_local_mix_mic_le_audio(le_audio);
+        if (is_le_audio_spdif_open()) {
+            r_printf(">> spdif LE_AUDIO is opened! return!\n");
+            return le_audio;
+        }
+        if (spdif_player_runing()) {
+            spdif_player_close();
+        }
+        if (params && le_audio) {
+            err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
+            if (err != 0) {
+                ASSERT(0, "spdif recorder open fail");
+            }
+#if LEA_LOCAL_SYNC_PLAY_EN
+            err = le_audio_player_open(le_audio, params);
+            if (err != 0) {
+                ASSERT(0, "spdif player open fail");
+            }
+#endif
+        } else {
+            // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
+            r_printf("=========================> err %d, param:%x, le_audio:%x\n", __LINE__, (u32)params, (u32)le_audio);
+        }
+    } else {
+        //此时mic广播已经打开
+        app_spdif_hd.le_audio = le_audio;
+        if (is_le_audio_spdif_open()) {
+            r_printf(">> spdif LE_AUDIO is opened! return!\n");
+            return le_audio;
+        }
+        if (spdif_player_runing()) {
+            spdif_player_close();
+        }
+        if (params && le_audio) {
+            err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
+            if (err != 0) {
+                ASSERT(0, "spdif recorder open fail");
+            }
+        } else {
+            // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
+            r_printf("=========================> err %d, param:%x, le_audio:%x\n", __LINE__, (u32)params, (u32)le_audio);
+        }
+    }
+    local_le_audio_music_start_deal();
+#else
+
+    if (1) {//(get_iis_play_status() == LOCAL_AUDIO_PLAYER_STATUS_PLAY) {
+        //打开广播音频播放
+        le_audio = le_audio_stream_create(params->conn, &params->fmt);
         app_spdif_hd.le_audio = le_audio;
     }
+    //打开广播数据流
+    if (is_le_audio_spdif_open()) {
+        r_printf(">> spdif LE_AUDIO is opened! return!\n");
+        return le_audio;
+    }
+    if (spdif_player_runing()) {
+        spdif_player_close();
+    }
+    if (params && le_audio) {
+        err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "spdif recorder open fail");
+        }
+#if LEA_LOCAL_SYNC_PLAY_EN
+        err = le_audio_player_open(le_audio, params);
+        if (err != 0) {
+            ASSERT(0, "spdif player open fail");
+        }
+#endif
+    } else {
+        // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
+        r_printf("=========================> err, param:%x, le_audio:%x\n", (u32)params, (u32)le_audio);
+    }
+#endif
+
+    spdif_stream_start();
+
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     //修复spdif模式下反复开关广播后，在广播下按下pp键，本地mute住但接收端依旧出声的问题
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_START);
@@ -530,9 +628,34 @@ static void *spdif_tx_le_audio_open(void *args)
     //修复spdif模式下反复开关广播后，在广播下按下pp键，本地mute住但接收端依旧出声的问题
     update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
+    <<< <<< < 6306b3cad484cd27a3f64d02d87c87f7b6b65c81
+
+    //打开广播数据流
+    if (is_le_audio_spdif_open()) {
+        r_printf(">> spdif LE_AUDIO is opened! return!\n");
+        return le_audio;
+    }
+    if (spdif_player_runing()) {
+        spdif_player_close();
+    }
+    if (params && le_audio) {
+        struct le_audio_stream_format *le_audio_fmt = &params->fmt;
+        err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
+        if (err != 0) {
+            ASSERT(0, "spdif recorder open fail");
+        }
+#if LEA_LOCAL_SYNC_PLAY_EN
+        err = le_audio_player_open(le_audio, params);
+        if (err != 0) {
+            ASSERT(0, "spdif player open fail");
+        }
+#endif
+    } else {
+        // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
+        r_printf("=========================> err, param:%x, le_audio:%x\n", (u32)params, (u32)le_audio);
+    }
+
     spdif_stream_start();
-
-
     return le_audio;
 }
 
@@ -543,6 +666,13 @@ static int spdif_tx_le_audio_close(void *le_audio)
         return -EPERM;
     }
     spdif_stream_stop();
+
+#if LE_AUDIO_LOCAL_MIC_EN
+    le_audio_spdif_recorder_close();
+    local_le_audio_music_stop_deal();
+    app_spdif_hd.le_audio = NULL;
+
+#else
     //关闭广播音频播放
 #if LEA_LOCAL_SYNC_PLAY_EN
     le_audio_player_close(le_audio);
@@ -550,6 +680,8 @@ static int spdif_tx_le_audio_close(void *le_audio)
     le_audio_spdif_recorder_close();
     le_audio_stream_free(le_audio);
     app_spdif_hd.le_audio = NULL;
+#endif
+
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
     update_app_broadcast_deal_scene(LE_AUDIO_MUSIC_STOP);
 #endif
@@ -595,6 +727,25 @@ static int spdif_rx_le_audio_close(void *rx_audio)
 static int le_audio_spdif_volume_pp(void)
 {
     int ret = 0;
+#if LE_AUDIO_LOCAL_MIC_EN
+    int mic_run_flag = is_local_mix_mic_le_audio_runing();
+    if (mic_run_flag == 0) {
+        if (!app_spdif_hd.mute_mark) {
+            //mute_mark = 0;
+            ret = le_audio_scene_deal(LE_AUDIO_MUSIC_START);
+        } else {
+            //mute_mark = 1;
+            ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
+        }
+    } else {
+        if (app_spdif_hd.mute_mark == 1) {
+            broadcast_audio_cur_mode_tx_stream_close();
+        } else {
+            broadcast_audio_cur_mode_tx_stream_open();
+        }
+    }
+#else
+
     if (!app_spdif_hd.mute_mark) {
         //mute_mark = 0;
         y_printf(">>>>>>>>>>> %s, le_audio_scene_deal(LE_AUDIO_MUSIC_START)\n", __func__);
@@ -604,6 +755,7 @@ static int le_audio_spdif_volume_pp(void)
         y_printf(">>>>>>>>>>> %s, le_audio_scene_deal(LE_AUDIO_MUSIC_STOP)\n", __func__);
         ret = le_audio_scene_deal(LE_AUDIO_MUSIC_STOP);
     }
+#endif
     return ret;
 }
 

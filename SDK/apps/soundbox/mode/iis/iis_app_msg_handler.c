@@ -27,10 +27,11 @@ int iis_app_msg_handler(int *msg)
         break;
     case APP_MSG_IIS_START:
         printf("app msg iis start\n");
-
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_APP_MODE_ENTER) > 0) {
             break;
         }
+#endif
 
         iis_start();
         /* UI_REFLASH_WINDOW(true);//刷新主页并且支持打断显示 */

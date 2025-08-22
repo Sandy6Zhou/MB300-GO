@@ -20,7 +20,6 @@
 #include "app_config.h"
 #include "system/includes.h"
 #include "media/includes.h"
-#include "asm/audio_adc.h"
 #include "audio_config.h"
 #include "media/audio_def.h"
 
@@ -62,7 +61,11 @@ const int config_jlstream_node_report_enable = TCFG_CFG_TOOL_ENABLE;
 #endif
 const int config_media_24bit_enable = MEDIA_24BIT_ENABLE;
 
+#if TCFG_APP_RECORD_EN
 const int CONFIG_SEAMLESS_RECORDER_ENABLE = 1;
+#else
+const int CONFIG_SEAMLESS_RECORDER_ENABLE = 0;
+#endif
 
 #if TCFG_JLSTREAM_TURBO_ENABLE
 const int CONFIG_JLSTREAM_TURBO_ENABLE = 1;
@@ -992,15 +995,15 @@ const char log_tag_const_i_AUDIO_STREAM  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_AUDIO_STREAM  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_STREAM  = CONFIG_DEBUG_LIB(TRUE);
 
-const char log_tag_const_v_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_c_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_AUDIO_DECODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_v_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_c_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_AUDIO_DECODER  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_AUDIO_DECODER  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_DECODER  = CONFIG_DEBUG_LIB(TRUE);
 
-const char log_tag_const_v_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_c_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_v_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_c_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(TRUE);
 const char log_tag_const_e_AUDIO_ENCODER  = CONFIG_DEBUG_LIB(TRUE);
 

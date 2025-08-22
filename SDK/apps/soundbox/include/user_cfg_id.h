@@ -67,6 +67,13 @@
 #define     VM_CHARGE_PROGI_VOLT            55//恒流充电的PROGI
 
 
+#define     CFG_FMNA_BLE_ADDRESS_INFO        175
+#define     CFG_FMNA_SOFTWARE_AUTH_START     176
+#define     CFG_FMNA_SOFTWARE_AUTH_END       (CFG_FMNA_SOFTWARE_AUTH_START + 4)
+#define     CFG_FMNA_SOFTWARE_AUTH_FLAG      181
+#define     CFG_FMY_INFO                     182
+
+
 //=================================================================================//
 //                             用户自定义配置项 暂时只能使用 [1 ~ 49]                            //
 //=================================================================================//

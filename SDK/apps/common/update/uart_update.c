@@ -61,6 +61,7 @@ static u32 retry_time = 4;//重试n次
 
 static protocal_frame_t protocal_frame __attribute__((aligned(4)));
 u32 update_baudrate = 9600;             //初始波特率
+static u8 update_start = 0;
 /* static uart_update_cfg  update_cfg; */
 
 u32 uart_dev_receive_data(void *buf, u32 relen, u32 addr);
@@ -256,6 +257,7 @@ __recheck:
                         break;
                     case CMD_UART_UPDATE_READY:
                         log_info("CMD_UART_UPDATE_READY\n");
+                        update_start  = 1;
                         os_taskq_post_msg(THIS_TASK_NAME, 1, MSG_UART_UPDATE_READY);
                         break;
                     default:
@@ -398,6 +400,12 @@ bool uart_send_update_len(u32 update_len)
     return uart_update_cmd(CMD_SEND_UPDATE_LEN, cmd, 4);
 }
 
+bool get_uart_update_sta(void)
+{
+    return update_start;
+}
+
+
 
 u16 uart_f_open(void)
 {
@@ -449,8 +457,7 @@ static void update_loader_download_task(void *p)
 {
     int ret;
     int msg[8];
-    static u8 update_start = 0;
-    const uart_bus_t *uart_bus;
+    /*const uart_bus_t *uart_bus;*/
     u32 uart_rxcnt = 0;
 
     while (1) {

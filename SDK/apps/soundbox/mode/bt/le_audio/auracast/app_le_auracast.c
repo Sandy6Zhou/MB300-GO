@@ -1727,15 +1727,25 @@ int app_auracast_deal(int scene)
 
     switch (scene) {
     case LE_AUDIO_APP_MODE_ENTER:
-        if (!auracast_app_mode_exit) {
+        /*调用LE_AUDIO_APP_MODE_ENTER时要强制关开广播，用来解决切模式播放提示音的时候按键开了广播，
+        提示音结束后广播没法根据当前音频的情况去open发送端或者接收端*/
+        if (get_auracast_role() != 0) {
+            log_info("LE_AUDIO_APP_MODE_CLOSE");
+            app_auracast_suspend();
+            le_audio_ops_unregister();
+            le_audio_switch_ops = NULL;
+        }
+        /* if (!auracast_app_mode_exit) {
             log_error("app_auracast_deal,scene has entered");
             break;
-        }
+        } */
+
         log_info("LE_AUDIO_APP_MODE_ENTER");
         //进入当前模式
-        auracast_app_mode_exit = 0;
+
         config_auracast_as_master = 1;
     case LE_AUDIO_APP_OPEN:
+        auracast_app_mode_exit = 0;  //解决广播状态+切模式播放提示音的时候，按键广播切到单箱未跑LE_AUDIO_APP_MODE_ENTER导致auracast_app_mode_exit依旧是1,后面open广播再close广播时因auracast_app_mode_exit=1没开本地数据流
         mode = app_get_current_mode();
         if (mode) {
             le_audio_ops_register(mode->name);

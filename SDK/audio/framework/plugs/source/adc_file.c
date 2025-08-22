@@ -5,7 +5,7 @@
 #pragma code_seg(".adc_file.text")
 #endif
 #include "source_node.h"
-#include "asm/audio_adc.h"
+#include "audio_adc.h"
 #include "audio_config.h"
 #include "adc_file.h"
 #include "gpio_config.h"
@@ -714,6 +714,12 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 static int adc_ioc_set_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 {
     hdl->sample_rate = fmt->sample_rate;
+    if (hdl->ch_num != AUDIO_CH_NUM(fmt->channel_mode)) {
+        //节点配置的声道类型与协商输出的声道类型不一致。
+        printf("adc channel number set error, %d, %d\n", hdl->ch_num, AUDIO_CH_NUM(fmt->channel_mode));
+        return -1;
+    }
+
     return 0;
 }
 
@@ -929,6 +935,12 @@ static int adc_ioctl(void *_hdl, int cmd, int arg)
         break;
     case NODE_IOC_SET_SCENE:
         hdl->scene = arg;
+        //adc节点需要根据场景配置位宽
+        if ((hdl->scene == STREAM_SCENE_ESCO) || (hdl->scene == STREAM_SCENE_PC_MIC) || (hdl->scene == STREAM_SCENE_LEA_CALL)) {
+            adc_hdl.bit_width = 0;
+        } else {
+            adc_hdl.bit_width = audio_general_in_dev_bit_width();
+        }
         break;
     case NODE_IOC_SET_PRIV_FMT:
         hdl->irq_points = arg;

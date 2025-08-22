@@ -15,7 +15,7 @@
 #include "le_connected.h"
 #include "app_le_auracast.h"
 
-#if(TCFG_USER_TWS_ENABLE == 0)
+#if (TCFG_APP_BT_EN && TCFG_USER_TWS_ENABLE == 0)
 
 #define MAX_PAGE_DEVICE_NUM 2
 
@@ -517,6 +517,12 @@ static int dual_conn_hci_event_handler(int *_event)
     if (app_var.goto_poweroff_flag) {
         return 0;
     }
+#if (TCFG_BT_BACKGROUND_ENABLE == 0 && TCFG_KBOX_1T3_MODE_EN)
+    if (!app_in_mode(APP_MODE_BT)) {
+        return 0;
+    }
+#endif
+
     int is_remote_test = bt_get_remote_test_flag();
 
     switch (event->event) {

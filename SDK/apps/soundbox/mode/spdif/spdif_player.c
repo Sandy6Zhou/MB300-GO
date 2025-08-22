@@ -1,3 +1,4 @@
+
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma bss_seg(".spdif_player.data.bss")
 #pragma data_seg(".spdif_player.data")
@@ -26,6 +27,7 @@
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
+#include "audio_effect_demo.h"
 
 #if TCFG_SPDIF_ENABLE
 
@@ -59,6 +61,9 @@ static void spdif_player_callback(void *private_data, int event)
 #endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
+#endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
 #endif
         break;
     }
@@ -271,34 +276,7 @@ void spdif_open_player(void)
     printf("================ open spdif player\n");
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN))
     if (get_le_audio_curr_role() == 1) { //打开广播的数据流
-        struct le_audio_stream_params *params   =  spdif_get_le_audio_params();
-        void *le_audio = spdif_get_le_audio_hdl();
-        int err = -1;
-        if (g_spdif_player) {
-            spdif_player_close();
-        }
-        if (params && le_audio) {
-            struct le_audio_stream_format *le_audio_fmt = &params->fmt;
-            err = le_audio_spdif_recorder_open((void *) & (params->fmt), le_audio, params->latency);
-            if (err != 0) {
-                ASSERT(0, "spdif recorder open fail");
-            }
-#if LEA_LOCAL_SYNC_PLAY_EN
-            err = le_audio_player_open(le_audio, params);
-            if (err != 0) {
-                ASSERT(0, "spdif player open fail");
-            }
-#endif
-        } else {
-            // 当spdif开启广播时，短时间内快速按pp键，可能会出现的情况, le_audio==NULL
-            if (params == NULL) {
-                r_printf("=========================> [%s, %d] param == NULL\n", __func__, __LINE__);
-            }
-            if (le_audio == NULL) {
-                r_printf("=========================> [%s, %d] le_audio == NULL\n", __func__, __LINE__);
-            }
-            sys_timeout_add(NULL, delay_open_spdif_player, 1000);
-        }
+        y_printf(">> Spdif_LE_AUDIO Control in spdif_tx_le_open!");
     }
 #else
     if (0) {}
@@ -310,7 +288,7 @@ void spdif_open_player(void)
             audio_pitch_default_parm_set(app_var.pitch_mode);
             spdif_file_pitch_mode_init(app_var.pitch_mode);
 #endif
-            musci_vocal_remover_update_parm();
+            music_vocal_remover_update_parm();
         }
     }
 }

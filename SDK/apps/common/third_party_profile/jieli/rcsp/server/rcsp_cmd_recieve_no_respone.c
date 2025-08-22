@@ -28,17 +28,16 @@
 void rcsp_cmd_recieve_no_respone(void *priv, u8 OpCode, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     rcsp_printf("cmd_recieve_no_respone, %x\n", OpCode);
-    switch (OpCode) {
-    default:
 #if JL_RCSP_EXTRA_FLASH_OPT
-        if (0 == JL_rcsp_extra_flash_cmd_no_resp(priv, OpCode, data, len)) {
-            break;
-        }
-#endif
-        if (0 == JL_rcsp_sensors_log_notify(priv, OpCode, data, len)) {
-            break;
-        }
+    if (0 == JL_rcsp_extra_flash_cmd_no_resp(priv, OpCode, data, len)) {
+        break;
     }
+#endif
+#if JL_RCSP_SENSORS_DATA_OPT
+    if (0 == JL_rcsp_sensors_log_notify(priv, OpCode, data, len)) {
+        break;
+    }
+#endif
 }
 #endif//RCSP_MODE
 

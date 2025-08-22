@@ -31,7 +31,7 @@
 #include "tws_a2dp_play.h"
 #include "app_le_auracast.h"
 
-#if(TCFG_USER_TWS_ENABLE)
+#if(TCFG_APP_BT_EN && TCFG_USER_TWS_ENABLE)
 
 
 static u8 g_play_addr[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -199,15 +199,17 @@ static void tws_a2dp_play_in_task(u8 *data)
         bt_stop_a2dp_slience_detect(bt_addr);
         memcpy(g_play_addr, bt_addr, 6);
         a2dp_player_low_latency_enable(tws_api_get_low_latency_state());
+#if TCFG_LE_AUDIO_APP_CONFIG
         if (le_audio_scene_deal(LE_AUDIO_A2DP_START) > 0) {
             break;
         }
+#endif
         int err = a2dp_player_open(bt_addr);
         if (err == -EBUSY) {
             bt_start_a2dp_slience_detect(bt_addr, 50); //丢掉50包(约1s)之后才开始能量检测,过滤掉提示音，避免提示音引起抢占
         }
         /* memset(g_play_addr, 0xff, 6); */
-        musci_vocal_remover_update_parm();
+        music_vocal_remover_update_parm();
         break;
     case CMD_A2DP_CLOSE:
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
