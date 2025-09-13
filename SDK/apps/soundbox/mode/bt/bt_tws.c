@@ -911,7 +911,10 @@ int bt_tws_connction_status_event_handler(int *msg)
 #if TCFG_AUDIO_ANC_ENABLE
         bt_tws_sync_anc();
 #endif
+
+#if TCFG_SYS_LVD_EN
         tws_sync_bat_level(); //同步电量到对耳
+#endif
         bt_tws_sync_volume();
 
 #if TCFG_EAR_DETECT_ENABLE
@@ -933,7 +936,9 @@ int bt_tws_connction_status_event_handler(int *msg)
         work_state = evt->args[4];
         log_info("tws_event_connection_detach: state: %x,%x %x\n", gtws.state, work_state, reason);
 
+#if TCFG_SYS_LVD_EN
         app_power_set_tws_sibling_bat_level(0xff, 0xff);
+#endif
 
 #if TCFG_TEST_BOX_ENABLE
         if (testbox_get_status()) {
@@ -1011,7 +1016,10 @@ int bt_tws_connction_status_event_handler(int *msg)
     case TWS_EVENT_REMOVE_PAIRS:
         log_info("tws_event_remove_pairs\n");
         bt_tws_remove_pairs();
+
+#if TCFG_SYS_LVD_EN
         app_power_set_tws_sibling_bat_level(0xff, 0xff);
+#endif
         break;
     case TWS_EVENT_ROLE_SWITCH:
         r_printf("TWS_EVENT_ROLE_SWITCH=%d\n", role);
