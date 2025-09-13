@@ -99,6 +99,8 @@
 #endif
 
 [EXTRA_CFG_PARAM]
+OTP_CFG_SIZE = 256;
+
 #if CONFIG_DOUBLE_BANK_ENABLE
 BR22_TWS_DB = YES;	//dual bank flash framework enable
 FLASH_SIZE = CONFIG_FLASH_SIZE;		//flash_size cfg
@@ -242,8 +244,6 @@ CONFIG_CUSTOM_CFG2_TYPE = CONFIG_CUSTOM_CFG2_VALUE;
 #ifdef CONFIG_CUSTOM_CFG3_TYPE
 CONFIG_CUSTOM_CFG3_TYPE = CONFIG_CUSTOM_CFG3_VALUE;
 #endif
-/* [BURNER_PASSTHROUGH_CFG] */
-/* FLASH_WRITE_PROTECT = YES; */
 //#############################################################################################################################################
 
 #ifndef CONFIG_VM_ADDR
@@ -383,6 +383,7 @@ CAT2(CONFIG_RESERVED_AREA2, FILE) = CONFIG_RESERVED_AREA2_FILE;
 #endif
 
 #endif
+
 /*
  ****************************************************************************
  *								ANC配置区
@@ -485,14 +486,17 @@ REALME_LEN = 0x1000;
 REALME_OPT = 0;
 #endif
 
-[RESERVED_EXPAND_CONFIG]
 #if CONFIG_FINDMY_INFO_ENABLE
-//INI里面有个规则是VM一定会放到最前面
 
+[RESERVED_EXPAND_CONFIG]
 #if (CONFIG_FLASH_SIZE == 0x100000)
-#define CONFIG_FINDMY_INFO_ADDR	                0xFD000 //config user space
-#else
-#define CONFIG_FINDMY_INFO_ADDR	                0x1FD000 //config user space
+#define CONFIG_FINDMY_INFO_ADDR	                0xFC000 //config user space
+
+#elif (CONFIG_FLASH_SIZE == 0x200000)
+#define CONFIG_FINDMY_INFO_ADDR	                0x1FC000 //config user space
+
+#elif (CONFIG_FLASH_SIZE == 0x400000)
+#define CONFIG_FINDMY_INFO_ADDR	                0x3FC000 //config user space
 #endif
 
 #define CONFIG_FINDMY_INFO_LEN	                0x2000  //need 8K
@@ -506,6 +510,10 @@ FINDMY_OPT = CONFIG_FINDMY_INFO_OPT;
 [FW_ADDITIONAL]
 FILE_LIST = (file = file_authrunFindmy.tkn: type = 0xec);
 #endif
+
+
+[BURNER_PASSTHROUGH_CFG]
+FLASH_WRITE_PROTECT = YES;
 
 [BURNER_CONFIG]
 SIZE = CONFIG_BURNER_INFO_SIZE;

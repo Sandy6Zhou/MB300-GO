@@ -56,3 +56,22 @@ struct auracast_cfg_t *get_auracast_cfg_data(u8 mode)
     return &args[index];
 }
 
+
+//获取aurcast 帧长
+u16 get_auracast_frame_duration(void)
+{
+    struct auracast_cfg_t *cfg_info = get_auracast_cfg_data(app_get_current_mode()->name);
+    if (cfg_info) {
+        switch (cfg_info->variant) {
+        case 0:
+            return 75;
+        case 1:
+            return 100;
+        default:
+            break;
+        }
+    }
+    return 0;
+}
+
+

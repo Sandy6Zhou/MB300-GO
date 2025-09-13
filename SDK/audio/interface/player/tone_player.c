@@ -12,6 +12,7 @@
 #include "jldemuxer.h"
 #include "app_config.h"
 #include "app_tone.h"
+#include "audio_dac.h"
 
 #if TCFG_TONE_NODE_ENABLE
 
@@ -139,6 +140,7 @@ static void tone_player_callback(void *_player_id, int event)
 
         if (!file) {
             jlstream_release(player->stream);
+            DAC_NOISEGATE_ON();
 
             list_del(&player->entry);
 __try_play_next_tone:
@@ -367,6 +369,7 @@ static int tone_player_start(struct tone_player *player)
     }
     jlstream_set_dec_file(player->stream, player, &tone_file_ops);
 
+    DAC_NOISEGATE_OFF();
     err = jlstream_start(player->stream);
     if (err) {
         goto __exit1;
@@ -376,6 +379,7 @@ static int tone_player_start(struct tone_player *player)
 
 __exit1:
     jlstream_release(player->stream);
+    DAC_NOISEGATE_ON();
 __exit0:
     list_del(&player->entry);
     tone_player_free(player);
@@ -602,6 +606,7 @@ void tone_player_stop()
         if (player->stream) {
             jlstream_stop(player->stream, 50);
             jlstream_release(player->stream);
+            DAC_NOISEGATE_ON();
         }
         tone_player_free(player);
     }

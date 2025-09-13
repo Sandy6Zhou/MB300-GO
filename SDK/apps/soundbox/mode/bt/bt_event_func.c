@@ -336,7 +336,11 @@ int bt_get_battery_value()
 {
     //取消默认蓝牙定时发送电量给手机，需要更新电量给手机使用USER_CTRL_HFP_CMD_UPDATE_BATTARY命令
     /*电量协议的是0-9个等级，请比例换算*/
+#if TCFG_SYS_LVD_EN
     return get_cur_battery_level();
+#else
+    return 9;
+#endif
 }
 
 /*----------------------------------------------------------------------------*/

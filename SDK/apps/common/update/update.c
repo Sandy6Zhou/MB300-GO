@@ -664,7 +664,9 @@ static void update_common_state_cbk(update_mode_info_t *info, u32 state, void *p
 static int app_update_init(void)
 {
     update_module_init(update_common_state_cbk);
+#if TCFG_UPDATE_BLE_TEST_EN || TCFG_UPDATE_BT_LMP_EN
     testbox_update_init();
+#endif
     return 0;
 }
 

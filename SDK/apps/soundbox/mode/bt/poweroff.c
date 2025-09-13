@@ -188,9 +188,9 @@ void sys_enter_soft_poweroff(enum poweroff_reason reason)
 #if TCFG_APP_BT_EN
     void bt_sniff_disable();
     bt_sniff_disable();
-#endif
 
     bt_stop_a2dp_slience_detect(NULL);
+#endif
 
 #if (TCFG_KBOX_1T3_MODE_EN && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)))
     app_broadcast_close(APP_BROADCAST_STATUS_STOP);

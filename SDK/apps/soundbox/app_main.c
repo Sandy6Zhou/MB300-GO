@@ -70,7 +70,7 @@
 
 /*任务列表 */
 const struct task_info task_info_table[] = {
-#if LE_AUDIO_MIX_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN
+#if LE_AUDIO_MIX_MIC_EFFECT_EN
     {"app_core",            1,     0,   1024 * 2,   768 },
 #else
     {"app_core",            1,     0,   1024,   768 },
@@ -207,6 +207,10 @@ const struct task_info task_info_table[] = {
     {"periph_demo",       3,     0,   512,   0 },
     {"CVP_RefTask",	        4,	   0,   256,   128	},
     {"trim_task",	        4,	   0,   256,   128	},
+#if (TCFG_LLNS_DNS_NODE_ENABLE)
+    {"llns_dns",	        4,	   0,   256,   128	},
+    {"llns_dns1",	        4,	   0,   256,   128	},
+#endif
     {0, 0},
 };
 
@@ -430,7 +434,9 @@ static struct app_mode *app_task_init()
         msg[2] = APP_MODE_POWERON;
 
 #endif
+#if(TCFG_SYS_LVD_EN == 1)
         check_power_on_voltage();
+#endif
         app_poweron_check(update);
         app_send_message(APP_MSG_POWER_ON, 0);
     }

@@ -123,7 +123,7 @@ void board_init()
 
     gpadc_init();
 
-#if TCFG_BATTERY_CURVE_ENABLE
+#if TCFG_BATTERY_CURVE_ENABLE && TCFG_SYS_LVD_EN
     vbat_curve_init(g_battery_curve_table, ARRAY_SIZE(g_battery_curve_table));
 #endif
 

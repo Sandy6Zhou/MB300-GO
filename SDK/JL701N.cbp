@@ -87,6 +87,21 @@
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
 <Add option="-DTCFG_USER_SOUNDBOX_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_ICSD_ENABLE=0" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1" />
+<Add option="-DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1" />
+<Add option="-DEXPORT_SOMATOSENSORY_ENABLE=0" />
+<Add option="-DEXPORT_PLATFORM_ANC_ENABLE=0" />
+<Add option="-DEXPORT_PLATFORM_HW_MATH_VERSION=2" />
+<Add option="-DEXPORT_LE_AUDIO_SUPPORT=1" />
 <Add directory="interface" />
 <Add directory="interface/driver" />
 <Add directory="interface/driver/device" />
@@ -159,6 +174,7 @@
 <Add directory="apps/common/third_party_profile/mma_protocol" />
 <Add directory="apps/common/third_party_profile/realme_protocol" />
 <Add directory="apps/common/third_party_profile/swift_pair" />
+<Add directory="apps/common/third_party_profile/bt_fmy" />
 <Add directory="apps/common/third_party_profile/dma_protocol" />
 <Add directory="apps/common/third_party_profile/dma_protocol/dma_use_lib" />
 <Add directory="apps/common/third_party_profile/gfps_protocol" />
@@ -405,6 +421,7 @@
 <Add option="cpu/br28/liba/libdistortion.a" />
 <Add option="cpu/br28/liba/lib_frequency_compressor.a" />
 <Add option="cpu/br28/liba/lib_tremolo.a" />
+<Add option="cpu/br28/liba/lib_gain_mix.a" />
 <Add option="cpu/br28/liba/libFFT_pi32v2_OnChip.a" />
 <Add option="cpu/br28/liba/lib_wtg_dec.a" />
 <Add option="cpu/br28/liba/bfilterfun_lib.a" />
@@ -441,14 +458,14 @@
 <Add library="C:\JL\pi32\pi32v2-lib\r3-large\libm.a" />
 </Linker>
 <ExtraCommands>
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P build\genFileList.c -o build\fileList.dumy" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P build\fileList.c -o build\fileList.mk" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P apps\soundbox\sdk_used_list.c -o apps\soundbox\sdk_used_list.used" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P apps\soundbox\movable\section.c -o apps\soundbox\movable\section.txt" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P cpu\br28\sdk_ld.c -o cpu\br28\sdk.ld" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P cpu\br28\tools\download.c -o cpu\br28\tools\download.bat" />
+<Add before="$compiler $options $includes -D__LD__ -E -P build\genFileList.c -o build\fileList.dumy" />
+<Add before="$compiler $options $includes -D__LD__ -E -P build\fileList.c -o build\fileList.mk" />
+<Add before="$compiler $options $includes -D__LD__ -E -P apps\soundbox\sdk_used_list.c -o apps\soundbox\sdk_used_list.used" />
+<Add before="$compiler $options $includes -D__LD__ -E -P apps\soundbox\movable\section.c -o apps\soundbox\movable\section.txt" />
+<Add before="$compiler $options $includes -D__LD__ -E -P cpu\br28\sdk_ld.c -o cpu\br28\sdk.ld" />
+<Add before="$compiler $options $includes -D__LD__ -E -P cpu\br28\tools\download.c -o cpu\br28\tools\download.bat" />
 <Add before="tools\utils\fixbat.exe cpu\br28\tools\download.bat" />
-<Add before="$compiler $options $includes -DEXPORT_PLATFORM_HW_MATH_VERSION=2 -DEXPORT_PLATFORM_AUDIO_TDM_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_FM_ENABLE=1 -DEXPORT_PLATFORM_ANC_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_ALINK_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SPATIAL_EFFECT_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_SMART_VOICE_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_UART_SENDER_ENABLE=1 -DEXPORT_LE_AUDIO_SUPPORT=1 -DEXPORT_PLATFORM_AUDIO_WM8978_ENABLE=1 -D__LD__ -DEXPORT_SOMATOSENSORY_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_SPDIF_ENABLE=0 -DEXPORT_PLATFORM_ICSD_ENABLE=0 -DEXPORT_PLATFORM_AUDIO_EFFECT_DEMO_ENABLE=1 -DEXPORT_PLATFORM_AUDIO_PDM_ENABLE=1 -E -P cpu\br28\tools\isd_config_rule.c -o cpu\br28\tools\isd_config.ini" />
+<Add before="$compiler $options $includes -D__LD__ -E -P cpu\br28\tools\isd_config_rule.c -o cpu\br28\tools\isd_config.ini" />
 <Mode before="always" />
 <Add after="cpu\br28\tools\download.bat sdk" />
 <Mode after="always" />
@@ -510,6 +527,7 @@
 <Unit filename="apps/common/device/key/touch_key.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/key/touch_key.h" />
 <Unit filename="apps/common/device/key/uart_key.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/gSensor/gSensor_manage.h" />
 <Unit filename="apps/common/device/sensor/ir_sensor/ir_manage.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/sensor/ir_sensor/ir_manage.h" />
 <Unit filename="apps/common/device/sensor/ir_sensor/jsa1221.c"><Option compilerVer="CC"/></Unit>
@@ -675,6 +693,16 @@
 <Unit filename="apps/common/test/fs_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/ancs_client_demo/le_ancs_client.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/ancs_client_demo/le_ancs_client.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_cfg.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_fmna.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_fmna.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_modet.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_modet.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_ota.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_ota.h" />
+<Unit filename="apps/common/third_party_profile/bt_fmy/ble_fmy_profile.h" />
 <Unit filename="apps/common/third_party_profile/common/3th_profile_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/common/3th_profile_api.h" />
 <Unit filename="apps/common/third_party_profile/common/custom_cfg.c"><Option compilerVer="CC"/></Unit>
@@ -704,6 +732,7 @@
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_ota.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_ota.h" />
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_tme.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/gatt_common/le_gatt_common.h" />
 <Unit filename="apps/common/third_party_profile/jieli/le_client_demo.h" />
 <Unit filename="apps/common/third_party_profile/jieli/le_common.h" />
 <Unit filename="apps/common/third_party_profile/jieli/online_db/online_db_deal.c"><Option compilerVer="CC"/></Unit>
@@ -903,6 +932,8 @@
 <Unit filename="apps/common/third_party_profile/mma_protocol/mma_platform_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/mma_protocol/mma_platform_api.h" />
 <Unit filename="apps/common/third_party_profile/mma_protocol/mma_protocol.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/multi_ble_client/ble_multi_client.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/multi_ble_client/ble_multi_client.h" />
 <Unit filename="apps/common/third_party_profile/multi_protocol_common.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/multi_protocol_event.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/multi_protocol_main.c"><Option compilerVer="CC"/></Unit>
@@ -1431,6 +1462,7 @@
 <Unit filename="audio/interface/include/a2dp_player.h" />
 <Unit filename="audio/interface/include/adda_loop_player.h" />
 <Unit filename="audio/interface/include/ai_voice_recoder.h" />
+<Unit filename="audio/interface/include/audio_dsp_low_latency_player.h" />
 <Unit filename="audio/interface/include/cvp_node.h" />
 <Unit filename="audio/interface/include/dev_flow_player.h" />
 <Unit filename="audio/interface/include/dev_flow_recoder.h" />
@@ -1465,6 +1497,8 @@
 <Unit filename="audio/interface/player/le_audio_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/linein_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/local_tws_player.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/interface/player/loudspeaker_iis_player.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/interface/player/loudspeaker_mic_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/pc_spk_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/reference_time.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/player/ring_player.c"><Option compilerVer="CC"/></Unit>
@@ -1474,8 +1508,10 @@
 <Unit filename="audio/interface/recoder/dev_flow_recoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/recoder/esco_recoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/recoder/file_recorder.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/interface/recoder/le_audio_mix_mic_recorder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/recoder/le_audio_recorder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/recoder/pc_mic_recoder.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/interface/user_defined/audio_dsp_low_latency_player.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/jl_kws/jl_kws_algo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/jl_kws/jl_kws_api.h" />
 <Unit filename="audio/jl_kws/jl_kws_audio.c"><Option compilerVer="CC"/></Unit>
@@ -1594,6 +1630,7 @@
 <Unit filename="interface/btstack/third_party/common/spp_config.h" />
 <Unit filename="interface/btstack/third_party/common/spp_user.h" />
 <Unit filename="interface/btstack/third_party/dma/dma_api.h" />
+<Unit filename="interface/btstack/third_party/fmna/fmna_api.h" />
 <Unit filename="interface/btstack/third_party/le_audio/big.h" />
 <Unit filename="interface/btstack/third_party/le_audio/cig.h" />
 <Unit filename="interface/btstack/third_party/rcsp/JL_rcsp_api.h" />
@@ -1828,7 +1865,9 @@
 <Unit filename="interface/media/effects/excitor_api.h" />
 <Unit filename="interface/media/effects/fix_iir_filter_api.h" />
 <Unit filename="interface/media/effects/frequency_compressor_api.h" />
+<Unit filename="interface/media/effects/gain_mix_api.h" />
 <Unit filename="interface/media/effects/howling_pitchshifter_api.h" />
+<Unit filename="interface/media/effects/jlsp_ahs_api.h" />
 <Unit filename="interface/media/effects/lf_chorusStereo_api.h" />
 <Unit filename="interface/media/effects/lf_flangerStereo_api.h" />
 <Unit filename="interface/media/effects/lf_pingpong_echo_api.h" />

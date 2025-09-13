@@ -269,11 +269,19 @@ void cfg_file_parse(u8 idx)
     struct volume_cfg ktone_vol_cfg;
     struct volume_cfg ring_vol_cfg;
     //赋予相关变量初值
+#if TCFG_AS_WIRELESS_MIC_DSP_ENABLE
+    volume_ioc_get_cfg("Vol_DSPMusic", &music_vol_cfg);
+    volume_ioc_get_cfg("Vol_DSPMusic", &call_vol_cfg);
+    volume_ioc_get_cfg("Vol_DSPMusic", &tone_vol_cfg);
+    volume_ioc_get_cfg("Vol_DSPMusic", &ktone_vol_cfg);
+    volume_ioc_get_cfg("Vol_DSPMusic", &ring_vol_cfg);
+#else
     volume_ioc_get_cfg("Vol_BtmMusic", &music_vol_cfg);
     volume_ioc_get_cfg("Vol_BtcCall", &call_vol_cfg);
     volume_ioc_get_cfg("Vol_SysTone", &tone_vol_cfg);
     volume_ioc_get_cfg("Vol_SysKTone", &ktone_vol_cfg);
     volume_ioc_get_cfg("Vol_SysRing", &ring_vol_cfg);
+#endif
 
     ret = syscfg_read(CFG_SYS_VOL, &default_volume, 2);
     if (ret < 0) {
@@ -286,7 +294,11 @@ void cfg_file_parse(u8 idx)
     }
     //读不到VM，则表示当前音量使用默认状态
     app_var.volume_def_state = music_volume == -1 ? 1 : 0;
+#if TCFG_AS_WIRELESS_MIC_DSP_ENABLE
+    app_var.music_volume = default_volume;
+#else
     app_var.music_volume = music_volume == -1 ? default_volume : music_volume;
+#endif
     app_var.wtone_volume = tone_vol_cfg.cur_vol;
     app_var.ktone_volume = ktone_vol_cfg.cur_vol;
     app_var.ring_volume = ring_vol_cfg.cur_vol;

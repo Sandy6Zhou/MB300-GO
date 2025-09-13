@@ -30,7 +30,7 @@
 #if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #include "surround_sound.h"
 #endif
-#if LE_AUDIO_MIX_MIC_EN || LE_AUDIO_LOCAL_MIC_EN
+#if LE_AUDIO_LOCAL_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
 
@@ -508,14 +508,6 @@ int broadcast_transmitter_connect_deal(void *priv, u8 mode)
         //打开广播音频播放
         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_open) {
             broadcast_hdl->bis_hdl_info[i].recorder = le_audio_switch_ops->tx_le_audio_open(&params);
-#if LE_AUDIO_MIX_MIC_EN
-            if (get_is_need_resume_le_audio_mix_mic() && is_le_audio_mix_mic_recorder_running() == 0) {
-                if (app_get_current_mode()->name != APP_MODE_MIC) {
-                    set_need_resume_le_audio_mix_mic(0);
-                    le_audio_mix_mic_open();
-                }
-            }
-#endif
         }
     }
 
@@ -1314,12 +1306,6 @@ int broadcast_close(u8 big_hdl)
                 }
                 spin_unlock(&broadcast_lock);
 
-#if LE_AUDIO_MIX_MIC_EN
-                if (is_le_audio_mix_mic_recorder_running()) {
-                    set_need_resume_le_audio_mix_mic(1);
-                    le_audio_mix_mic_close();
-                }
-#endif
                 if (recorder) {
                     if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                         le_audio_switch_ops->tx_le_audio_close(recorder);
@@ -1842,12 +1828,6 @@ int broadcast_audio_all_close(u16 big_hdl)
                         p->bis_hdl_info[i].init_ok = 0;
                     }
                     spin_unlock(&broadcast_lock);
-#if LE_AUDIO_MIX_MIC_EN
-                    if (is_le_audio_mix_mic_recorder_running()) {
-                        set_need_resume_le_audio_mix_mic(1);
-                        le_audio_mix_mic_close();
-                    }
-#endif
                     if (recorder) {
                         if (le_audio_switch_ops && le_audio_switch_ops->tx_le_audio_close) {
                             le_audio_switch_ops->tx_le_audio_close(recorder);
@@ -1994,14 +1974,6 @@ int broadcast_audio_all_open(u16 big_hdl)
                         recorder = le_audio_switch_ops->tx_le_audio_open(&params);
 #if LE_AUDIO_LOCAL_MIC_EN
                         local_mix_mic_le_audio_open(&params);
-#endif
-#if LE_AUDIO_MIX_MIC_EN
-                        if (get_is_need_resume_le_audio_mix_mic() && is_le_audio_mix_mic_recorder_running() == 0) {
-                            if (app_get_current_mode()->name != APP_MODE_MIC) {
-                                set_need_resume_le_audio_mix_mic(0);
-                                le_audio_mix_mic_open();
-                            }
-                        }
 #endif
                         spin_lock(&broadcast_lock);
                         broadcast_hdl->bis_hdl_info[i].recorder = recorder;

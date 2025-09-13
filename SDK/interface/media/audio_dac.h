@@ -4,6 +4,8 @@
 #include "audio_cfifo.h"
 #include "asm/dac.h"
 
+#define DAC_NOISEGATE_OFF()     audio_dac_noisefloor_optimize_onoff(0);
+#define DAC_NOISEGATE_ON()      audio_dac_noisefloor_optimize_onoff(1);
 
 struct audio_dac_channel_attr {
     u8  write_mode;         /*DAC写入模式*/
@@ -418,7 +420,7 @@ int dac_analog_light_open_cb(struct audio_dac_hdl *);
 int dac_analog_light_close_cb(struct audio_dac_hdl *);
 
 
-
+#if AUDIO_DAC_IO_ENABLE
 void audio_dac_io_init(struct audio_dac_io_param *param);
 void audio_dac_io_uninit(struct audio_dac_io_param *param);
 
@@ -438,6 +440,7 @@ void audio_dac_io_uninit(struct audio_dac_io_param *param);
  *    低电平 val = 0
  */
 void audio_dac_io_set(u8 ch, u8 val);
+#endif
 
 /*MIC Capless API*/
 void audio_dac_set_capless_DTB(struct audio_dac_hdl *dac, u32 dacr32);

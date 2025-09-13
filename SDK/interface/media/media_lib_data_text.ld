@@ -201,12 +201,14 @@
 	*(.jl_codec_c_sparse_code)
 	*(.jl_codec_d_code)
 	*(.jl_codec_e_code)
+	*(.jl_codec_const) 
+	*(.jl_plc_c_code) 
+	*(.jl_plc_c_const) 
 	*(.jl_codec_t8k_code)
 	*(.jl_codec_t16k_code)
 	*(.jl_codec_t24k_code)
 	*(.jl_codec_t32k_code)
 	*(.jl_codec_t441k_code)
-	*(.jl_codec_const) 
 #endif
 
 #if AUDIO_JLA_V2_CODEC_AT_RAM
@@ -352,6 +354,10 @@
 #if AFx_FREQUENCY_COMPRESSOR_AT_RAM
 	*(.freq_compressor.text.cache.L2.code)
 	*(.freq_compressor.text.cache.L2.const)
+#endif
+#if AFx_GAIN_MIX_AT_RAM
+	*(.gain_mix.text.cache.L2.code)	
+	*(.gain_mix.text.cache.L2.const)	
 #endif
 
 #if AFx_DAC_IO_IRQ_HANDLER_AT_RAM

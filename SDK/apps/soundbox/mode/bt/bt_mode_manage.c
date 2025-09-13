@@ -134,8 +134,7 @@ static int bt_exit_current_mode(u8 mode)
 #if TCFG_USER_TWS_ENABLE
         int status = tws_api_get_tws_state();
         r_printf("tws_api_get_tws_state:%x %x\n", tws_api_get_tws_state(), (status & TWS_STA_SIBLING_CONNECTED && status & TWS_STA_PHONE_CONNECTED));
-        if ((status & TWS_STA_SIBLING_CONNECTED && status & TWS_STA_PHONE_CONNECTED) \
-            && app_get_a2dp_play_status()) {
+        if ((status & TWS_STA_SIBLING_CONNECTED && status & TWS_STA_PHONE_CONNECTED)) {
             ret = -1;
         }
         bt_tws_onoff(0);
@@ -277,7 +276,7 @@ static void bt_mode_exit_check(void *priv)
     switch (g_bt_hdl.work_mode) {
     case BT_MODE_TWS:
 #if TCFG_USER_TWS_ENABLE
-        if (!(tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) && app_get_a2dp_play_status() == 0) {
+        if (!(tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED)) {
             already_exit = 1;
         }
         break;

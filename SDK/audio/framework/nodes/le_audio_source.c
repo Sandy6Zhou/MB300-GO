@@ -183,6 +183,13 @@ static void le_audio_source_set_bt_addr(struct stream_iport *iport, int arg)
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
 
     ctx->le_audio = (void *)arg;
+
+#if LE_AUDIO_LOCAL_MIC_EN && LE_AUDIO_MIX_MIC_EFFECT_EN && LEA_LOCAL_SYNC_PLAY_EN
+    if (!ctx->rx_stream) {
+        ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, AUDIO_CODING_PCM);
+    }
+#endif
+
 }
 
 static int le_audio_source_ioc_start(struct stream_iport *iport)
@@ -229,6 +236,8 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
 #if LEA_LOCAL_SYNC_PLAY_EN
         ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, hdl->coding_type);
 #endif
+        hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
+    } else {
         hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
     }
 

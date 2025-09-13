@@ -182,6 +182,8 @@ objs += \
 	  $(ROOT)/audio/interface/player/adda_loop_player.o \
 	  $(ROOT)/audio/interface/player/linein_player.o \
       $(ROOT)/audio/interface/player/reference_time.o \
+	  $(ROOT)/audio/interface/player/loudspeaker_iis_player.o \
+	  $(ROOT)/audio/interface/player/loudspeaker_mic_player.o \
 
 
 objs += \
@@ -190,12 +192,15 @@ objs += \
 	  $(ROOT)/audio/interface/recoder/dev_flow_recoder.o \
 
 objs += \
+	  $(ROOT)/audio/interface/user_defined/audio_dsp_low_latency_player.o
+
+objs += \
 	$(ROOT)/audio/interface/player/le_audio_player.o \
 	$(ROOT)/audio/framework/nodes/le_audio_source.o \
 	$(ROOT)/audio/framework/plugs/source/le_audio_file.o \
 	$(ROOT)/audio/le_audio/le_audio_stream.o \
 	$(ROOT)/audio/interface/recoder/le_audio_recorder.o \
-	$(ROOT)/audio/interface/recoder/le_audio_mix_mic_recorder.o \
+	$(ROOT)/audio/interface/recoder/le_audio_mix_mic_recorder.o
 
 objs += \
 	$(ROOT)/audio/midi/audio_dec_midi_file.o
@@ -325,11 +330,14 @@ objs += \
 
 #if EXPORT_PLATFORM_AUDIO_ALINK_ENABLE
 objs += \
-	  $(ROOT)/audio/framework/nodes/iis_node.o \
+	  $(ROOT)/audio/framework/nodes/iis_node.o
+
+objs += \
 	  $(ROOT)/audio/framework/plugs/source/iis_file.o
 
 objs += \
-	  $(ROOT)/audio/framework/nodes/multi_ch_iis_node.o \
+	  $(ROOT)/audio/framework/nodes/multi_ch_iis_node.o
+objs += \
 	  $(ROOT)/audio/framework/plugs/source/multi_ch_iis_file.o
 
 #endif
@@ -474,8 +482,10 @@ objs += \
 objs += \
 	$(ROOT)/apps/common/update/testbox_uart_update.o
 
+#if VFS_ENABLE
 objs += \
 	$(ROOT)/apps/common/dev_manager/dev_update.o
+#endif
 
 objs += \
 	$(ROOT)/apps/common/update/update_tws.o
@@ -637,12 +647,12 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/common/custom_cfg.o
 
 
-#if EXPORT_FNMA_ENABLE
 objs += \
     $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy.o \
     $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_fmna.o \
-    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_ota.o
-#endif
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_ota.o \
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_modet.o
+
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/realme_protocol/realme_config.o \
@@ -878,6 +888,9 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/online_db/spp_online_db.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/online_db/online_db_deal.o
 
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/multi_ble_client/ble_multi_client.o \
 
 
 

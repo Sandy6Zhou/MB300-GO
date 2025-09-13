@@ -67,6 +67,7 @@ struct pc_spk_fmt_t {
     u8 channel;
     u8 bit;
     u32 sample_rate;
+    u32 iso_data_len;
 };
 
 struct pc_spk_isr_state {
@@ -84,6 +85,7 @@ struct pc_spk_fmt_t pc_spk_fmt = {
     .channel = SPK_CHANNEL,
     .bit = SPK_AUDIO_RES,
     .sample_rate = SPK_AUDIO_RATE,
+    .iso_data_len = SPK_CHANNEL * SPK_AUDIO_RATE * (SPK_AUDIO_RES / 8) / 1000,
 };
 #if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
 #define SPK_PUSH_FRAME_NUM 8 //SPK一次push的帧数，单位：uac rx中断间隔
@@ -115,7 +117,11 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
         pc_spk_isr.pc_spk_in_isr = 0;
         return;
     }
-    struct stream_node  *source_node = hdl->source_node;
+
+    if ((len % pc_spk_fmt.iso_data_len) != 0) {
+        log_error("uac iso error : %d, %d\n", len, pc_spk_fmt.iso_data_len);
+        return;
+    }
     if (!hdl->cache_buf) {
         int cache_buf_len = len * SPK_PUSH_FRAME_NUM * 4; //4块输出buf
         //申请cbuffer
@@ -140,7 +146,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
     }
     u32 cache_len = cbuf_get_data_len(&hdl->spk_cache_cbuffer);
     if (cache_len >= len * SPK_PUSH_FRAME_NUM) {
-        frame = source_plug_get_output_frame(source_node, cache_len);
+        frame = source_plug_get_output_frame(hdl->source_node, cache_len);
         if (!frame) {
             pc_spk_isr.pc_spk_in_isr = 0;
             return;
@@ -154,7 +160,7 @@ void pc_spk_data_isr_cb(void *buf, u32 len)
         frame->timestamp = hdl->timestamp;
 #endif
         cbuf_read(&hdl->spk_cache_cbuffer, frame->data, frame->len);
-        source_plug_put_output_frame(source_node, frame);
+        source_plug_put_output_frame(hdl->source_node, frame);
         hdl->data_run = 1;
     }
     pc_spk_isr.pc_spk_in_isr = 0;
@@ -344,6 +350,7 @@ void pc_spk_set_fmt(u8 channel, u8 bit, u32 sample_rate)
     if (sample_rate != 0) {
         pc_spk_fmt.sample_rate = sample_rate;
     }
+    pc_spk_fmt.iso_data_len = channel * sample_rate * (bit / 8) / 1000;
 }
 
 u32 pc_spk_get_fmt_sample_rate(void)

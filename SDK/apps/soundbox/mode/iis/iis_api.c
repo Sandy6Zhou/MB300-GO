@@ -175,6 +175,7 @@ u8 iis_get_status(void)
 /*-------------------------------------------------------------------*/
 int iis_volume_set(s16 vol)
 {
+    __this->audio_state = APP_AUDIO_STATE_MUSIC;
     app_audio_set_volume(__this->audio_state, vol, 1);
     printf("iis vol: %d", __this->volume);
     __this->volume = vol;

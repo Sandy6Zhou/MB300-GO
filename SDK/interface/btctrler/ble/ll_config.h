@@ -70,8 +70,8 @@
 
 
 /* --- Core Spec 5.4 --- */
-#define LL_FEAT_PAWR_ADVERTISER                    (UINT64_C(1) << 43)   /*!< Periodic Advertising with Responses - Advertiser role supported. */
-#define LL_FEAT_PAWR_SCANNER                       (UINT64_C(1) << 44)   /*!< Periodic Advertising with Responses - Scanner role supported. */
+#define LL_FEAT_PAWR_ADVERTISER                     (UINT64_C(1) << (43))   /*!< Periodic Advertising with Responses  Advertiser supported. */
+#define LL_FEAT_PAWR_SCANNER                        (UINT64_C(1) << (44))   /*!< Periodic Advertising with Responses  Scanner supported. */
 
 #define LL_FEAT_VENDOR_BIG_SYNC_TRANSFER            (UINT64_C(1) << (62))   /*!< Vendor BIG sync transfer. */
 #define LL_FEAT_VENDOR_BIG_TRANSFER                 (UINT64_C(1) << (63))   /*!< Vendor BIG transfer. */
@@ -244,6 +244,9 @@ extern const int config_bb_optimized_ctrl;
 #define LE_BB_OPT_FEAT_RX_HMPR_EN   	BIT(24)
 #define LE_BB_OPT_FEAT_DUAL_BD_SWITCH   BIT(25)
 #define LE_BB_OPT_FEAT_SC_ULL           BIT(26)
+#define LE_BB_OPT_FEAT_BIG_CHMAP_EN     BIT(27)
+#define LE_BB_OPT_FEAT_DYNAMIC_RTN_EN   BIT(28)
+#define LE_BB_OPT_FEAT_MERGE_HW_EN      BIT(29)
 
 #define LE_ADV_RSSI_AFH_EN()	        (config_bb_optimized_ctrl & BIT(6))
 #define LE_ADV_PER_AFH_EN()		        (config_bb_optimized_ctrl & BIT(10))
@@ -253,6 +256,8 @@ extern const int config_bb_optimized_ctrl;
 #define LE_SUPPORT_V3_PLUS_EN()			(config_bb_optimized_ctrl & BIT(23))
 #define LE_SUPPORT_RX_HMPR_EN()			(config_bb_optimized_ctrl & BIT(24))
 #define LE_IS_SUPPORT_SC_ULL()			(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_SC_ULL)
+#define LE_IS_SUPPORT_BIG_CHMAP()		(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_BIG_CHMAP_EN)
+#define LE_IS_SUPPORT_DYNAMIC_RTN_EN()	(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_DYNAMIC_RTN_EN)
 
 struct le_adv_link_param_cfg {
     u8 param1;

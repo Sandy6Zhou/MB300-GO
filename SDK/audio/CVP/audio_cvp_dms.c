@@ -658,12 +658,16 @@ void *read_dms_hybrid_mic_coeff()
         aec_hdl->transfer_func = zalloc(param_len);
     }
     if (aec_hdl->transfer_func == NULL) {
+        resfile_close(fp);
         return NULL;
     }
     /* resfile_seek(fp, ptr, RESFILE_SEEK_SET); */
     int rlen = resfile_read(fp, aec_hdl->transfer_func, param_len);
     if (rlen != param_len) {
         printf("[error] read dms_hybrid.bin err !!! %d =! %d", rlen, param_len);
+        free(aec_hdl->transfer_func);
+        aec_hdl->transfer_func = NULL;
+        resfile_close(fp);
         return NULL;
     }
     resfile_close(fp);

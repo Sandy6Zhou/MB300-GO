@@ -1,9 +1,15 @@
 #ifndef _AUDIO_HOWLING_AHS_H_
 #define _AUDIO_HOWLING_AHS_H_
 #include "generic/typedef.h"
+#include "jlsp_ahs_api.h"
 
 struct audio_ahs_param_tool_set {
     int is_bypass;
+    ahs_param_t param;
+};
+struct audio_ahs_post_param_tool_set {
+    int is_bypass;
+    ahs_param_t param;
 };
 
 struct audio_ahs_init_param_t {
@@ -24,4 +30,5 @@ void audio_jlsp_ahs_run_1(s16 *frame_out, u16 points);
 u8 audio_ahs_status(void);
 void audio_ahs_sem_post();
 void audio_jlsp_ahs_run_single_core(s16 *in, u16 points);
+void audio_ahs_param_update(ahs_param_t *param);
 #endif

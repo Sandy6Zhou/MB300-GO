@@ -39,6 +39,8 @@
 #define AUDIO_DAC_MAX_SAMPLE_RATE           TCFG_AUDIO_GLOBAL_SAMPLE_RATE
 #endif
 
+#define TCFG_AUDIO_IIS_CLOCK_CLOSE          0
+
 //**************************************
 // 		    场景参数更新使能
 //**************************************

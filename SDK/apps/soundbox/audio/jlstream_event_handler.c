@@ -47,6 +47,7 @@
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
 #define PIPELINE_UUID_AI_VOICE      0x5475
 #define PIPELINE_UUID_LOUDSPK       0xAD27
+#define PIPELINE_UUID_USER_DEFINED  0x9795
 
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
@@ -163,6 +164,10 @@ static int get_pipeline_uuid(const char *name)
 
     if (!strcmp(name, "loudspkiis") || !strcmp(name, "loudspkmic")) {
         return PIPELINE_UUID_LOUDSPK;
+    }
+
+    if (!strcmp(name, "user_defined")) {
+        return PIPELINE_UUID_USER_DEFINED;
     }
 
     if (!strcmp(name, "ai_voice")) {
@@ -533,6 +538,15 @@ static int tws_get_output_channel()
     return channel;
 }
 
+#if TCFG_AS_WIRELESS_MIC_DSP_ENABLE
+#include "uac_stream.h"
+static int get_pc_mic_status()
+{
+    int state = (int)uac_get_mic_stream_status();//获取pcmic打开状态
+    return state;
+}
+#endif
+
 #if TCFG_SWITCH_NODE_ENABLE
 static int get_switch_node_callback(const char *arg)
 {
@@ -540,9 +554,6 @@ static int get_switch_node_callback(const char *arg)
 
 
 #if TCFG_MIC_EFFECT_ENABLE
-    if (!strncmp(arg, "Sw_MicEff2DAC", strlen("Sw_MicEff2DAC"))) {
-        return (int)get_micEff2DAC_switch_status;
-    }
 #if LE_AUDIO_MIX_MIC_EFFECT_EN
     if (!strncmp(arg, "Sw_MicEff2LeAud", strlen("Sw_MicEff2LeAud"))) {
         return (int)get_micEff2LeAudio_switch_status;
@@ -550,6 +561,11 @@ static int get_switch_node_callback(const char *arg)
 #endif
 #endif
 
+#if TCFG_AS_WIRELESS_MIC_DSP_ENABLE
+    if (!strcmp(arg, "SW_PCMIC")) {
+        return (int)get_pc_mic_status;
+    }
+#endif
 
 #if TCFG_MIX_RECORD_ENABLE
     if (!strncmp(arg, "SW_Rec", strlen("SW_Rec"))) {

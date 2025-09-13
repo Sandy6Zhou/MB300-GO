@@ -447,7 +447,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 #endif
     const int config_btctler_le_acl_packet_length = 255;
     const int config_btctler_le_acl_total_nums = 15;
-    const int config_bb_optimized_ctrl =LE_BB_OPT_FEAT_ISO_DIRECT_PUSH|BIT(5)|BIT(28);//BIT(7);//|BIT(8);
+    const int config_bb_optimized_ctrl =LE_BB_OPT_FEAT_ISO_DIRECT_PUSH|BIT(5)|BIT(27);//BIT(7);//|BIT(8);
 
 #else
     #define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV)

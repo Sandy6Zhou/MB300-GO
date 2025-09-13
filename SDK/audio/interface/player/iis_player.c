@@ -75,6 +75,12 @@ int iis_player_open(void)
     jlstream_add_thread(player->stream, "media2");
 #endif
 #endif
+
+#if (TCFG_AS_WIRELESS_MIC_DSP_ENABLE && TCFG_LLNS_DNS_NODE_ENABLE)
+    jlstream_set_node_task(player->stream, NODE_UUID_LLNS_DNS, "LLNS_DNS3", "llns_dns");
+    jlstream_set_node_task(player->stream, NODE_UUID_LLNS_DNS, "LLNS_DNS4", "llns_dns1");
+#endif
+
 #if TCFG_LOCAL_TWS_ENABLE
     err = jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
     if (err == 0) {

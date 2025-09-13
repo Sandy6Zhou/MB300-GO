@@ -96,7 +96,7 @@ static void charge_full_deal(void)
     printf("%s poweron_en:%d\n", __func__, get_charge_poweron_en());
     if (get_charge_poweron_en() == 0) {
         /* power_set_soft_poweroff(); */
-#if (!TCFG_CHARGESTORE_ENABLE)
+#if (!TCFG_CHARGESTORE_ENABLE && TCFG_SYS_LVD_EN)
         vbat_timer_delete();
 #endif
     } else {

@@ -321,11 +321,13 @@ int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param)
             jlstream_set_scene(player->stream, STREAM_SCENE_LEA_CALL);
         } else {
             printf("LEA Service Type:Media\n");
+#if TCFG_APP_PC_EN
             if (app_in_mode(APP_MODE_PC)) {
                 u16 l_vol = 0, r_vol = 0;
                 uac_speaker_stream_get_volume(&l_vol, &r_vol);
                 app_audio_set_volume(APP_AUDIO_STATE_MUSIC, (r_vol + l_vol) / 2, 1);
             }
+#endif
             jlstream_set_scene(player->stream, STREAM_SCENE_LE_AUDIO);
         }
 

@@ -628,7 +628,6 @@ static void *spdif_tx_le_audio_open(void *args)
     //修复spdif模式下反复开关广播后，在广播下按下pp键，本地mute住但接收端依旧出声的问题
     update_app_auracast_deal_scene(LE_AUDIO_MUSIC_START);
 #endif
-    <<< <<< < 6306b3cad484cd27a3f64d02d87c87f7b6b65c81
 
     //打开广播数据流
     if (is_le_audio_spdif_open()) {

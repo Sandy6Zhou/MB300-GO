@@ -177,6 +177,7 @@ enum stream_scene : u8 {
 
     STREAM_SCENE_LOUDSPEAKER_IIS, //扩音器IIS
     STREAM_SCENE_LOUDSPEAKER_MIC, //扩音器MIC
+    STREAM_SCENE_USER_DEFINED, //自定义流程
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
     STREAM_SCENE_TONE = 0x20,
@@ -781,5 +782,11 @@ void jlstream_return_frame(struct stream_iport *iport, struct stream_frame *fram
 int jlstream_get_cpu_usage();
 
 void stream_mem_unfree_dump();
+
+
+int jlstream_set_node_task(struct jlstream *stream, u16 node_uuid,
+                           const char *node_name, const char *task_name);
+
+
 #endif
 

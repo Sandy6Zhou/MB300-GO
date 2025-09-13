@@ -256,9 +256,6 @@ static void tws_a2dp_play_in_task(u8 *data)
 
     case CMD_A2DP_PLAY_RSP:
         r_printf("CMD_A2DP_PLAY_RSP");
-        if (!app_get_a2dp_play_status() && app_in_mode(APP_MODE_BT)) {
-            break;
-        }
 
         u8 buf[7];
 

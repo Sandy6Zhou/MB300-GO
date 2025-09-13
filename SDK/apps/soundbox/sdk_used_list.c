@@ -1,9 +1,17 @@
 #include "app_config.h"
 
-
+#if (defined CONFIG_CPU_BR56) || (defined CONFIG_CPU_BR31)
+breakpoint_init
+#endif
 source_node_adapter
 
+#if TCFG_LLNS_NODE_ENABLE
+llns_node_adapter
+#endif
 
+#if TCFG_LLNS_DNS_NODE_ENABLE
+llns_dns_node_adapter
+#endif
 
 
 #if TCFG_MIXER_NODE_ENABLE
@@ -548,7 +556,7 @@ switch_node_adapter
 distortion_node_adapter
 #endif
 
-#ifdef TCFG_LOCAL_TWS_ENABLE
+#if (defined TCFG_LOCAL_TWS_ENABLE) && TCFG_LOCAL_TWS_ENABLE
 local_tws_file_plug
 #endif
 

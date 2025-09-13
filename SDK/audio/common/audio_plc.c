@@ -65,6 +65,7 @@ void *audio_plc_open(u16 sr, u16 ch_num, af_DataType *dataTypeobj)
     if (plc->run_buf) {
         s8 err = PLC_init(plc->run_buf, &plc_parm, dataTypeobj);
         if (err) {
+            ASSERT(0, " esco plc open  error !!! err = %d\n", err);
             PLC_LOG("PLC_init err:%d", err);
             free(plc->run_buf);
             free(plc);
@@ -184,7 +185,7 @@ int audio_plc_close(void *_plc)
 #else
 void *audio_plc_open(u16 sr, u16 ch_num, af_DataType *dataTypeobj)
 {
-    return 0;
+    return NULL;
 }
 
 void audio_plc_run(void *_plc, s16 *data, u16 len, u8 repair)

@@ -538,6 +538,7 @@ static int dual_conn_hci_event_handler(int *_event)
         } else if (event->value == ERROR_CODE_PIN_OR_KEY_MISSING) {
             printf("ERROR_CODE_PIN_OR_KEY_MISSING");
             del_device_from_page_list(event->args);
+            page_mode_active = 0;
             if (g_dual_conn.timer) {
                 sys_timeout_del(g_dual_conn.timer);
                 g_dual_conn.timer = 0;
@@ -553,6 +554,7 @@ static int dual_conn_hci_event_handler(int *_event)
                 g_dual_conn.timer = 0;
             }
             del_device_from_page_list(event->args);
+            page_mode_active = 0;
             return 0;
         case ERROR_CODE_CONNECTION_REJECTED_DUE_TO_UNACCEPTABLE_BD_ADDR:
         case ERROR_CODE_CONNECTION_ACCEPT_TIMEOUT_EXCEEDED:

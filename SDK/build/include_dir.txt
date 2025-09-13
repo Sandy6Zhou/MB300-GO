@@ -70,6 +70,7 @@
 -Iapps/common/third_party_profile/mma_protocol
 -Iapps/common/third_party_profile/realme_protocol
 -Iapps/common/third_party_profile/swift_pair
+-Iapps/common/third_party_profile/bt_fmy
 -Iapps/common/third_party_profile/dma_protocol
 -Iapps/common/third_party_profile/dma_protocol/dma_use_lib
 -Iapps/common/third_party_profile/gfps_protocol

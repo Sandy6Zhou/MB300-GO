@@ -44,7 +44,7 @@
 #include "surround_sound.h"
 #endif
 
-#if LE_AUDIO_MIX_MIC_EN || LE_AUDIO_LOCAL_MIC_EN
+#if LE_AUDIO_LOCAL_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
 

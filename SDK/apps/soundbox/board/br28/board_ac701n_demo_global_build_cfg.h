@@ -8,7 +8,16 @@
 
 /* Following Macros Affect Periods Of Both Code Compiling And Post-build */
 
+#if CONFIG_FINDMY_UARP_ENABLE
+#define CONFIG_DOUBLE_BANK_ENABLE               1       //单双备份选择(若打开了改宏,FLASH结构变为双备份结构，适用于接入第三方协议的OTA， PS: JL-OTA同样支持双备份升级, 需要根据实际FLASH大小同时配置CONFIG_FLASH_SIZE)
+#define CONFIG_DB_UPDATE_DATA_GENERATE_EN       1       //是否生成db_data.bin(用于第三方协议接入使用)
+#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     1    	//ufw只生成1份4K对齐的代码
+#else
 #define CONFIG_DOUBLE_BANK_ENABLE               0       //单双备份选择(若打开了改宏,FLASH结构变为双备份结构，适用于接入第三方协议的OTA， PS: JL-OTA同样支持双备份升级, 需要根据实际FLASH大小同时配置CONFIG_FLASH_SIZE)
+#define CONFIG_DB_UPDATE_DATA_GENERATE_EN       0       //是否生成db_data.bin(用于第三方协议接入使用)
+#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     0    	//ufw只生成1份4K对齐的代码
+#endif
+
 
 #define CONFIG_ANC_ENABLE           			0		//配置是否支持ANC
 
@@ -17,10 +26,6 @@
 /* Above Macros Affect Periods Of Both Code Compiling And Post-build */
 
 /* Following Macros Only For Post Bulid Configuaration */
-
-#define CONFIG_DB_UPDATE_DATA_GENERATE_EN       0       //是否生成db_data.bin(用于第三方协议接入使用)
-#define CONFIG_ONLY_GRENERATE_ALIGN_4K_CODE     0    	//ufw只生成1份4K对齐的代码
-
 //config for supported chip version
 #ifdef CONFIG_BR30_C_VERSION
 #define CONFIG_SUPPORTED_CHIP_VERSION			C

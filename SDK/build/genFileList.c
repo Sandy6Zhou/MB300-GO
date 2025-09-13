@@ -251,7 +251,7 @@ c_SRC_FILES += \
 #endif
 
 // Audio Player
-#if TCFG_APP_IIS_EN
+#if TCFG_APP_IIS_EN || TCFG_APP_DSP_EN
 c_SRC_FILES += \
 	  audio/interface/player/iis_player.c
 #endif
@@ -266,6 +266,8 @@ c_SRC_FILES += \
 	  audio/interface/player/adda_loop_player.c \
 	  audio/interface/player/linein_player.c \
       audio/interface/player/reference_time.c \
+	  audio/interface/player/loudspeaker_iis_player.c \
+	  audio/interface/player/loudspeaker_mic_player.c \
 
 
 // Audio Recoder
@@ -274,6 +276,9 @@ c_SRC_FILES += \
 	  audio/interface/recoder/ai_voice_recoder.c \
 	  audio/interface/recoder/dev_flow_recoder.c \
 
+c_SRC_FILES += \
+	  audio/interface/user_defined/audio_dsp_low_latency_player.c
+
 #if TCFG_LE_AUDIO_APP_CONFIG
 c_SRC_FILES += \
 	audio/interface/player/le_audio_player.c \
@@ -281,8 +286,7 @@ c_SRC_FILES += \
 	audio/framework/plugs/source/le_audio_file.c \
 	audio/le_audio/le_audio_stream.c \
 	audio/interface/recoder/le_audio_recorder.c \
-	audio/interface/recoder/le_audio_mix_mic_recorder.c \
-	
+	audio/interface/recoder/le_audio_mix_mic_recorder.c
 #endif
 
 #if MIDI_FILE_DEC_ENABLE
@@ -435,15 +439,22 @@ c_SRC_FILES += \
 
 // ALINK BUILD
 #if EXPORT_PLATFORM_AUDIO_ALINK_ENABLE
-#if TCFG_IIS_NODE_ENABLE
+#if TCFG_IIS_NODE_ENABLE || TCFG_TDM_TX_NODE_ENABLE
 c_SRC_FILES += \
-	  audio/framework/nodes/iis_node.c \
+	  audio/framework/nodes/iis_node.c
+#endif
+
+#if TCFG_IIS_RX_NODE_ENABLE || TCFG_TDM_RX_NODE_ENABLE
+c_SRC_FILES += \
 	  audio/framework/plugs/source/iis_file.c
 #endif
 
 #if TCFG_MULTI_CH_IIS_NODE_ENABLE
 c_SRC_FILES += \
-	  audio/framework/nodes/multi_ch_iis_node.c \
+	  audio/framework/nodes/multi_ch_iis_node.c
+#endif
+#if TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
+c_SRC_FILES += \
 	  audio/framework/plugs/source/multi_ch_iis_file.c
 #endif
 
@@ -627,9 +638,11 @@ c_SRC_FILES += \
 	apps/common/update/testbox_uart_update.c
 #endif
 
+#if VFS_ENABLE
 #if TCFG_UPDATE_STORAGE_DEV_EN
 c_SRC_FILES += \
 	apps/common/dev_manager/dev_update.c
+#endif
 #endif
 
 #if (OTA_TWS_SAME_TIME_ENABLE && !OTA_TWS_SAME_TIME_NEW)
@@ -864,13 +877,13 @@ c_SRC_FILES += \
 #endif
 
 
-#if EXPORT_FNMA_ENABLE
 #if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
 c_SRC_FILES += \
     apps/common/third_party_profile/bt_fmy/ble_fmy.c \
     apps/common/third_party_profile/bt_fmy/ble_fmy_fmna.c \
-    apps/common/third_party_profile/bt_fmy/ble_fmy_ota.c
-#endif
+    apps/common/third_party_profile/bt_fmy/ble_fmy_ota.c \
+    apps/common/third_party_profile/bt_fmy/ble_fmy_modet.c
+
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
@@ -1196,6 +1209,11 @@ c_SRC_FILES += \
 #endif
 
 
+#if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE && (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+c_SRC_FILES += \
+    apps/common/third_party_profile/multi_ble_client/ble_multi_client.c \
+
+#endif
 
 
 // *INDENT-OFF*

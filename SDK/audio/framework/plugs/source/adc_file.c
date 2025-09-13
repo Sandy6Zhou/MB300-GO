@@ -653,7 +653,7 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
         fmt->sample_rate = 44100;
 #endif
         break;
-#if WIRELESS_MIC_PRODUCT_MODE
+#ifdef CONFIG_WIRELESS_MIC_ENABLE
     case STREAM_SCENE_WIRELESS_MIC:
 #if (defined(TCFG_AUDIO_ADC_SAMPLE_RATE) && TCFG_AUDIO_ADC_SAMPLE_RATE)
         fmt->sample_rate    = TCFG_AUDIO_ADC_SAMPLE_RATE;

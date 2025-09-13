@@ -125,6 +125,10 @@
 #define CONFIG_FINDMY_INFO_ENABLE      		    0
 #endif
 
+#ifndef CONFIG_FINDMY_UARP_ENABLE
+#define CONFIG_FINDMY_UARP_ENABLE               0
+#endif
+
 //*********************************************************************************//
 //                                  le_audio 配置                                       //
 //*********************************************************************************//
@@ -174,6 +178,10 @@
 
 /* -----------------独立模式 PC/LINEIN/SPDIF 模块默认控制------- */
 //没有独立模式的 需要在sdk_config.h定义对应的宏，有独立模式的，根据模式宏的值默认定义对应的宏
+#if (TCFG_AS_WIRELESS_MIC_DSP_ENABLE && (TCFG_USB_SLAVE_AUDIO_SPK_ENABLE || TCFG_USB_SLAVE_AUDIO_MIC_ENABLE))
+#define TCFG_PC_ENABLE       1
+#endif
+
 #ifndef TCFG_PC_ENABLE
 #define TCFG_PC_ENABLE       TCFG_APP_PC_EN
 #endif
@@ -284,7 +292,11 @@
 // #define USB_DEVICE_CLASS_CONFIG 									(AUDIO_CLASS)
 /////要确保 上面 undef 后在include usb
 
+#if TCFG_AS_WIRELESS_MIC_DSP_ENABLE
+#define USB_PC_NO_APP_MODE                        1
+#else
 #define USB_PC_NO_APP_MODE                        0
+#endif
 
 #if TCFG_CHARGE_ENABLE
 #define TCFG_USB_PORT_CHARGE                1

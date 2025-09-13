@@ -72,7 +72,7 @@ static struct le_audio_fm_recorder *g_fm_recorder = NULL;
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_RX_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
 struct le_audio_iis_recorder {
     void *stream;
 };
@@ -326,6 +326,20 @@ int le_audio_linein_recorder_open(void *params, void *le_audio, int latency)
         return 0;
     }
     int err = 0;
+
+    //确认中断点数的配置
+    u16 linein_irq_point_unit = AUDIO_ADC_IRQ_POINTS;
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SOURCE_EN)
+    u16 frame_duration = get_auracast_frame_duration();	//100 or 75
+    if (frame_duration == 100) {
+        //如果是10ms帧长，那么中断时长需要为5ms，44100的采样率，中断点数为 5 * 44.1 = 220
+        linein_irq_point_unit = 220;
+    } else if (frame_duration == 75) {
+        //如果是7.5ms帧长，那么中断时长需要为2.5ms，44100的采样率，中断点数为 2.5 * 44.1 = 110
+        linein_irq_point_unit = 110;
+    }
+#endif
+
     struct le_audio_stream_format *le_audio_fmt = (struct le_audio_stream_format *)params;
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"linein_le_audio");
     struct stream_enc_fmt fmt = {
@@ -356,7 +370,8 @@ int le_audio_linein_recorder_open(void *params, void *le_audio, int latency)
     }
     jlstream_node_ioctl(g_aux_recorder->stream, NODE_UUID_CAPTURE_SYNC, NODE_IOC_SET_PARAM, latency);
     //设置中断点数
-    jlstream_node_ioctl(g_aux_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);
+    /* jlstream_node_ioctl(g_aux_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS); */
+    jlstream_node_ioctl(g_aux_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, linein_irq_point_unit);
 
 
     err = jlstream_ioctl(g_aux_recorder->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
@@ -395,7 +410,7 @@ void le_audio_linein_recorder_close(void)
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
     (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
-    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && (TCFG_APP_IIS_EN || TCFG_IIS_RX_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE)
 
 static void muti_ch_iis_recorder_callback(void *private_data, int event)
 {
@@ -780,11 +795,6 @@ u8 is_le_audio_spdif_open(void)
 static void spdif_recorder_callback(void *private_data, int event)
 {
     printf("le audio spdif recorder callback : %d\n", event);
-}
-
-u8 is_le_audio_spdif_open(void)
-{
-    return (g_spdif_recorder == NULL) ? 0 : 1;
 }
 
 int le_audio_spdif_recorder_open(void *params, void *le_audio, int latency)

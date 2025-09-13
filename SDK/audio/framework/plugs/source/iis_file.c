@@ -25,7 +25,7 @@
 /************************ 该文件是 IIS 输入用的 ************************/
 /************************ ********************* ************************/
 
-#if TCFG_IIS_NODE_ENABLE || TCFG_TDM_RX_NODE_ENABLE
+#if TCFG_IIS_RX_NODE_ENABLE || TCFG_TDM_RX_NODE_ENABLE
 
 #define IIS_LOG_ENABLE          0
 #if IIS_LOG_ENABLE
@@ -277,6 +277,7 @@ void iis_rx_init(struct iis_file_hdl *hdl)
             params.ch_num = TDM_CH_NUM;
         }
 #endif
+        params.clk_close = TCFG_AUDIO_IIS_CLOCK_CLOSE;
         iis_hdl[hdl->module_idx] = audio_iis_init(params);
     }
     if (!iis_hdl[hdl->module_idx]) {

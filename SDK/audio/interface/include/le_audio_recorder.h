@@ -11,6 +11,9 @@
 #ifndef _LE_AUDIO_RECORDER_H_
 #define _LE_AUDIO_RECORDER_H_
 
+
+extern u16 get_auracast_frame_duration(void);
+
 int le_audio_a2dp_recorder_open(u8 *btaddr, void *arg, void *le_audio);
 void le_audio_a2dp_recorder_close(u8 *btaddr);
 u8 *le_audio_a2dp_recorder_get_btaddr(void);

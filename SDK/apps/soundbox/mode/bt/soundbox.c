@@ -170,7 +170,7 @@ void bredr_handle_register()
 #if TCFG_BT_VOL_SYNC_ENABLE
     bt_music_vol_change_handle_register(set_music_device_volume, phone_get_device_vol);
 #endif
-#if TCFG_BT_DISPLAY_BAT_ENABLE
+#if TCFG_BT_DISPLAY_BAT_ENABLE && TCFG_SYS_LVD_EN
     bt_get_battery_value_handle_register(bt_get_battery_value);   /*电量显示获取电量的接口*/
 #endif
 
@@ -325,8 +325,10 @@ void bt_function_select_init()
     bt_set_simple_pair_param(3, 0, 2);
 
     /*测试盒连接获取参数需要的一些接口注册*/
+#if TCFG_SYS_LVD_EN
     bt_testbox_ex_info_get_handle_register(TESTBOX_INFO_VBAT_VALUE, get_vbat_value);
     bt_testbox_ex_info_get_handle_register(TESTBOX_INFO_VBAT_PERCENT, get_vbat_percent);
+#endif
     bt_testbox_ex_info_get_handle_register(TESTBOX_INFO_BURN_CODE, sdfile_get_burn_code);
     bt_testbox_ex_info_get_handle_register(TESTBOX_INFO_SDK_VERSION, bt_get_sdk_ver_info);
 
