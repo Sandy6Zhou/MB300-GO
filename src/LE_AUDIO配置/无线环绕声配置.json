@@ -1,0 +1,1312 @@
+{
+ "fields": [
+  {
+   "__config__": {
+    "layout": "rowFormItem",
+    "tag": "group",
+    "tagIcon": "row",
+    "layoutTree": true,
+    "componentName": "无线环绕声功能",
+    "enableUuid": "",
+    "showComponentName": true,
+    "dataType": [
+     "8",
+     "1"
+    ],
+    "status": 0,
+    "template": "",
+    "hideAddTemplate": false,
+    "span": 24,
+    "formId": 176,
+    "renderKey": "1761694502159558",
+    "children": [
+     {
+      "__config__": {
+       "layout": "rowFormItem",
+       "tag": "group",
+       "tagIcon": "row",
+       "layoutTree": true,
+       "componentName": "",
+       "enableUuid": "",
+       "showComponentName": false,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "template": "",
+       "span": 24,
+       "formId": 134,
+       "renderKey": "1341668146263611",
+       "children": [
+        {
+         "__config__": {
+          "label": "功能说明",
+          "labelWidth": null,
+          "showLabel": true,
+          "tag": "el-input",
+          "tagIcon": "textarea",
+          "defaultValue": "1. 使能无线环绕声功能时，LE_Audio 数据流会自动选择成 “环绕5.1“。\n2. 广播设备当发送端或者接收端是否由板子硬件确定：\n      1）不由硬件决定（多份代码）：小机编译代码时已经能确认是作为Tx端或者Rx端（Rx1或者Rx2或者Rx3），选择 “代码编译时已确定广播角色” 选项，相应需要配置4份全为选择 “代码编译时已确定广播角色” 的代码，才能实现无线环绕声功能。\n      2）由硬件决定（共代码）：编译代码时还不能确认是作为Tx端还是Rx端，需要等小机上电时通过板子硬件决定作为Tx端或者Rx端（Rx1或者Rx2或者Rx3）。选择 “广播角色由板子硬件决定” 这个选项，相应需要配置1份代码，就可以实现无线环绕声功能，对应做单箱发送端或者接收端在代码程序中进行确认。例如通过小机上电对某个IO口进行电压检测来决定广播的角色。\n3. 使能无线环绕声广播宏时，会关闭BIS广播的本地同步播放使能。\n4. 目前只有IIS模式支持做无线环绕声的发送端，接收端为 环绕声接收模式。\n5. 使能无线环绕声功能时会使能蓝牙、IIS和环绕声接收模式，其它模式会自动关闭并且不能支持打开广播功能！\n6. IIS模式下的广播功能只能单箱角色为Tx端时打开，环绕声接收模式只有单箱模式为Rx端时才能进入！",
+          "required": false,
+          "layout": "colFormItem",
+          "span": 24,
+          "regList": [],
+          "changeTag": true,
+          "dataType": [
+           "string"
+          ],
+          "file": "",
+          "status": 0,
+          "filetype": 1,
+          "formId": 102,
+          "renderKey": "1021739850903395",
+          "originValue": "1. 使能无线环绕声功能时，LE_Audio 数据流会自动选择成 “环绕5.1“。\n2. 广播设备当发送端或者接收端是否由板子硬件确定：\n      1）不由硬件决定（多份代码）：小机编译代码时已经能确认是作为Tx端或者Rx端（Rx1或者Rx2或者Rx3），选择 “代码编译时已确定广播角色” 选项，相应需要配置4份全为选择 “代码编译时已确定广播角色” 的代码，才能实现无线环绕声功能。\n      2）由硬件决定（共代码）：编译代码时还不能确认是作为Tx端还是Rx端，需要等小机上电时通过板子硬件决定作为Tx端或者Rx端（Rx1或者Rx2或者Rx3）。选择 “广播角色由板子硬件决定” 这个选项，相应需要配置1份代码，就可以实现无线环绕声功能，对应做单箱发送端或者接收端在代码程序中进行确认。例如通过小机上电对某个IO口进行电压检测来决定广播的角色。\n3. 使能无线环绕声广播宏时，会关闭BIS广播的本地同步播放使能。\n4. 目前只有IIS模式支持做无线环绕声的发送端，接收端为 环绕声接收模式。\n5. 使能无线环绕声功能时会使能蓝牙、IIS和环绕声接收模式，其它模式会自动关闭并且不能支持打开广播功能！\n6. IIS模式下的广播功能只能单箱角色为Tx端时打开，环绕声接收模式只有单箱模式为Rx端时才能进入！",
+          "eventField": []
+         },
+         "type": "textarea",
+         "placeholder": "请输入功能说明",
+         "autosize": {
+          "minRows": 2,
+          "maxRows": 11
+         },
+         "style": {
+          "width": "100%"
+         },
+         "maxlength": null,
+         "show-word-limit": false,
+         "readonly": false,
+         "disabled": false,
+         "id": "id_1741004988390_58",
+         "__vModel__": "field102"
+        }
+       ],
+       "eventField": [],
+       "disable": true,
+       "saveWay": "macro"
+      },
+      "type": "default",
+      "justify": "start",
+      "align": "top",
+      "style": {
+       "height": "200px",
+       "paddingLeft": "0px"
+      },
+      "id": "id_1677208674570_0",
+      "show-text": false
+     },
+     {
+      "__config__": {
+       "layout": "rowFormItem",
+       "tag": "group",
+       "tagIcon": "row",
+       "layoutTree": true,
+       "componentName": "row_102",
+       "enableUuid": "",
+       "showComponentName": false,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "status": 0,
+       "template": "",
+       "hideAddTemplate": false,
+       "span": 24,
+       "formId": 102,
+       "renderKey": "1021739865042351",
+       "children": [
+        {
+         "__config__": {
+          "label": "无线环绕声功能",
+          "tag": "el-switch",
+          "tagIcon": "switch",
+          "defaultValue": 0,
+          "span": 24,
+          "showLabel": true,
+          "labelWidth": 180,
+          "layout": "colFormItem",
+          "required": true,
+          "regList": [],
+          "changeTag": true,
+          "status": 0,
+          "dataType": [
+           "8",
+           "-1"
+          ],
+          "formId": 205,
+          "renderKey": "2051740985409123",
+          "saveWay": "macro",
+          "eventField": [],
+          "uuid": "LEA_DUAL_STREAM_MERGE_TRANS_MODE",
+          "originValue": 0
+         },
+         "style": {},
+         "disabled": false,
+         "active-text": "",
+         "inactive-text": "",
+         "active-color": null,
+         "inactive-color": null,
+         "active-value": 1,
+         "inactive-value": 0,
+         "id": "id_1740986143291_18",
+         "__vModel__": "field205"
+        },
+        {
+         "__config__": {
+          "label": "环绕声设备角色是否由板子硬件确定",
+          "showLabel": true,
+          "labelWidth": 250,
+          "tag": "el-select",
+          "tagIcon": "select",
+          "layout": "colFormItem",
+          "span": 24,
+          "required": true,
+          "defaultValue": 1,
+          "regList": [],
+          "changeTag": true,
+          "searchSource": false,
+          "status": 0,
+          "dataType": [
+           "32",
+           "-1"
+          ],
+          "formId": 206,
+          "renderKey": "2061740987009221",
+          "eventField": [],
+          "saveWay": "macro",
+          "formItemWidth": "",
+          "originValue": 1,
+          "uuid": "SURROUND_SOUND_FIX_ROLE_EN"
+         },
+         "__slot__": {
+          "options": [
+           {
+            "label": "否(多份代码)",
+            "value": 1,
+            "hide": false,
+            "disabled": false
+           },
+           {
+            "label": "是(共代码)",
+            "value": 0,
+            "hide": false,
+            "disabled": false
+           }
+          ]
+         },
+         "placeholder": "",
+         "style": {
+          "width": "20%"
+         },
+         "clearable": false,
+         "disabled": false,
+         "filterable": false,
+         "multiple": false,
+         "id": "id_1740987009221_19",
+         "__vModel__": "field206"
+        }
+       ],
+       "eventField": []
+      },
+      "type": "default",
+      "justify": "start",
+      "align": "top",
+      "style": {
+       "height": "50px",
+       "paddingLeft": "0px"
+      },
+      "id": "id_1739865042351_3"
+     }
+    ],
+    "eventField": []
+   },
+   "type": "default",
+   "justify": "start",
+   "align": "top",
+   "style": {
+    "height": "400px",
+    "paddingLeft": "0px"
+   },
+   "id": "id_1740984507138_0"
+  },
+  {
+   "__config__": {
+    "layout": "rowFormItem",
+    "tag": "group",
+    "tagIcon": "row",
+    "layoutTree": true,
+    "componentName": "环绕声设备角色配置",
+    "enableUuid": "",
+    "showComponentName": true,
+    "dataType": [
+     "8",
+     "1"
+    ],
+    "status": 0,
+    "template": "",
+    "hideAddTemplate": false,
+    "span": 24,
+    "formId": 210,
+    "renderKey": "2101740987272757",
+    "children": [
+     {
+      "__config__": {
+       "label": "注意事项",
+       "labelWidth": null,
+       "showLabel": true,
+       "tag": "el-input",
+       "tagIcon": "textarea",
+       "defaultValue": "！！！ 注意：\n1. 单箱角色配置只有在 <环绕声设备角色是否由板子硬件确定> 选项中选择 <否(多份代码)> 时生效！！！\n2. 发送端双声道数据流的解码器和单声道数据流的解码器会工具单箱角色的修改而自动修改一些配置。",
+       "required": false,
+       "layout": "colFormItem",
+       "span": 24,
+       "regList": [],
+       "changeTag": true,
+       "dataType": [
+        "string"
+       ],
+       "file": "",
+       "status": 0,
+       "filetype": 1,
+       "formId": 103,
+       "renderKey": "1031739862023121",
+       "originValue": "！！！ 注意：\n1. 单箱角色配置只有在 <环绕声设备角色是否由板子硬件确定> 选项中选择 <否(多份代码)> 时生效！！！\n2. 发送端双声道数据流的解码器和单声道数据流的解码器会工具单箱角色的修改而自动修改一些配置。",
+       "eventField": []
+      },
+      "type": "textarea",
+      "placeholder": "请输入注意事项",
+      "autosize": {
+       "minRows": 1,
+       "maxRows": 3
+      },
+      "style": {
+       "width": "100%"
+      },
+      "maxlength": null,
+      "show-word-limit": false,
+      "readonly": true,
+      "disabled": false,
+      "id": "id_1740991090595_52",
+      "__vModel__": "field103"
+     },
+     {
+      "__config__": {
+       "label": "单箱角色",
+       "labelWidth": 100,
+       "showLabel": true,
+       "tag": "el-radio-group",
+       "tagIcon": "radio",
+       "changeTag": true,
+       "defaultValue": 0,
+       "layout": "colFormItem",
+       "span": 24,
+       "optionType": "default",
+       "regList": [],
+       "required": false,
+       "border": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 212,
+       "renderKey": "2121740987836014",
+       "eventField": [],
+       "originValue": 3,
+       "formItemWidth": "",
+       "syncFlag": "",
+       "tip": "环绕声广播设备角色不由板子硬件决定时有效",
+       "tipAlways": true,
+       "saveWay": "macro",
+       "paddingLeft": "",
+       "uuid": "SURROUND_SOUND_ROLE"
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "Tx端",
+         "value": 0,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "Rx1(立体声左)",
+         "value": 1,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "Rx2(立体声右)",
+         "value": 2,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "Rx3(单声道)",
+         "value": 3,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "style": {
+       "width": "100%"
+      },
+      "size": "medium",
+      "disabled": false,
+      "id": "id_1740987836014_25",
+      "__vModel__": "field212"
+     }
+    ],
+    "eventField": []
+   },
+   "type": "default",
+   "justify": "start",
+   "align": "top",
+   "style": {
+    "height": "150px",
+    "paddingLeft": "0px"
+   },
+   "id": "id_1740987272757_23"
+  },
+  {
+   "__config__": {
+    "layout": "rowFormItem",
+    "tag": "group",
+    "tagIcon": "row",
+    "layoutTree": true,
+    "componentName": "发送端双声道数据流编码器配置",
+    "enableUuid": "",
+    "showComponentName": true,
+    "dataType": [
+     "8",
+     "1"
+    ],
+    "status": 0,
+    "template": "",
+    "hideAddTemplate": false,
+    "span": 24,
+    "formId": 215,
+    "renderKey": "2151740989281104",
+    "children": [
+     {
+      "__config__": {
+       "label": "编解码格式",
+       "showLabel": true,
+       "labelWidth": 90,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 5,
+       "required": false,
+       "defaultValue": "0xA000000",
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1",
+        "o16"
+       ],
+       "formId": 217,
+       "renderKey": "2171740989487471",
+       "originValue": "0xA000000",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_CODEC_TYPE",
+       "emptyValue": "0xA000000",
+       "tip": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "JLA",
+         "value": "0x20000000",
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "JLA_V2",
+         "value": "0xA000000",
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "LC3",
+         "value": "0x400000",
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择编解码格式",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1741243629973_2",
+      "__vModel__": "field217"
+     },
+     {
+      "__config__": {
+       "label": "编解码声道数",
+       "showLabel": true,
+       "labelWidth": null,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 2,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "formId": 219,
+       "renderKey": "2191740989520366",
+       "originValue": 2,
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_CODEC_CHANNEL",
+       "emptyValue": "2"
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "单声道",
+         "value": 1,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "双声道",
+         "value": 2,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择编解码声道数",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740989821708_37",
+      "__vModel__": "field219"
+     },
+     {
+      "__config__": {
+       "label": "发送端解码输出",
+       "showLabel": true,
+       "labelWidth": 0,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 37,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 222,
+       "renderKey": "2221740990378830",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL",
+       "originValue": 37,
+       "paddingLeft": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "左声道",
+         "value": 17,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "右声道",
+         "value": 18,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "立体声",
+         "value": 37,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择输出声道",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990408332_43",
+      "__vModel__": "field222"
+     },
+     {
+      "__config__": {
+       "label": "接收端解码输出",
+       "showLabel": true,
+       "labelWidth": 0,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 37,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 223,
+       "renderKey": "2231740990392253",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL",
+       "originValue": 37,
+       "paddingLeft": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "左声道",
+         "value": 17,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "右声道",
+         "value": 18,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "立体声",
+         "value": 37,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择输出声道",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990411165_44",
+      "__vModel__": "field223"
+     },
+     {
+      "__config__": {
+       "label": "码率",
+       "showLabel": true,
+       "changeTag": true,
+       "labelWidth": 80,
+       "tag": "el-input-number",
+       "tagIcon": "number",
+       "defaultValue": 192000,
+       "span": 5,
+       "layout": "colFormItem",
+       "required": false,
+       "regList": [],
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 217,
+       "renderKey": "2171741075711679",
+       "originValue": 128000,
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_BIT_RATE"
+      },
+      "placeholder": "码率",
+      "min": 0,
+      "step": 1000,
+      "step-strictly": false,
+      "controls-position": "",
+      "disabled": false,
+      "id": "id_1741075822906_22",
+      "__vModel__": "field217"
+     },
+     {
+      "__config__": {
+       "label": "采样率",
+       "showLabel": true,
+       "labelWidth": "",
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 48000,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 221,
+       "renderKey": "2211740989830994",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_CODEC_SAMPLERATE",
+       "originValue": 48000,
+       "emptyValue": "48000"
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "48000",
+         "value": 48000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "44100",
+         "value": 44100,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "32000",
+         "value": 32000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "24000",
+         "value": 24000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "22500",
+         "value": 22500,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "16000",
+         "value": 16000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "8000",
+         "value": 8000,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择采样率",
+      "style": {
+       "width": ""
+      },
+      "clearable": true,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990371430_40",
+      "__vModel__": "field221"
+     },
+     {
+      "__config__": {
+       "label": "帧持续时间",
+       "showLabel": true,
+       "labelWidth": 100,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 7,
+       "required": false,
+       "defaultValue": 50,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "formId": 220,
+       "renderKey": "2201740989765794",
+       "tip": "编解码帧长，JLA不支持12.5ms",
+       "originValue": 50,
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_DUAL_CODEC_FRAME_LEN",
+       "emptyValue": "100",
+       "eventField": []
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "2.5ms",
+         "value": 25,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "5ms",
+         "value": 50,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "7.5ms",
+         "value": 75,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "10ms",
+         "value": 100,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "12.5ms",
+         "value": 125,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间",
+      "style": {
+       "width": "70%"
+      },
+      "clearable": true,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740989819138_36",
+      "__vModel__": "field220"
+     }
+    ],
+    "eventField": []
+   },
+   "type": "default",
+   "justify": "start",
+   "align": "top",
+   "style": {
+    "height": "200px",
+    "paddingLeft": "0px"
+   },
+   "id": "id_1740989308797_30"
+  },
+  {
+   "__config__": {
+    "layout": "rowFormItem",
+    "tag": "group",
+    "tagIcon": "row",
+    "layoutTree": true,
+    "componentName": "发送端单声道数据流编码器配置",
+    "enableUuid": "",
+    "showComponentName": true,
+    "dataType": [
+     "8",
+     "1"
+    ],
+    "status": 0,
+    "template": "",
+    "hideAddTemplate": false,
+    "span": 24,
+    "formId": 224,
+    "renderKey": "2241740990572636",
+    "children": [
+     {
+      "__config__": {
+       "label": "编解码格式",
+       "showLabel": true,
+       "labelWidth": 90,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 5,
+       "required": false,
+       "defaultValue": "0xA000000",
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1",
+        "o16"
+       ],
+       "formId": 225,
+       "renderKey": "2251740990572636",
+       "originValue": "0xA000000",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_CODEC_TYPE",
+       "emptyValue": "0xA000000",
+       "tip": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "JLA",
+         "value": "0x20000000",
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "JLA_V2",
+         "value": "0xA000000",
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "LC3",
+         "value": "0x400000",
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择编解码格式",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_46",
+      "__vModel__": "field225"
+     },
+     {
+      "__config__": {
+       "label": "编解码声道数",
+       "showLabel": true,
+       "labelWidth": null,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 1,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "formId": 226,
+       "renderKey": "2261740990572636",
+       "originValue": 1,
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_CODEC_CHANNEL",
+       "emptyValue": "2"
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "单声道",
+         "value": 1,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "双声道",
+         "value": 2,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择编解码声道数",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_47",
+      "__vModel__": "field226"
+     },
+     {
+      "__config__": {
+       "label": "发送端解码输出",
+       "showLabel": true,
+       "labelWidth": 0,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 37,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 229,
+       "renderKey": "2291740990572636",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL",
+       "originValue": 37,
+       "paddingLeft": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "左声道",
+         "value": 17,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "右声道",
+         "value": 18,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "立体声",
+         "value": 37,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择输出声道",
+      "style": {
+       "width": ""
+      },
+      "clearable": false,
+      "disabled": true,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_50",
+      "__vModel__": "field229"
+     },
+     {
+      "__config__": {
+       "label": "接收端解码输出",
+       "showLabel": true,
+       "labelWidth": 0,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 37,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 230,
+       "renderKey": "2301740990572636",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL",
+       "originValue": 37,
+       "paddingLeft": "",
+       "formItemWidth": ""
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "左声道",
+         "value": 17,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "右声道",
+         "value": 18,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "立体声",
+         "value": 37,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择输出声道",
+      "style": {
+       "width": ""
+      },
+      "clearable": true,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_51",
+      "__vModel__": "field230"
+     },
+     {
+      "__config__": {
+       "label": "码率",
+       "showLabel": true,
+       "changeTag": true,
+       "labelWidth": 80,
+       "tag": "el-input-number",
+       "tagIcon": "number",
+       "defaultValue": 64000,
+       "span": 5,
+       "layout": "colFormItem",
+       "required": false,
+       "regList": [],
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 234,
+       "renderKey": "2341740993152482",
+       "originValue": 128000,
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_BIT_RATE",
+       "formItemWidth": ""
+      },
+      "placeholder": "码率",
+      "min": 0,
+      "step": 1000,
+      "step-strictly": false,
+      "controls-position": "",
+      "disabled": false,
+      "id": "id_1741073315738_18",
+      "__vModel__": "field234"
+     },
+     {
+      "__config__": {
+       "label": "采样率",
+       "showLabel": true,
+       "labelWidth": null,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 6,
+       "required": false,
+       "defaultValue": 48000,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "32",
+        "1"
+       ],
+       "formId": 228,
+       "renderKey": "2281740990572636",
+       "eventField": [],
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_CODEC_SAMPLERATE",
+       "originValue": 48000,
+       "emptyValue": "48000"
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "48000",
+         "value": 48000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "44100",
+         "value": 44100,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "32000",
+         "value": 32000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "24000",
+         "value": 24000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "22500",
+         "value": 22500,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "16000",
+         "value": 16000,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "8000",
+         "value": 8000,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择采样率",
+      "style": {
+       "width": ""
+      },
+      "clearable": true,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_49",
+      "__vModel__": "field228"
+     },
+     {
+      "__config__": {
+       "label": "帧持续时间",
+       "showLabel": true,
+       "labelWidth": 100,
+       "tag": "el-select",
+       "tagIcon": "select",
+       "layout": "colFormItem",
+       "span": 7,
+       "required": false,
+       "defaultValue": 50,
+       "regList": [],
+       "changeTag": true,
+       "searchSource": false,
+       "status": 0,
+       "dataType": [
+        "8",
+        "1"
+       ],
+       "formId": 227,
+       "renderKey": "2271740990572636",
+       "tip": "编解码帧长，JLA不支持12.5ms",
+       "originValue": 50,
+       "saveWay": "macro",
+       "uuid": "SURROUND_SOUND_MONO_CODEC_FRAME_LEN",
+       "emptyValue": "100",
+       "eventField": []
+      },
+      "__slot__": {
+       "options": [
+        {
+         "label": "2.5ms",
+         "value": 25,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "5ms",
+         "value": 50,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "7.5ms",
+         "value": 75,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "10ms",
+         "value": 100,
+         "hide": false,
+         "disabled": false
+        },
+        {
+         "label": "12.5ms",
+         "value": 125,
+         "hide": false,
+         "disabled": false
+        }
+       ]
+      },
+      "placeholder": "请选择帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间帧持续时间",
+      "style": {
+       "width": "70%"
+      },
+      "clearable": true,
+      "disabled": false,
+      "filterable": false,
+      "multiple": false,
+      "id": "id_1740990572636_48",
+      "__vModel__": "field227"
+     }
+    ],
+    "eventField": []
+   },
+   "type": "default",
+   "justify": "start",
+   "align": "top",
+   "style": {
+    "height": "200px",
+    "paddingLeft": "0px"
+   },
+   "id": "id_1740990572636_45"
+  }
+ ],
+ "formName": "LE_AUDIO配置",
+ "formRef": "elForm",
+ "formModel": "formData",
+ "size": "small",
+ "labelPosition": "right",
+ "labelWidth": 110,
+ "formRules": "rules",
+ "gutter": 0,
+ "disabled": false,
+ "span": 24,
+ "formBtns": false,
+ "maxFormId": 300,
+ "version": {
+  "code": 1,
+  "tool": "4.4.0"
+ }
+}
