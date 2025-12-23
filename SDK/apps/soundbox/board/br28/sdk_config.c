@@ -9,68 +9,15 @@
 
 #if TCFG_IO_CFG_AT_POWER_ON
 const struct gpio_cfg_item g_io_cfg_at_poweron [] =  {
-
+    
 };
 #endif // TCFG_IO_CFG_AT_POWER_ON
 
 #if TCFG_IO_CFG_AT_POWER_OFF
 const struct gpio_cfg_item g_io_cfg_at_poweroff [] =  {
-
+    
 };
 #endif // TCFG_IO_CFG_AT_POWER_OFF
-
-#if TCFG_BATTERY_CURVE_ENABLE
-const struct battery_curve g_battery_curve_table [] =  {
-    {
-        .voltage = 3300,
-        .percent = 0
-    },
-    {
-        .voltage = 3450,
-        .percent = 5
-    },
-    {
-        .voltage = 3680,
-        .percent = 10
-    },
-    {
-        .voltage = 3740,
-        .percent = 20
-    },
-    {
-        .voltage = 3770,
-        .percent = 30
-    },
-    {
-        .voltage = 3790,
-        .percent = 40
-    },
-    {
-        .voltage = 3820,
-        .percent = 50
-    },
-    {
-        .voltage = 3870,
-        .percent = 60
-    },
-    {
-        .voltage = 3920,
-        .percent = 70
-    },
-    {
-        .voltage = 3980,
-        .percent = 80
-    },
-    {
-        .voltage = 4060,
-        .percent = 90
-    },
-    {
-        .voltage = 4120,
-        .percent = 100
-    }
-};
-#endif // TCFG_BATTERY_CURVE_ENABLE
 
 #if TCFG_IOKEY_ENABLE
 const struct iokey_info g_iokey_info [] =  {
@@ -117,37 +64,14 @@ const struct adkey_res_value adkey_res_table [] =  {
     },
     {
         .key_value = KEY_AD_NUM2,
-        .res_value = 62
-    },
-    {
-        .key_value = KEY_AD_NUM3,
         .res_value = 91
     },
     {
-        .key_value = KEY_AD_NUM4,
-        .res_value = 150
-    },
-    {
-        .key_value = KEY_AD_NUM5,
-        .res_value = 240
-    },
-    {
-        .key_value = KEY_AD_NUM6,
-        .res_value = 330
-    },
-    {
-        .key_value = KEY_AD_NUM7,
-        .res_value = 510
-    },
-    {
-        .key_value = KEY_AD_NUM8,
-        .res_value = 1000
-    },
-    {
-        .key_value = KEY_AD_NUM9,
-        .res_value = 2200
+        .key_value = KEY_AD_NUM3,
+        .res_value = 180
     }
 };
+
 const struct adkey_info g_adkey_data =  {
     .key_io = IO_PORTB_01,
     .pull_up_type = 1,
@@ -246,8 +170,62 @@ const struct ff00_2_keynum g_irkey_table [] =  {
         .source_value = 0x4a
     }
 };
+
 const struct irkey_info g_irkey_data =  {
     .key_io = IO_PORTC_08,
     .irkey_table = g_irkey_table
 };
 #endif // TCFG_IRKEY_ENABLE
+
+#if TCFG_BATTERY_CURVE_ENABLE
+const struct battery_curve g_battery_curve_table [] =  {
+    {
+        .voltage = 3300,
+        .percent = 0
+    },
+    {
+        .voltage = 3450,
+        .percent = 5
+    },
+    {
+        .voltage = 3680,
+        .percent = 10
+    },
+    {
+        .voltage = 3740,
+        .percent = 20
+    },
+    {
+        .voltage = 3770,
+        .percent = 30
+    },
+    {
+        .voltage = 3790,
+        .percent = 40
+    },
+    {
+        .voltage = 3820,
+        .percent = 50
+    },
+    {
+        .voltage = 3870,
+        .percent = 60
+    },
+    {
+        .voltage = 3920,
+        .percent = 70
+    },
+    {
+        .voltage = 3980,
+        .percent = 80
+    },
+    {
+        .voltage = 4060,
+        .percent = 90
+    },
+    {
+        .voltage = 4120,
+        .percent = 100
+    }
+};
+#endif // TCFG_BATTERY_CURVE_ENABLE

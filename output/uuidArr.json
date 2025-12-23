@@ -1,0 +1,166 @@
+[
+ {
+  "uuid": "32",
+  "defaultValue": 32
+ },
+ {
+  "uuid": 40,
+  "defaultValue": 40
+ },
+ {
+  "uuid": 50,
+  "defaultValue": 50
+ },
+ {
+  "uuid": 3,
+  "defaultValue": 3
+ },
+ {
+  "defaultValue": "1. uac音频参数（含UAC协议版本）修改后需要在 “设备管理器” 卸载一次，才能正常工作；\n2. 对于多数安卓（苹果）手机而言，要支持播歌、录音、通话，声音经样机输入输出（不经过手机扬声器输出，麦克风输入），最佳组合是 关闭读卡器 + USB扬声器 2ch 24bit + USB麦克风 1ch 16bit。USB扬声器可配置成16 + 24bit，手机会以24bit打开。至于采样率以及有几个采样率，则没有要求；\n3. 设备类开关不同的组合，会使USB呈现不同的Product ID，这是为了兼容Windows 7等不支持自动更新驱动的老系统。如果需要固定Product ID，要修改代码。\n以下为uac v2.0需要注意的：\n4. uac 2.0需要使能spk的多采样率以及mic的多采样率才能被正确枚举；\n5. 从Windodws 10 1703开始才支持uac 2.0，Linux则较早就支持，基于兼容性考虑，请谨慎选用；"
+ },
+ {
+  "uuid": "PP00",
+  "defaultValue": "PP00"
+ },
+ {
+  "uuid": "0x12345678",
+  "defaultValue": "0x12345678"
+ },
+ {
+  "uuid": "0x45",
+  "defaultValue": "0x45"
+ },
+ {
+  "uuid": "0x46",
+  "defaultValue": "0x46"
+ },
+ {
+  "uuid": "0x47",
+  "defaultValue": "0x47"
+ },
+ {
+  "uuid": "0x44",
+  "defaultValue": "0x44"
+ },
+ {
+  "uuid": "0x40",
+  "defaultValue": "0x40"
+ },
+ {
+  "uuid": "0x43",
+  "defaultValue": "0x43"
+ },
+ {
+  "uuid": "0x07",
+  "defaultValue": "0x07"
+ },
+ {
+  "uuid": "0x15",
+  "defaultValue": "0x15"
+ },
+ {
+  "uuid": "0x09",
+  "defaultValue": "0x09"
+ },
+ {
+  "uuid": "0x16",
+  "defaultValue": "0x16"
+ },
+ {
+  "uuid": "0x19",
+  "defaultValue": "0x19"
+ },
+ {
+  "uuid": "0x0d",
+  "defaultValue": "0x0d"
+ },
+ {
+  "uuid": "0x0c",
+  "defaultValue": "0x0c"
+ },
+ {
+  "uuid": "0x18",
+  "defaultValue": "0x18"
+ },
+ {
+  "uuid": "0x5e",
+  "defaultValue": "0x5e"
+ },
+ {
+  "uuid": "0x08",
+  "defaultValue": "0x08"
+ },
+ {
+  "uuid": "0x1c",
+  "defaultValue": "0x1c"
+ },
+ {
+  "uuid": "0x5a",
+  "defaultValue": "0x5a"
+ },
+ {
+  "uuid": "0x42",
+  "defaultValue": "0x42"
+ },
+ {
+  "uuid": "0x52",
+  "defaultValue": "0x52"
+ },
+ {
+  "uuid": "0x4a",
+  "defaultValue": "0x4a"
+ },
+ {
+  "uuid": "soundbox",
+  "defaultValue": "soundbox"
+ },
+ {
+  "uuid": [
+   255,
+   255,
+   255,
+   255,
+   255,
+   255
+  ],
+  "defaultValue": "FF FF FF FF FF FF"
+ },
+ {
+  "uuid": "115200",
+  "defaultValue": 115200
+ },
+ {
+  "uuid": 65535,
+  "defaultValue": "0xFFFF"
+ },
+ {
+  "defaultValue": "1. 通过 “le_audio应用选择” 来选用标准或者私有的le_audio协议，AURACAST和UNICAST（UNICAST暂不支持）为标准协议，JL_BIS和JL_CIS为私有协议；\n2. UNICAST、AURACAST、JL_CIS、JL_BIS同时只能开启其中一组，不能混合开启；"
+ },
+ {
+  "uuid": "le_audio_soundbar",
+  "defaultValue": "le_audio_soundbar"
+ },
+ {
+  "defaultValue": "1. 当上面的 “le_audio应用选择” 选择了AURACAST或者UNICAST，以下配置不生效，请到AURACAST配置或UNICAST配置中配置参数；\n2. 下面的配置参数需要保证跟与其通讯的设备的参数保持一致，否则会出现编解码异常；"
+ },
+ {
+  "defaultValue": "1. 连接AC706系列无线麦且音箱不开启TWS时 参数配置参考：\n（1）LE_AUDIO配置 -> 公共配置 -> 公共配置 -> 编解码格式选择 -> JLA_V2；\n（2）LE_AUDIO配置 -> 公共配置 -> 公共配置 -> 编解码声道数->单声道；\n（3）LE_AUDIO配置 -> 公共配置 -> 公共配置 -> 帧持续时间 -> 12.5ms; \n（4）LE_AUDIO配置 -> 公共配置 -> 公共配置 -> 采样率 -> 32000；\n（5）LE_AUDIO配置 -> JL_CIS配置 -> 1T3模式 -> 发包间隔 -> 12500；\n（6）LE_AUDIO配置 -> JL_CIS配置 -> 1T3模式 -> 码率 -> 80000；"
+ },
+ {
+  "uuid": "main52",
+  "defaultValue": "main52"
+ },
+ {
+  "defaultValue": "1. 使能无线环绕声功能时，LE_Audio 数据流会自动选择成 “环绕5.1“。\n2. 广播设备当发送端或者接收端是否由板子硬件确定：\n      1）不由硬件决定（多份代码）：小机编译代码时已经能确认是作为Tx端或者Rx端（Rx1或者Rx2或者Rx3），选择 “代码编译时已确定广播角色” 选项，相应需要配置4份全为选择 “代码编译时已确定广播角色” 的代码，才能实现无线环绕声功能。\n      2）由硬件决定（共代码）：编译代码时还不能确认是作为Tx端还是Rx端，需要等小机上电时通过板子硬件决定作为Tx端或者Rx端（Rx1或者Rx2或者Rx3）。选择 “广播角色由板子硬件决定” 这个选项，相应需要配置1份代码，就可以实现无线环绕声功能，对应做单箱发送端或者接收端在代码程序中进行确认。例如通过小机上电对某个IO口进行电压检测来决定广播的角色。\n3. 使能无线环绕声广播宏时，会关闭BIS广播的本地同步播放使能。\n4. 目前只有IIS模式支持做无线环绕声的发送端，接收端为 环绕声接收模式。\n5. 使能无线环绕声功能时会使能蓝牙、IIS和环绕声接收模式，其它模式会自动关闭并且不能支持打开广播功能！\n6. IIS模式下的广播功能只能单箱角色为Tx端时打开，环绕声接收模式只有单箱模式为Rx端时才能进入！"
+ },
+ {
+  "defaultValue": "！！！ 注意：\n1. 单箱角色配置只有在 <环绕声设备角色是否由板子硬件确定> 选项中选择 <否(多份代码)> 时生效！！！\n2. 发送端双声道数据流的解码器和单声道数据流的解码器会工具单箱角色的修改而自动修改一些配置。"
+ },
+ {
+  "uuid": "PB02&1_PB08&1",
+  "defaultValue": "PB02&1_PB08&1"
+ },
+ {
+  "defaultValue": ""
+ }
+]

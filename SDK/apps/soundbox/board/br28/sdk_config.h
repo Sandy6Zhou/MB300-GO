@@ -11,6 +11,10 @@
 
 #include "jlstream_node_cfg.h"
 
+// ------------JLStudio Auto generate------------
+#define PROJECT_CONFIG_NAME "" // 默认配置为空，非默认配置为配置名称
+// ------------JLStudio Auto generate------------
+
 // ------------板级配置.json------------
 #define TCFG_DEBUG_UART_ENABLE 1 // 调试串口
 #if TCFG_DEBUG_UART_ENABLE
@@ -25,13 +29,20 @@
 #define TCFG_ONLINE_TX_PORT IO_PORT_DP // 串口引脚TX
 #define TCFG_ONLINE_RX_PORT IO_PORT_DM // 串口引脚RX
 #define TCFG_COMM_TYPE TCFG_USB_COMM // 通信方式
-#define TCFG_TUNING_WITH_DUAL_DEVICE_ENBALE 0
 #endif // TCFG_CFG_TOOL_ENABLE
 
 #define CONFIG_SPI_DATA_WIDTH 2 // flash通信
 #define CONFIG_SPI_MODE 0 // flash模式
 #define CONFIG_FLASH_SIZE 1048576 // flash容量
 #define TCFG_VM_SIZE 32 // VM大小（K）
+
+#define TCFG_NORFLASH_DEV_ENABLE 0 // 外置flash配置
+#if TCFG_NORFLASH_DEV_ENABLE
+#define TCFG_NOR_FAT 0 // 挂载fatfs文件系统使能
+#define TCFG_FLASH_DEV_FLASH_READ_WIDTH 0 // flash线宽
+#define TCFG_FLASH_DEV_SPI_HW_NUM 1 // 支持flash的硬件SPI
+#define TCFG_FLASH_DEV_SPI_CS_PORT IO_PORTA_07 // CS片选IO
+#endif // TCFG_NORFLASH_DEV_ENABLE
 
 #define TCFG_PWMLED_ENABLE 1 // LED配置
 #if TCFG_PWMLED_ENABLE
@@ -47,10 +58,10 @@
 #define TCFG_PSRAM_DEV_ENABLE 0 // PSRAM配置
 #if TCFG_PSRAM_DEV_ENABLE
 #define TCFG_PSRAM_INIT_CLK PSRAM_CLK_120MHZ // 时钟频率
-#define TCFG_PSRAM_MODE PSRAM_MODE_4_WIRE_CMD4_ADR4_DAT4 // 线数设置
+#define TCFG_PSRAM_MODE 2 // 线数设置
 #define TCFG_PSRAM_SIZE (2 * 1024 * 1024) // PSRAM大小
 #define TCFG_PSRAM_POWER_PORT IO_PORTE_06 // 电源控制IO
-#define TCFG_PSRAM_PORT_SEL PSRAM_PORT_PORTA // IO引脚组
+#define TCFG_PSRAM_PORT_SEL 0 // IO引脚组
 #endif // TCFG_PSRAM_DEV_ENABLE
 
 #define TCFG_SD0_ENABLE 1 // SD配置
@@ -83,6 +94,7 @@
 #define TCFG_USB_SLAVE_HID_ENABLE 1 // HID使能
 #define MSD_BLOCK_NUM 1 // MSD缓存块数
 #define USB_AUDIO_VERSION USB_AUDIO_VERSION_1_0 // UAC协议版本
+#define TCFG_USB_APPLE_DOCK_EN 0 // 苹果IAP使能
 #define TCFG_USB_SLAVE_AUDIO_SPK_ENABLE 1 // USB扬声器使能
 #define SPK_AUDIO_RATE_NUM 1 // SPK采样率列表
 #define SPK_AUDIO_RES 16 // SPK位宽1
@@ -125,7 +137,7 @@
 #define TCFG_FM_QN8035_ENABLE 0 // FM_QN8035
 #endif // TCFG_FM_OUTSIDE_ENABLE
 
-#define TCFG_LINEIN_DETECT_ENABLE 0 // LINEIN检测配置
+#define TCFG_LINEIN_DETECT_ENABLE 1 // LINEIN检测配置
 #if TCFG_LINEIN_DETECT_ENABLE
 #define TCFG_LINEIN_DETECT_IO IO_PORTB_03 // 检测IO选择
 #define TCFG_LINEIN_DETECT_PULL_UP_ENABLE 1 // 检测IO上拉使能
@@ -138,7 +150,8 @@
 
 #define TCFG_IO_CFG_AT_POWER_OFF 0 // 关机时IO配置
 
-#define TCFG_CHARGESTORE_PORT 0 // 通信IO
+#define TCFG_CHARGESTORE_PORT IO_PORT_LDOIN // 通信IO
+#define CONFIG_UART_UPDATE_PIN PP00 // INI配置（工具自动生成）
 // ------------板级配置.json------------
 
 // ------------功能配置.json------------
@@ -147,8 +160,13 @@
 #define TCFG_APP_LINEIN_EN 1 // LINEIN模式
 #define TCFG_APP_FM_EN 0 // FM模式
 #define TCFG_APP_PC_EN 1 // PC模式
+#define TCFG_APP_RTC_EN 0 // RTC模式
+#define TCFG_APP_IIS_EN 0 // IIS模式
+#define TCFG_APP_RECORD_EN 0 // 录音模式
 #define TCFG_APP_SURROUND_SOUND_EN 0 // 环绕声接收模式
+#define TCFG_APP_MIC_EN 0 // MIC模式
 #define TCFG_MIC_EFFECT_ENABLE 1 // 混响使能
+#define TCFG_MIX_RECORD_ENABLE 0 // 混合录音使能
 #define TCFG_DEC_ID3_V2_ENABLE 0 // ID3_V2
 #define TCFG_DEC_ID3_V1_ENABLE 0 // ID3_V1
 #define FILE_DEC_REPEAT_EN 0 // 无缝循环播放
@@ -158,7 +176,6 @@
 #define TCFG_DEC_DECRYPT_KEY 0x12345678 // 加密KEY
 #define MUSIC_PLAYER_CYCLE_ALL_DEV_EN 1 // 循环播放模式是否循环所有设备
 #define MUSIC_PLAYER_PLAY_FOLDER_PREV_FIRST_FILE_EN 0 // 切换文件夹播放时从第一首歌开始
-#define TCFG_MUSIC_DEVICE_TONE_EN 0 // 设备提示音
 #define TWFG_APP_POWERON_IGNORE_DEV 4000 // 设备忽略时间（单位：ms）
 #define TCFG_FIX_CLOCK_FREQ 0 // 固定时钟频率
 // ------------功能配置.json------------
@@ -185,9 +202,9 @@
 #define TCFG_LOWPOWER_POWER_SEL PWR_LDO15 // 电源模式
 #define TCFG_LOWPOWER_OSC_TYPE OSC_TYPE_LRC // 低功耗时钟源
 #define TCFG_CLOCK_MODE CLOCK_MODE_ADAPTIVE // 时钟模式
-#define TCFG_LOWPOWER_VDDIOM_LEVEL VDDIOM_VOL_32V // IOVDD
+#define TCFG_LOWPOWER_VDDIOM_LEVEL VDDIOM_VOL_34V // IOVDD
 #define TCFG_LOWPOWER_VDDIOW_LEVEL VDDIOM_VOL_26V // 弱IOVDD
-#define CONFIG_LVD_LEVEL 2.7v // LVD档位
+#define CONFIG_LVD_LEVEL 2.5v // LVD档位
 #define TCFG_MAX_LIMIT_SYS_CLOCK 128000000 // 上限时钟设置
 #define TCFG_LOWPOWER_LOWPOWER_SEL 0 // 低功耗模式
 #define TCFG_AUTO_POWERON_ENABLE 1 // 上电自动开机
@@ -221,18 +238,18 @@
 // ------------UI配置.json------------
 #define TCFG_UI_ENABLE 1 // UI配置
 #if TCFG_UI_ENABLE
-#define CONFIG_UI_STYLE STYLE_JL_SOUNDBOX // UI类型
-#define TCFG_LED7_RUN_RAM 0 // LED屏驱动跑RAM
-#define TCFG_UI_LED7_ENABLE 0 // LED7脚数码管屏
+#define CONFIG_UI_STYLE STYLE_JL_LED7 // UI类型
+#define TCFG_LED7_RUN_RAM 1 // LED屏驱动跑RAM
+#define TCFG_UI_LED7_ENABLE 1 // LED7脚数码管屏
 #define TCFG_TFT_LCD_DEV_SPI_HW_NUM 1 // LCD SPI口选择
 #define TCFG_LRC_LYRICS_ENABLE 0 // 歌词显示
 #define LRC_ENABLE_SAVE_LABEL_TO_FLASH 0 // 保存歌词时间标签到flash
 #define TCFG_LCD_OLED_ENABLE 0 // OLED屏使能
 #define TCFG_OLED_SPI_SSD1306_ENABLE 0 // SSD1306
-#define TCFG_SPI_LCD_ENABLE 1 // LCD屏使能
-#define TCFG_LCD_SPI_ST7789V_ENABLE 1 // ST7789V
-#define TCFG_LCD_SPI_SH8601A_ENABLE 0 //SH8601A
-#define TCFG_LCD_SPI_GC9B71_ENABLE  0 //GC9B71
+#define TCFG_SPI_LCD_ENABLE 0 // LCD彩屏使能
+#define TCFG_LCD_SPI_ST7789V_ENABLE 0 // ST7789V
+#define TCFG_TOUCH_PANEL_ENABLE 0 // 触摸面板使能
+#define TCFG_TP_IT7259E_ENABLE 0 // IT7259E
 #define TCFG_LED7_PIN0 IO_PORTA_04 // LED引脚0
 #define TCFG_LED7_PIN1 IO_PORTA_06 // LED引脚1
 #define TCFG_LED7_PIN2 IO_PORTA_07 // LED引脚2
@@ -240,7 +257,7 @@
 #define TCFG_LED7_PIN4 IO_PORTA_09 // LED引脚4
 #define TCFG_LED7_PIN5 IO_PORTA_10 // LED引脚5
 #define TCFG_LED7_PIN6 IO_PORTA_11 // LED引脚6
-#define TCFG_LCD_PIN_RESET IO_PORTB_06 // LCD RESET
+#define TCFG_LCD_PIN_RESET IO_PORTB_06 // LCD RESET 
 #define TCFG_LCD_PIN_CS IO_PORTA_03 // LCD CS
 #define TCFG_LCD_PIN_BL IO_PORTC_08 // LCD BLCKLIGHT
 #define TCFG_LCD_PIN_DC IO_PORTA_02 // LCD DC
@@ -252,8 +269,6 @@
 // ------------蓝牙配置.json------------
 #define TCFG_BT_NAME_SEL_BY_AD_ENABLE 0 // 蓝牙名(AD采样)
 
-#define TCFG_USER_EMITTER_ENABLE 0 //EDR发射器
-#define TCFG_BT_SUPPORT_PROFILE_HFP_AG 1
 #define TCFG_BT_PAGE_TIMEOUT 8 // 单次回连时间(s)
 #define TCFG_BT_POWERON_PAGE_TIME 30 // 开机回连超时(s)
 #define TCFG_BT_TIMEOUT_PAGE_TIME 120 // 超距断开回连超时(s)
@@ -268,6 +283,7 @@
 #define TCFG_BT_VOL_SYNC_ENABLE 1 // 音量同步
 #define TCFG_BT_MUSIC_INFO_ENABLE 0 // 歌曲信息显示
 #define TCFG_BT_DISPLAY_BAT_ENABLE 1 // 电量显示
+#define TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE 0 // 仅保留电量显示
 #define TCFG_BT_DUAL_CONN_ENABLE 0 // 一拖二
 #define TCFG_BT_INBAND_RING 1 // 手机铃声
 #define TCFG_BT_PHONE_NUMBER_ENABLE 0 // 来电报号
@@ -286,12 +302,16 @@
 #define TCFG_BT_SUPPORT_SPP 1 // SPP
 #define TCFG_BT_SUPPORT_PNP 1 // PNP
 #define TCFG_BT_SUPPORT_PBAP 0 // PBAP
+#define TCFG_BT_SUPPORT_MAP 0 // MAP
 #define TCFG_BT_SUPPORT_PAN 0 // PAN
 #define TCFG_BT_BACKGROUND_ENABLE 1 // 蓝牙后台
 #define TCFG_BT_BACKGROUND_GOBACK 1 // 蓝牙后台连接断开返回
 #define TCFG_BT_BACKGROUND_DETECT_TIME 1940 // 音乐检测时间
 #define CONFIG_BT_MODE 1 // 模式选择
 #define TCFG_NORMAL_SET_DUT_MODE 0 // NORMAL模式下使能DUT测试
+#define TCFG_H4_UART_RX_PIN IO_PORT_DM // 串口接收
+#define TCFG_H4_UART_TX_PIN IO_PORT_DP // 串口发送
+#define TCFG_H4_UART_BAUD 115200 // 波特率
 
 #define TCFG_USER_TWS_ENABLE 0 // TWS
 #if TCFG_USER_TWS_ENABLE
@@ -306,9 +326,16 @@
 #define TCFG_TWS_PAIR_BY_BOTH_SIDES 0 // 两边同时按配对键进入配对
 #define TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE 0 // 自动主从切换
 #define TCFG_TWS_POWER_BALANCE_ENABLE 0 // 主从电量平衡
-#define TCFG_LOCAL_TWS_ENABLE 1 // TWS本地音乐转发
+#define TCFG_TWS_TONE_PLAY 0 // TWS提示音播放
+#define TCFG_LOCAL_TWS_ENABLE 0 // TWS本地音乐转发
 #define TCFG_LOCAL_TWS_SYNC_VOL 0 // 本地音乐音量同步
 #define TCFG_BACKGROUND_WITHOUT_EDR_CONNECT 0 // 后台关闭经典蓝牙连接
+#define LOCAL_TWS_CODEC_TYPE 0xa000000 // 编解码格式
+#define LOCAL_TWS_CODEC_CHANNEL 2 // 编解码声道数
+#define LOCAL_TWS_CODEC_BIT_WIDTH 0 // 编解码位宽
+#define LOCAL_TWS_CODEC_FRAME_LEN 100 // 帧持续时间
+#define LOCAL_TWS_CODEC_SAMPLERATE 44100 // 采样率
+#define LOCAL_TWS_CODEC_BIT_RATE 96000 // 码率
 #endif // TCFG_USER_TWS_ENABLE
 
 #define TCFG_BT_SNIFF_ENABLE 1 // sniff
@@ -326,63 +353,79 @@
 #define TCFG_BT_BLE_BREDR_SAME_ADDR 1 // 和2.1同地址
 #endif // TCFG_USER_BLE_ENABLE
 
-#define TCFG_THIRD_PARTY_PROTOCOLS_ENABLE 0 // AI配置
+#define TCFG_THIRD_PARTY_PROTOCOLS_ENABLE 0 // 第三方协议配置
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
-#define TCFG_THIRD_PARTY_PROTOCOLS_SEL 0//TRANS_DATA_EN // AI协议选择
+#define TCFG_THIRD_PARTY_PROTOCOLS_SEL 0 // 第三方协议选择
 #endif // TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
 
-#define TCFG_LE_AUDIO_PLAY_LATENCY 30000 // le_audio延时（us）
+#define CONFIG_FINDMY_UARP_ENABLE 0 // Findmy UARP 升级
+
+#define TCFG_NETAPPLICATION_ENABLE 0 // 蓝牙共享网络应用
+#if TCFG_NETAPPLICATION_ENABLE
+#define TCFG_INTELLIGENT_DUER 0 // 小度AI
+#define TCFG_INTELLIGENT_BRTC 0 // 百度BRTC
+#endif // TCFG_NETAPPLICATION_ENABLE
 // ------------蓝牙配置.json------------
 
 // ------------公共配置.json------------
-#define LE_AUDIO_CODEC_TYPE 0x8 // 编解码格式
+#define TCFG_LE_AUDIO_APP_CONFIG 0 // le_audio 应用选择
+#define LEA_LOCAL_SYNC_PLAY_EN 1 // 本地同步播放
+#define LEA_BIG_RX_CLOSE_EDR_EN 0 // 接收端关EDR
+#define LEA_BIG_FIX_ROLE LEA_ROLE_UNFIX // AURACAST或JL_BIS角色
+#define LEA_CIG_FIX_ROLE LEA_ROLE_AS_CENTRAL // UNICAST或JL_CIS角色
+#define LE_AUDIO_CODEC_TYPE 0xa000000 // 编解码格式
 #define LE_AUDIO_CODEC_CHANNEL 1 // 编解码声道数
 #define LE_AUDIO_CODEC_FRAME_LEN 100 // 帧持续时间
 #define LE_AUDIO_CODEC_SAMPLERATE 48000 // 采样率
 #define LEA_TX_DEC_OUTPUT_CHANNEL 37 // 发送端解码输出
 #define LEA_RX_DEC_OUTPUT_CHANNEL 37 // 接收端解码输出
 #define TCFG_KBOX_1T3_MODE_EN 0 // 1T3使能
+#define TCFG_KBOX_1T3_WITH_TWS_MODE 1 // TWS+MIC连接方式
+#define LE_AUDIO_LOCAL_MIC_EN 0 // 叠加Mic广播功能
+#define LE_AUDIO_MIX_MIC_LATENCY 85000 // 发送延时(us)
+#define LE_AUDIO_MIX_MIC_EFFECT_EN 0 // 叠加混响音效广播
 // ------------公共配置.json------------
 
-// ------------BIS配置.json------------
-#define LEA_BIG_CTRLER_TX_EN 0 // 发送使能
-#define LEA_BIG_CTRLER_RX_EN 0 // 接收使能
+// ------------JL_BIS配置.json------------
 #define LEA_BIG_CUSTOM_DATA_EN 1 // 自定义数据同步
 #define LEA_BIG_VOL_SYNC_EN 1 // 音量同步
-#define LEA_BIG_RX_CLOSE_EDR_EN 0 // 接收端关EDR
-#define LEA_LOCAL_SYNC_PLAY_EN 1 // 本地同步播放
-#define LEA_BIG_FIX_ROLE 0 // 广播角色
-// ------------BIS配置.json------------
+#define LEA_COMPATIBLE_WITH_OLD_VERSION 0 // 兼容非可视化版本广播
+// ------------JL_BIS配置.json------------
 
-// ------------CIS配置.json------------
-#define LEA_CIG_CENTRAL_EN 0 // 主机使能
-#define LEA_CIG_PERIPHERAL_EN 0 // 从机使能
+// ------------JL_CIS配置.json------------
 #define LEA_CIG_CENTRAL_CLOSE_EDR_CONN 0 // 主机关闭EDR
 #define LEA_CIG_PERIPHERAL_CLOSE_EDR_CONN 1 // 从机关闭EDR
 #define LEA_CIG_KEY_EVENT_SYNC 0 // 按键同步
-#define LEA_CIG_FIX_ROLE LEA_ROLE_AS_CENTRAL // 连接角色
 #define LEA_CIG_CONNECT_MODE LEA_CIG_2T1R_MODE // 连接方式
 #define LEA_CIG_TRANS_MODE LEA_TRANS_SIMPLEX // 音频传输方式
-// ------------CIS配置.json------------
+// ------------JL_CIS配置.json------------
+
+// ------------AURACAST配置.json------------
+#define AURACAST_SOURCE_BIS_NUMS 1 // source广播链路数
+#define AURACAST_SINK_BIS_NUMS 1 // sink最多接收链路数
+#define AURACAST_TX_CODEC_CHANNEL 1 // source音频通道
+#define AURACAST_RX_CODEC_CHANNEL 1 // sink音频通道
+// ------------AURACAST配置.json------------
 
 // ------------无线环绕声配置.json------------
 #define LEA_DUAL_STREAM_MERGE_TRANS_MODE 0 // 无线环绕声功能
-#define SURROUND_SOUND_FIX_ROLE_EN 0 // 环绕声广播角色是否固定
-#define SURROUND_SOUND_ROLE 0 // 单箱角色(角色固定时生效)
+#define SURROUND_SOUND_FIX_ROLE_EN 1 // 环绕声设备角色是否由板子硬件确定
+#define SURROUND_SOUND_ROLE 0 // 单箱角色
 #define SURROUND_SOUND_DUAL_CODEC_TYPE 0xa000000 // 编解码格式
 #define SURROUND_SOUND_DUAL_CODEC_CHANNEL 2 // 编解码声道数
 #define SURROUND_SOUND_DUAL_TX_DEC_OUTPUT_CHANNEL 37 // 发送端解码输出
-#define SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL 17 // 接收端解码输出
-#define SURROUND_SOUND_DUAL_BIT_RATE 128000 // 码率
+#define SURROUND_SOUND_DUAL_RX_DEC_OUTPUT_CHANNEL 37 // 接收端解码输出
+#define SURROUND_SOUND_DUAL_BIT_RATE 192000 // 码率
 #define SURROUND_SOUND_DUAL_CODEC_SAMPLERATE 48000 // 采样率
 #define SURROUND_SOUND_DUAL_CODEC_FRAME_LEN 50 // 帧持续时间
 #define SURROUND_SOUND_MONO_CODEC_TYPE 0xa000000 // 编解码格式
 #define SURROUND_SOUND_MONO_CODEC_CHANNEL 1 // 编解码声道数
 #define SURROUND_SOUND_MONO_TX_DEC_OUTPUT_CHANNEL 37 // 发送端解码输出
-#define SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL 17 // 接收端解码输出
-#define SURROUND_SOUND_MONO_BIT_RATE 128000 // 码率
+#define SURROUND_SOUND_MONO_RX_DEC_OUTPUT_CHANNEL 37 // 接收端解码输出
+#define SURROUND_SOUND_MONO_BIT_RATE 64000 // 码率
 #define SURROUND_SOUND_MONO_CODEC_SAMPLERATE 48000 // 采样率
 #define SURROUND_SOUND_MONO_CODEC_FRAME_LEN 50 // 帧持续时间
+// ------------无线环绕声配置.json------------
 
 // ------------升级配置.json------------
 #define TCFG_UPDATE_ENABLE 1 // 升级选择
@@ -396,7 +439,7 @@
 #define TCFG_UART_UPDATE_TX_PIN 0 // TX_IO选择
 #define TCFG_UART_UPDTAE_RX_PIN 0 // RX_IO选择
 #define CONFIG_UPDATE_JUMP_TO_MASK 0 // 升级维持io使能
-#define CONFIG_SD_LATCH_IO PB02_PB08 // SD卡升级需要维持的IO
+#define CONFIG_SD_LATCH_IO PB02&1_PB08&1 // SD卡升级需要维持的IO
 #define CONFIG_UPDATE_MUTIL_CPU_UART 0 // 多芯片交互升级
 #define CONFIG_UPDATE_MACHINE_NUM 0 // 唯一设备号
 #define TCFG_UPDATE_MUTIL_CPU_MASTER 0 // 是否固定为主机
@@ -412,9 +455,9 @@
 #define TCFG_AUDIO_VCM_CAP_EN 0x1 // VCM电容
 #define TCFG_AUDIO_DAC_POWER_ON_MODE 0X0 // DAC开启模式
 #define TCFG_AUDIO_DAC_BUFFER_TIME_MS 100 // 缓冲长度（ms）
-#define TCFG_AUDIO_DAC_IO_ENABLE 0 // DAC IO
 #define TCFG_AUDIO_DAC_PA_ISEL0 4 // PA_ISEL0
 #define TCFG_AUDIO_DAC_PA_ISEL1 3 // PA_ISEL1
+#define TCFG_AUDIO_DAC_IO_ENABLE 0 // DAC IO
 #define TCFG_AUDIO_DAC_POWER_BOOST 1 // 音量增强模式
 #define TCFG_AUDIO_L_CHANNEL_GAIN 0x03 // L Channel
 #define TCFG_AUDIO_R_CHANNEL_GAIN 0x03 // R Channel
@@ -429,38 +472,38 @@
 #define TCFG_ADC0_AIN_SEL 1 // 输入端口
 #define TCFG_ADC0_BIAS_SEL 1 // 供电端口
 #define TCFG_ADC0_BIAS_RSEL 4 // MIC BIAS上拉电阻挡位
-#define TCFG_ADC0_DCC_LEVEL 8 // DCC 档位
-#define TCFG_ADC0_POWER_IO 0 // IO供电选择
+#define TCFG_ADC0_DCC_LEVEL 14 // DCC 档位
+#define TCFG_ADC0_POWER_IO 49889 // IO供电选择
 #define TCFG_ADC1_ENABLE 1 // 使能
 #define TCFG_ADC1_MODE 0 // 模式
 #define TCFG_ADC1_AIN_SEL 1 // 输入端口
 #define TCFG_ADC1_BIAS_SEL 2 // 供电端口
 #define TCFG_ADC1_BIAS_RSEL 4 // MIC BIAS上拉电阻挡位
-#define TCFG_ADC1_DCC_LEVEL 8 // DCC 档位
-#define TCFG_ADC1_POWER_IO 0 // IO供电选择
+#define TCFG_ADC1_DCC_LEVEL 14 // DCC 档位
+#define TCFG_ADC1_POWER_IO 49889 // IO供电选择
 #define TCFG_ADC2_ENABLE 1 // 使能
 #define TCFG_ADC2_MODE 0 // 模式
 #define TCFG_ADC2_AIN_SEL 1 // 输入端口
 #define TCFG_ADC2_BIAS_SEL 4 // 供电端口
 #define TCFG_ADC2_BIAS_RSEL 4 // MIC BIAS上拉电阻挡位
-#define TCFG_ADC2_DCC_LEVEL 8 // DCC 档位
-#define TCFG_ADC2_POWER_IO 0 // IO供电选择
+#define TCFG_ADC2_DCC_LEVEL 14 // DCC 档位
+#define TCFG_ADC2_POWER_IO 49889 // IO供电选择
 #define TCFG_ADC3_ENABLE 1 // 使能
 #define TCFG_ADC3_MODE 0 // 模式
 #define TCFG_ADC3_AIN_SEL 1 // 输入端口
 #define TCFG_ADC3_BIAS_SEL 8 // 供电端口
 #define TCFG_ADC3_BIAS_RSEL 4 // MIC BIAS上拉电阻挡位
-#define TCFG_ADC3_DCC_LEVEL 8 // DCC 档位
-#define TCFG_ADC3_POWER_IO 0 // IO供电选择
+#define TCFG_ADC3_DCC_LEVEL 14 // DCC 档位
+#define TCFG_ADC3_POWER_IO 49889 // IO供电选择
 #endif // TCFG_AUDIO_ADC_ENABLE
 
 #define TCFG_AUDIO_GLOBAL_SAMPLE_RATE 44100 // 全局采样率
 #define TCFG_AEC_TOOL_ONLINE_ENABLE 0 // 手机APP在线调试
 #define TCFG_AUDIO_CVP_SYNC 0 // 通话上行同步
 #define TCFG_AUDIO_DMS_DUT_ENABLE 1 // 通话产测
-#define TCFG_ESCO_DL_CVSD_SR_USE_16K 1 // 通话下行固定16K
+#define TCFG_ESCO_DL_CVSD_SR_USE_16K 0 // 通话下行固定16K
+#define TCFG_TWS_ESCO_MODE TWS_ESCO_MASTER_AND_SLAVE // 通话模式
 #define TCFG_AUDIO_SMS_SEL SMS_DEFAULT // 1mic算法选择
-#define TCFG_AUDIO_SMS_DNS_VERSION SMS_DNS_V100 //1micDNS算法选择
 #define TCFG_AUDIO_DMS_GLOBAL_VERSION DMS_GLOBAL_V200 // 2micDNS算法选择
 #define TCFG_3MIC_MODE_SEL JLSP_3MIC_MODE2 // 3mic算法选择
 #define TCFG_MUSIC_PLC_YPE 0 // PLC类型选择
@@ -470,7 +513,7 @@
 #define TCFG_SMART_VOICE_USE_AEC 0 // 回音消除使能
 #define TCFG_SMART_VOICE_MIC_CH_SEL AUDIO_ADC_MIC_0 // 麦克风选择
 #define TCFG_AUDIO_KWS_LANGUAGE_SEL KWS_CH // 模式选择
-#define TCFG_DEC_WAV_ENABLE 1 // WAV
+#define TCFG_DEC_WAV_ENABLE 0 // WAV
 #define TCFG_DEC_MP3_ENABLE 1 // MP3
 #define TCFG_DEC_FLAC_ENABLE 1 // FLAC
 #define TCFG_DEC_WMA_ENABLE 1 // WMA
@@ -481,24 +524,21 @@
 #define TCFG_DEC_MTY_ENABLE 0 // MTY
 #define TCFG_DEC_WTS_ENABLE 0 // WTS
 #define TCFG_DEC_JLA_ENABLE 0 // JLA
-#define TCFG_ENC_MSBC_ENABLE 1 // MSBC
-#define TCFG_ENC_CVSD_ENABLE 1 // CVSD
+#define TCFG_DEC_JLA_V2_ENABLE 1 // JLA_V2
+#define TCFG_DEC_OGG_OPUS 0 // OGG_OPUS
+#define TCFG_DEC_STENC_OPUS 0 // STENC_OPUS
+#define TCFG_ENC_MSBC_ENABLE  1 // mSBC
+#define TCFG_ENC_CVSD_ENABLE  1 // CVSD
 #define TCFG_ENC_JLA_ENABLE 0 // JLA
-#define TCFG_ENC_SBC_ENABLE 1 // SBC
+#define TCFG_ENC_SBC_ENABLE 0 // SBC
 #define TCFG_ENC_AMR_ENABLE 0 // AMR
-#define TCFG_ENC_MP3_ENABLE 0 // MP3
+#define TCFG_ENC_OPUS_ENABLE 0 // OPUS
+#define TCFG_ENC_JLA_V2_ENABLE 1 // JLA_V2
+#define TCFG_ENC_MP3_ENABLE  0 // MP3
 #define TCFG_ENC_MP3_TYPE 0 // MP3格式选择
-#define TCFG_ENC_ADPCM_ENABLE 0 // ADPCM
+#define TCFG_ENC_ADPCM_ENABLE  0 // ADPCM
 #define TCFG_ENC_ADPCM_TYPE 0 // ADPCM格式选择
 #define TCFG_DATA_EXPORT_UART_TX_PORT IO_PORT_DM // 串口发送引脚
 #define TCFG_DATA_EXPORT_UART_BAUDRATE 2000000 // 串口波特率
 // ------------音频配置.json------------
-#define TCFG_IFLYTEK_ENABLE	0
-#if TCFG_IFLYTEK_ENABLE
-#define TCFG_IFLYTEK_VAD_DEMO	0
-#define TCFG_IFLYTEK_TTS_DEMO	0
-#define TCFG_IFLYTEK_SPARKDESK_DEMO	0
 #endif
-#endif
-
-
