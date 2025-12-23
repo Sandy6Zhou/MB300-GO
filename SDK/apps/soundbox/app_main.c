@@ -68,6 +68,8 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+#include "my_common.h"
+
 /*任务列表 */
 const struct task_info task_info_table[] = {
 #if LE_AUDIO_MIX_MIC_EFFECT_EN
@@ -657,11 +659,36 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
     return 1;
 }
 
+/*********************************************************************
+**函数名称:  custom_task_info_init
+**入口参数:  无
+**出口参数:  无
+**函数功能:  初始化任务数据信息结构
+*********************************************************************/
+const char *my_shell_task_name = "MY_SHELL";
+char *g_my_task_info[MAX_MY_MOD_TYPE] = { 0 };
+
+void custom_task_info_init(void)
+{
+    g_my_task_info[MOD_SHELL] = my_shell_task_name;
+}
+
 static void app_task_loop(void *p)
 {
     struct app_mode *mode;
 
     mode = app_task_init();
+
+    my_shell_uart_init();
+
+#if 1   //JIMI
+    int err = os_task_create(my_shell_task, NULL, 1, 2 * 1024, 128, my_shell_task_name);
+    if (err != OS_NO_ERR) {
+        r_printf("creat fail %x\n", err);
+    }
+#endif
+
+    custom_task_info_init();
 
     while (1) {
         app_set_current_mode(mode);

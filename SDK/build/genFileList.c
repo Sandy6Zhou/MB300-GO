@@ -1602,6 +1602,16 @@ c_SRC_FILES += \
 
 // *INDENT-OFF*
 
+// *JIMI-MYPROJ*
+
+c_SRC_FILES += \
+    apps/soundbox/myproj/src/my_uart.c \
+    apps/soundbox/myproj/src/my_shell.c \
+    apps/soundbox/myproj/src/my_tool.c \
+    apps/soundbox/myproj/src/my_log.c \
+
+// *JIMI-MYPROJ*
+
 #if 0
 c_SRC_FILES += \
 	  cpu/periph_demo/iic_master_demo.c \

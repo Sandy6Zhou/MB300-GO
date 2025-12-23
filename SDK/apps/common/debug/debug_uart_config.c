@@ -8,10 +8,12 @@
 #include "cpu/includes.h"
 #include "gpio_config.h"
 
+#include "my_common.h"
+
 #if CONFIG_DEBUG_ENABLE || CONFIG_DEBUG_LITE_ENABLE
 
 #define     DEBUG_UART_NUM  0
-#define     DEBUG_UART_DMA_EN   0
+#define     DEBUG_UART_DMA_EN   1
 
 static u8 uart_mode = 0;        //0:typical putbyte, 1:exception putbyte
 
@@ -35,7 +37,7 @@ void debug_uart_init()
     const struct uart_config debug_uart_config = {
         .baud_rate = TCFG_DEBUG_UART_BAUDRATE,
         .tx_pin = TCFG_DEBUG_UART_TX_PIN,
-        .rx_pin = -1,
+        .rx_pin = TCFG_DEBUG_UART_RX_PIN,
         .tx_wait_mutex = 0,//1:不支持中断调用,互斥,0:支持中断,不互斥
     };
 
@@ -59,7 +61,8 @@ void debug_uart_init()
 
     uart_init(DEBUG_UART_NUM, &debug_uart_config);
 
-#if DEBUG_UART_DMA_EN
+    // NOTE: 实测这里初始化dma会失败
+#if 0//DEBUG_UART_DMA_EN
     const struct uart_dma_config dma_config = {
         .event_mask = UART_EVENT_TX_DONE,
         .irq_callback = uart_irq,
@@ -75,27 +78,32 @@ void debug_uart_init()
 
 static void __putbyte(char a)
 {
-#if DEBUG_UART_DMA_EN
-
-    debug_uart_buf[uart_buffer_index][pos] = a;
-    pos++;
-    if ((jiffies - tx_jiffies > 10) || (pos == MAX_DEBUG_FIFO)) {
-        tx_jiffies = jiffies;
-        uart_wait_tx_idle(DEBUG_UART_NUM, 10);
-        uart_send_bytes(DEBUG_UART_NUM, debug_uart_buf[uart_buffer_index], pos);
-        uart_buffer_index = !uart_buffer_index;
-        pos = 0;
+//#if DEBUG_UART_DMA_EN
+    /**
+     * uart_send_bytes接口必须在串口dma初始化后才能使用，为了不影响开机
+     * 日志打印，dma初始化完成前先用uart_putbyte来打印日志。
+     */
+    if (debug_dma_init_flag)
+    {
+        debug_uart_buf[uart_buffer_index][pos] = a;
+        pos++;
+        if ((jiffies - tx_jiffies > 10) || (pos == MAX_DEBUG_FIFO)) {
+            tx_jiffies = jiffies;
+            uart_wait_tx_idle(DEBUG_UART_NUM, 10);
+            uart_send_bytes(DEBUG_UART_NUM, debug_uart_buf[uart_buffer_index], pos);
+            uart_buffer_index = !uart_buffer_index;
+            pos = 0;
+        }
     }
-
-#else
-
+    else
+    {
+//#else
     /* if(a == '\n'){                          */
     /*     uart_putbyte(DEBUG_UART_NUM, '\r'); */
     /* }                                       */
-
-    uart_putbyte(DEBUG_UART_NUM, a);
-
-#endif
+        uart_putbyte(DEBUG_UART_NUM, a);
+    }
+//#endif
 }
 
 /* --------------------------------------------------------------------------*/
