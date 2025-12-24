@@ -29,4 +29,8 @@ void my_send_msg_data(module_type src_mod_id, module_type dest_mod_id, MSG_S *ms
 
 void my_get_os_cpu_usage(void);
 
+uint8 string_check_is_hex_str(const char* str);
+
+uint8 hexstr_to_hex(uint8 *dest, uint8 dest_size, const char *src);
+
 #endif

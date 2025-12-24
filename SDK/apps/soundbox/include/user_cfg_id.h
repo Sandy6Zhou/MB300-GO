@@ -55,6 +55,11 @@
 #define     VM_WIRELESS_RECORDED_ADDR1       33
 #define     VM_WIRELESS_RECORDED_ADDR2       34
 
+//vm分区未使用id(35-47)
+#define     CFG_LICENSE_GG_VALUE             35
+#define     CFG_LICENSE_FF_VALUE             36
+#define     CFG_ADV_VALID_VALUE              37
+
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49
 #define     CFG_RCSP_ADV_HIGH_LOW_VOL        50

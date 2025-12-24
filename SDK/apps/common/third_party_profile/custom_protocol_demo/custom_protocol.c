@@ -7,7 +7,7 @@
 #include "multi_protocol_main.h"
 #include "custom_protocol.h"
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN && (MY_FINDMY_EN == 0))
 
 void *custom_demo_ble_hdl = NULL;
 void *custom_demo_spp_hdl = NULL;

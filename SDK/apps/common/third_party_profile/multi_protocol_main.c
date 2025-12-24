@@ -191,12 +191,17 @@ SDP_RECORD_REGISTER(spp_sdp_record_item) = {
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
-
-extern void custom_demo_all_init(void);
-extern void custom_demo_all_exit(void);
-extern void custom_demo_ble_disconnect(void);
-extern int custom_demo_adv_enable(u8 enable);
-
+#if MY_FINDMY_EN
+    extern void my_findmy_init(void);
+    extern void my_findmy_exit(void);
+    extern void my_findmy_ble_disconnect(void);
+    extern int my_findmy_adv_enable(u8 enable);
+#else
+    extern void custom_demo_all_init(void);
+    extern void custom_demo_all_exit(void);
+    extern void custom_demo_ble_disconnect(void);
+    extern int custom_demo_adv_enable(u8 enable);
+#endif
 // uuid:00001101-0000-1000-8000-00805F9B34FB
 const u8 sdp_honor_spp_service_data[96] = {
     0x36, 0x00, 0x5B, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x40, 0x09, 0x00, 0x01, 0x36, 0x00,
@@ -401,7 +406,11 @@ void multi_protocol_bt_init(void)
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+    my_findmy_init();
+#else
     custom_demo_all_init();
+#endif
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
@@ -442,7 +451,11 @@ void multi_protocol_bt_exit(void)
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+    my_findmy_exit();
+#else
     custom_demo_all_exit();
+#endif
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
@@ -470,8 +483,13 @@ void multi_protocol_bt_ble_disconnect(void)
     fmy_test_disconnect();
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+    extern void my_findmy_ble_disconnect(void);
+    my_findmy_ble_disconnect();
+#else
     extern void custom_demo_ble_disconnect(void);
     custom_demo_ble_disconnect();
+#endif
 #endif
 }
 
@@ -500,7 +518,11 @@ void multi_protocol_bt_ble_enable(u8 enable)
     dma_ble_module_enable(enable);
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+    my_findmy_adv_enable(enable);
+#else
     custom_demo_adv_enable(enable);
+#endif
 #endif
 }
 

@@ -51,6 +51,18 @@ int bt_app_msg_handler(int *msg)
 #endif
 
     switch (msg_type) {
+    case APP_MSG_BLE_CONNECTED:
+        printf("APP_MSG_BLE_CONNECTED");
+        extern void ble_connect_api(void);
+        ble_connect_api();
+        break;
+
+    case APP_MSG_BLE_DISCONNECTED:
+        printf("APP_MSG_BLE_DISCONNECTED");
+        extern void ble_disconnect_api(void);
+        ble_disconnect_api();
+        break;
+
     case APP_MSG_CHANGE_MODE:
         puts("app msg key change mode\n");
         /*一些情况不希望退出蓝牙模式*/

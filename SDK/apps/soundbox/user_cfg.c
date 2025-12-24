@@ -32,6 +32,8 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+#include "my_common.h"
+
 void app_set_sys_vol(s16 vol_l, s16  vol_r);
 
 BT_CONFIG bt_cfg = {
@@ -408,6 +410,9 @@ void cfg_file_parse(u8 idx)
     log_info("mac:");
     put_buf(mac_buf, sizeof(mac_buf));
     memcpy(bt_cfg.mac_addr, mac_buf, 6);
+
+    // 加载自定义VM数据
+    my_param_load_vm_config();
 
 #if (CONFIG_BT_MODE != BT_NORMAL)
     const u8 dut_name[]  = "AC693x_DUT";

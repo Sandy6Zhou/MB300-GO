@@ -126,3 +126,97 @@ void my_get_os_cpu_usage(void)
     task_info_reset();
     my_log_printf(1, "cpu0:%d%%, cpu1:%d%%", usage[0], usage[1]);//输出总占用率
 }
+
+/************************************************************************
+**@brief: 检测字符串是不是全是十六进制数据组成(0~9,a,b,c,d,e,f,A,B,C,D,E,F)
+**@param[in] str: 输入的字符串
+**@return: 返回字符串的长度,0表示错误
+*************************************************************************/
+uint8 string_check_is_hex_str(const char* str)
+{
+    uint8 no_count = 0;
+
+    if (str == NULL)
+    {
+        return 0;
+    }
+
+    while (*str)
+    {
+        if ((*str >= '0' && *str <= '9') ||
+            (*str >= 'a' && *str <= 'f') ||
+            (*str >= 'A' && *str <= 'F'))
+        {
+            no_count++;
+            str++;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    return no_count;
+}
+
+/************************************************************************
+**@brief: 将十六进制字符串转换成十六进制数组
+**@param[in] dest:      目标数组
+**@param[in] dest_size: 目标数组长度
+**@param[in] src:       原始字符串
+**@return: 返回十六进制数组长度,0表示错误
+*************************************************************************/
+uint8 hexstr_to_hex(uint8 *dest, uint8 dest_size, const char *src)
+{
+    uint8 offset = 0;
+    uint8 temp_data = 0;
+    uint8 hex_data = 0;
+    uint8 byte_count = 0;
+
+    if (dest == NULL || src == NULL || dest_size == 0)
+    {
+        return 0;
+    }
+
+    while(*src)
+    {
+        if (*src >= '0' && *src <= '9')
+        {
+            temp_data = (uint8)(*src - '0');
+        }
+        else if (*src >= 'A' && *src <= 'F')
+        {
+            temp_data = (uint8)(*src - 'A' + 0x0A);
+        }
+        else if (*src >= 'a' && *src <= 'f')
+        {
+            temp_data = (uint8)(*src - 'a' + 0x0A);
+        }
+        else
+        {
+            return 0;
+        }
+
+
+        if (offset % 2)
+        {
+            hex_data |= (temp_data & 0x0F);
+            dest[byte_count] = hex_data;
+            byte_count++;
+            
+            // 检查缓冲区边界
+            if (byte_count >= dest_size) {
+                my_log_printf(1, "\r\nsrc string is too large.\r\n");
+                break;
+            }
+        }
+        else
+        {
+            hex_data = ((temp_data << 4) & 0xf0);
+        }
+
+        offset++;
+        src++;
+    }
+
+    return ((offset / 2) + (offset % 2));
+}

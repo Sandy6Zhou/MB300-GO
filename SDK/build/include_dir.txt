@@ -175,4 +175,4 @@
 -Iinterface/net/lwip_2_2_0/lwip/app/ddns
 -Iinterface/net/lte_module
 -Iapps/soundbox/myproj/inc
-
+-Iapps/common/third_party_profile/my_custom_protocol/

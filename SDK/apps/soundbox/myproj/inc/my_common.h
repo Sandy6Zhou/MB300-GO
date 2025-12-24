@@ -54,6 +54,7 @@ typedef enum
 #include "my_shell.h"
 #include "my_tool.h"
 #include "my_log.h"
+#include "my_vm_param.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 

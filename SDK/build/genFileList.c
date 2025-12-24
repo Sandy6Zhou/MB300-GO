@@ -784,10 +784,14 @@ c_SRC_FILES += \
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+c_SRC_FILES += \
+    apps/common/third_party_profile/my_custom_protocol/my_findmy_protocol.c
+#else
 c_SRC_FILES += \
     apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c
 #endif
-
+#endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & SWIFT_PAIR_EN)
 c_SRC_FILES += \
@@ -1609,6 +1613,7 @@ c_SRC_FILES += \
     apps/soundbox/myproj/src/my_shell.c \
     apps/soundbox/myproj/src/my_tool.c \
     apps/soundbox/myproj/src/my_log.c \
+    apps/soundbox/myproj/src/my_vm_param.c \
 
 // *JIMI-MYPROJ*
 

@@ -42,6 +42,110 @@ CMD_STRUC AT_CMD_INNER[] = {
     {0, NULL,        NULL,                      NULL}
 };
 
+//AT^GT_CM=
+char *my_handle_at_factory_cmd(char **pParam, int nParam)
+{
+    static char resp[256];
+    char *p = resp;
+    const lic_ff_struct *lic_ff;
+    const lic_gg_struct *lic_gg;
+    int ret;
+
+    memset(resp, 0, sizeof(resp));
+
+    if (CMD_MATCHED2(pParam[0], "FF"))
+    {
+        // AT^GT_CM=FF
+        if (nParam < 2)
+        {
+            lic_ff = my_param_get_ff();
+            if (lic_ff->flag == FLAG_VALID)
+            {
+                sprintf(resp, "RETURN_FF:,%s", lic_ff->hex);
+            }
+            else
+            {
+                sprintf(resp, "RETURN_FF");
+            }
+        }
+        // AT^GT_CM=FF,xxxx
+        else
+        {
+            my_param_set_ff(pParam[1], strlen(pParam[1]));
+            sprintf(resp, "RETURN_FF_SET_OK");
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "GG"))
+    {
+        // AT^GT_CM=GG
+        if (nParam < 2)
+        {
+            lic_gg = my_param_get_gg();
+            if (lic_gg->flag == FLAG_VALID)
+            {
+                sprintf(resp, "RETURN_GG:,%s", lic_gg->hex);
+            }
+            else
+            {
+                sprintf(resp, "RETURN_GG");
+            }
+        }
+        // AT^GT_CM=GG,xxxx
+        else
+        {
+            my_param_set_gg(pParam[1], strlen(pParam[1]));
+            sprintf(resp, "RETURN_GG_SET_OK");
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "JGTAG"))
+    {
+        // AT^GT_CM=JGTAG,ON/OFF
+        if (nParam == 2)
+        {
+            ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
+            if (ret == 0) {
+                sprintf(resp, "RETURN_JGTAG_%s_OK", pParam[1]);
+            }else {
+                sprintf(resp, "RETURN_JGTAG_%s_FAIL", pParam[1]);
+            }
+        }
+        else
+        {
+            sprintf(resp, "RETURN_JGTAG_SET_FAIL");
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "JATAG"))
+    {
+        // AT^GT_CM=JATAG,ON/OFF
+        if (nParam == 2)
+        {
+            ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
+            if (ret == 0) {
+                sprintf(resp, "RETURN_JATAG_%s_OK", pParam[1]);
+            }else {
+                sprintf(resp, "RETURN_JATAG_%s_FAIL", pParam[1]);
+            }
+        }
+        else
+        {
+            sprintf(resp, "RETURN_JATAG_SET_FAIL");
+        }
+    }
+    return resp;
+}
+
+int sh_at_factory_cmd(char *pfactorycmd)
+{
+    int argc = 0; // 输入输出参数
+    char *argv[MAX_ARGS] = { 0 };
+
+    my_parse_cmd_line(pfactorycmd + strlen(FACTORY_CMD_HEADER), ',' , &argc, argv);
+
+    my_log_printf_internal(0, "%s", my_handle_at_factory_cmd(argv, argc));
+
+    return 0;
+}
+
 int sh_at_test(int argc, char *argv[])
 {
     char szValue[30] = {0};
@@ -197,7 +301,6 @@ static int ParseCmd(char *cmdline, int cmd_len)
         return -1;
     }
 
-#if 0
     // 检查是否是产测指令
     if (strncmp(cmdline, FACTORY_CMD_HEADER, strlen(FACTORY_CMD_HEADER)) == 0)
     {
@@ -205,6 +308,7 @@ static int ParseCmd(char *cmdline, int cmd_len)
 
         return 0;
     }
+#if 0
 
 #if AT_JMCMD_ENABLE
     if (strncmp(cmdline, "AT+JMCMD=", strlen("AT+JMCMD=")) == 0)

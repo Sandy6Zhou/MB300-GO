@@ -469,7 +469,7 @@ const int config_delete_link_key          = 1;           //配置是否连接失
     #elif ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_hw_nums = 5;
     #else
-        const int config_btctler_le_hw_nums = 2;
+        const int config_btctler_le_hw_nums = 4;    //广播对象有几个，这里需要配置成几个(目前两个可连接，两个不可连接)
     #endif
 
     #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
