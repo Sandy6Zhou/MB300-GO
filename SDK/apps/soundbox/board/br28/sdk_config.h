@@ -111,7 +111,7 @@
 #define TCFG_HW_I2C0_DAT_PORT IO_PORTC_05 // 硬件iic DATA脚
 #define TCFG_HW_I2C0_CLK 100000 // 硬件iic波特率
 
-#define TCFG_HW_SPI1_ENABLE 1 // 硬件SPI1
+#define TCFG_HW_SPI1_ENABLE 0 // 硬件SPI1
 #if TCFG_HW_SPI1_ENABLE
 #define TCFG_HW_SPI1_PORT_CLK IO_PORTA_07 // SPI1 CLK脚
 #define TCFG_HW_SPI1_PORT_DO IO_PORTA_08 // SPI1  DO脚
@@ -121,7 +121,7 @@
 #define TCFG_HW_SPI1_BAUD 24000000 // SPI1  时钟
 #endif // TCFG_HW_SPI1_ENABLE
 
-#define TCFG_HW_SPI2_ENABLE 1 // 硬件SPI2
+#define TCFG_HW_SPI2_ENABLE 0 // 硬件SPI2
 #if TCFG_HW_SPI2_ENABLE
 #define TCFG_HW_SPI2_PORT_CLK NO_CONFIG_PORT // SPI2 CLK脚
 #define TCFG_HW_SPI2_PORT_DO NO_CONFIG_PORT // SPI2  DO脚
@@ -178,7 +178,7 @@
 #define MUSIC_PLAYER_CYCLE_ALL_DEV_EN 1 // 循环播放模式是否循环所有设备
 #define MUSIC_PLAYER_PLAY_FOLDER_PREV_FIRST_FILE_EN 0 // 切换文件夹播放时从第一首歌开始
 #define TWFG_APP_POWERON_IGNORE_DEV 4000 // 设备忽略时间（单位：ms）
-#define TCFG_FIX_CLOCK_FREQ 0 // 固定时钟频率
+#define TCFG_FIX_CLOCK_FREQ 96000000 // 固定时钟频率
 // ------------功能配置.json------------
 
 // ------------按键配置.json------------
@@ -210,7 +210,7 @@
 #define TCFG_LOWPOWER_LOWPOWER_SEL 0 // 低功耗模式
 #define TCFG_AUTO_POWERON_ENABLE 1 // 上电自动开机
 
-#define TCFG_SYS_LVD_EN 1 // 电池电量检测
+#define TCFG_SYS_LVD_EN 0 // 电池电量检测
 #if TCFG_SYS_LVD_EN
 #define TCFG_POWER_OFF_VOLTAGE 3600 // 关机电压(mV)
 #define TCFG_POWER_WARN_VOLTAGE 3700 // 低电电压(mV)
@@ -237,11 +237,11 @@
 // ------------电源配置.json------------
 
 // ------------UI配置.json------------
-#define TCFG_UI_ENABLE 1 // UI配置
+#define TCFG_UI_ENABLE 0 // UI配置
 #if TCFG_UI_ENABLE
 #define CONFIG_UI_STYLE STYLE_JL_LED7 // UI类型
-#define TCFG_LED7_RUN_RAM 1 // LED屏驱动跑RAM
-#define TCFG_UI_LED7_ENABLE 1 // LED7脚数码管屏
+#define TCFG_LED7_RUN_RAM 0 // LED屏驱动跑RAM
+#define TCFG_UI_LED7_ENABLE 0 // LED7脚数码管屏
 #define TCFG_TFT_LCD_DEV_SPI_HW_NUM 1 // LCD SPI口选择
 #define TCFG_LRC_LYRICS_ENABLE 0 // 歌词显示
 #define LRC_ENABLE_SAVE_LABEL_TO_FLASH 0 // 保存歌词时间标签到flash
@@ -283,7 +283,7 @@
 #define TCFG_A2DP_ADAPTIVE_MAX_LATENCY 550 // A2DP自适应最大延时(msec)
 #define TCFG_BT_VOL_SYNC_ENABLE 1 // 音量同步
 #define TCFG_BT_MUSIC_INFO_ENABLE 0 // 歌曲信息显示
-#define TCFG_BT_DISPLAY_BAT_ENABLE 1 // 电量显示
+#define TCFG_BT_DISPLAY_BAT_ENABLE 0 // 电量显示
 #define TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE 0 // 仅保留电量显示
 #define TCFG_BT_DUAL_CONN_ENABLE 0 // 一拖二
 #define TCFG_BT_INBAND_RING 1 // 手机铃声

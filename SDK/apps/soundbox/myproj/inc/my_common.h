@@ -2,6 +2,8 @@
 #define MY_COMMON_H
 
 #include "system/includes.h"
+#include "spi.h"
+#include "gpio.h"
 #include "uart.h"
 #include "debug.h"
 #include "clock.h"
@@ -55,6 +57,7 @@ typedef enum
 #include "my_tool.h"
 #include "my_log.h"
 #include "my_vm_param.h"
+#include "my_led_spi.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 

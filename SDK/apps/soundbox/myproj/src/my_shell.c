@@ -150,13 +150,18 @@ int sh_at_test(int argc, char *argv[])
 {
     char szValue[30] = {0};
 
-    if (argc != 2) return -1;
+    if (argc < 2) return -1;
 
     strncpy(szValue, argv[1], 30);
 
     if (strcmp(szValue, "CPUINFO") == 0)
     {
         my_get_os_cpu_usage();
+    }
+    else if (strcmp(szValue, "LED") == 0)
+    {
+        // TEST LED R G B NUM
+        my_led_set_rgb(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
     }
     else
     {

@@ -681,6 +681,8 @@ static void app_task_loop(void *p)
 
     my_shell_uart_init();
 
+    my_led_5050_bt002_init(HW_SPI1);
+
 #if 1   //JIMI
     int err = os_task_create(my_shell_task, NULL, 1, 2 * 1024, 128, my_shell_task_name);
     if (err != OS_NO_ERR) {
