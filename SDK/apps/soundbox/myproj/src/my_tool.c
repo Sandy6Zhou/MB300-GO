@@ -220,3 +220,43 @@ uint8 hexstr_to_hex(uint8 *dest, uint8 dest_size, const char *src)
 
     return ((offset / 2) + (offset % 2));
 }
+
+uint8 hex2ascii(uint8 digit)
+{
+    uint8 val;
+
+    if (digit <= 9) {
+        val = digit - 0x0 + '0';
+    } else {
+        val = digit - 0xA + 'A';
+    }
+
+    return val;
+}
+
+/************************************************************************
+**@brief: 将十六进制数组转换成十六进制字符串
+**@param[in] hex:       十六进制数组
+**@param[in] hex_len:   十六进制数组长度
+**@param[in] str:       十六进制字符串
+**@param[in] str_len:   十六进制字符串长度
+*************************************************************************/
+void hex2hexstr(uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len)
+{
+    uint16 i = 0,j=0;
+    uint8 *buf = str;
+
+    if (str_len < 2*hex_len) {
+        my_log_printf(1, "str_len is too small.\r\n");
+        return;
+    }
+
+    while(hex_len--)
+    {
+
+        buf[j++] = hex2ascii((hex[i] >> 4) & 0x0f);
+        buf[j++] = hex2ascii(hex[i] & 0x0f);
+        i++;
+    }
+    buf[j] = 0;
+}

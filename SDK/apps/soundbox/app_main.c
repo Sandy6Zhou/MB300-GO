@@ -666,11 +666,13 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
 **函数功能:  初始化任务数据信息结构
 *********************************************************************/
 const char *my_shell_task_name = "MY_SHELL";
+const char *my_ble_task_name = "MY_BLE";
 char *g_my_task_info[MAX_MY_MOD_TYPE] = { 0 };
 
 void custom_task_info_init(void)
 {
     g_my_task_info[MOD_SHELL] = my_shell_task_name;
+    g_my_task_info[MOD_BLE] = my_ble_task_name;
 }
 
 static void app_task_loop(void *p)
@@ -687,6 +689,11 @@ static void app_task_loop(void *p)
     int err = os_task_create(my_shell_task, NULL, 1, 2 * 1024, 128, my_shell_task_name);
     if (err != OS_NO_ERR) {
         r_printf("creat fail %x\n", err);
+    }
+
+    err = os_task_create(my_ble_task, NULL, 1, 2 * 1024, 128, my_ble_task_name);
+    if (err != OS_NO_ERR) {
+        r_printf("creat ble task fail %x\n", err);
     }
 #endif
 

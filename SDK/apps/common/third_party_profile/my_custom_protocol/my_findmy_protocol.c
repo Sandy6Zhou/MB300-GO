@@ -23,6 +23,7 @@
 #define FLAG_TYPE_VALUE     0x06    // google的flag值
 #define CON_ADV_OBJ_MAX_NUM 2       // 一路google，一路ios
 #define ADV_INTERVAL        3200    // 3200*0.625ms=2000ms
+#define BLE_NOTIFY_SEND_BUF_MAX_SIZE    1024
 
 typedef enum {
     GOOGLE_ADV_TYPE,
@@ -40,10 +41,17 @@ ADV_HDL_S no_con_adv_obj_hdl[2] = {
 
 void *custom_demo_spp_hdl = NULL;
 static u8 battery_capacity = 100;   // 预留电量
+
+static uint8_t connect_id = 0xff;
+static uint16_t ble_server_rx_index = 0;
+
+static bool ble_server_send_done = true;
+static bool ble_data_send_enable[2] = {0};
 /*************************************************
                   BLE 相关内容
 *************************************************/
-const uint8_t custom_demo_profile_data[] = {
+// 自定义服务配置数据
+const uint8_t my_profile_data[] = {
     //////////////////////////////////////////////////////
     //
     // 0x0001 PRIMARY_SERVICE  1800
@@ -59,22 +67,24 @@ const uint8_t custom_demo_profile_data[] = {
 
     //////////////////////////////////////////////////////
     //
-    // 0x0004 PRIMARY_SERVICE  ae00
+    // 0x0004 PRIMARY_SERVICE  FEE9
     //
     //////////////////////////////////////////////////////
-    0x0a, 0x00, 0x02, 0x00, 0x04, 0x00, 0x00, 0x28, 0x00, 0xae,
+    0x0a, 0x00, 0x02, 0x00, 0x04, 0x00, 0x00, 0x28, 0xE9, 0xFE,
 
-    /* CHARACTERISTIC,  ae01, WRITE_WITHOUT_RESPONSE | DYNAMIC, */
-    // 0x0005 CHARACTERISTIC ae01 WRITE_WITHOUT_RESPONSE | DYNAMIC
-    0x0d, 0x00, 0x02, 0x00, 0x05, 0x00, 0x03, 0x28, 0x04, 0x06, 0x00, 0x01, 0xae,
-    // 0x0006 VALUE ae01 WRITE_WITHOUT_RESPONSE | DYNAMIC
-    0x08, 0x00, 0x04, 0x01, 0x06, 0x00, 0x01, 0xae,
+    /* CHARACTERISTIC,  FEB5, WRITE | WRITE_WITHOUT_RESPONSE | DYNAMIC, */
+    // 0x0005 CHARACTERISTIC FEB5 WRITE | WRITE_WITHOUT_RESPONSE | DYNAMIC
+    0x0d, 0x00, 0x02, 0x00, 0x05, 0x00, 0x03, 0x28, 0x0C, 0x06, 0x00, 0xB5, 0xFE,
+    // 属性: 0x0C = WRITE(0x08) + WRITE_NO_RESPONSE(0x04)
+    // 0x0006 VALUE FEB5 WRITE | WRITE_WITHOUT_RESPONSE | DYNAMIC
+    0x08, 0x00, 0x0C, 0x01, 0x06, 0x00, 0xB5, 0xFE,
 
-    /* CHARACTERISTIC,  ae02, NOTIFY, */
-    // 0x0007 CHARACTERISTIC ae02 NOTIFY
-    0x0d, 0x00, 0x02, 0x00, 0x07, 0x00, 0x03, 0x28, 0x10, 0x08, 0x00, 0x02, 0xae,
-    // 0x0008 VALUE ae02 NOTIFY
-    0x08, 0x00, 0x10, 0x00, 0x08, 0x00, 0x02, 0xae,
+    /* CHARACTERISTIC,  FEB6, NOTIFY, */
+    // 0x0007 CHARACTERISTIC FEB6 NOTIFY
+    0x0d, 0x00, 0x02, 0x00, 0x07, 0x00, 0x03, 0x28, 0x10, 0x08, 0x00, 0xB6, 0xFE,
+    // 属性: 0x10 = NOTIFY
+    // 0x0008 VALUE FEB6 NOTIFY
+    0x08, 0x00, 0x10, 0x00, 0x08, 0x00, 0xB6, 0xFE,
     // 0x0009 CLIENT_CHARACTERISTIC_CONFIGURATION
     0x0a, 0x00, 0x0a, 0x01, 0x09, 0x00, 0x02, 0x29, 0x00, 0x00,
 
@@ -309,6 +319,9 @@ void ble_connect_api(void)
 void ble_disconnect_api(void)
 {
     printf("stop no_connect adv obj, start connect adv obj.");
+    // 断开ble连接时，设置发送蓝牙数据的标志为false，防止断开后还继续发送
+    ble_data_send_enable[GOOGLE_ADV_TYPE] = false;
+    ble_data_send_enable[APPLE_ADV_TYPE] = false;
     // 关闭两个不可连接的广播对象
     start_adv(&no_con_adv_obj_hdl[GOOGLE_ADV_TYPE], 0);
     os_time_dly(10); 
@@ -323,6 +336,8 @@ void ble_disconnect_api(void)
 static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
 {
     u16 con_handle;
+    int mtu;
+
     printf("cbk packet_type:0x%x, packet[0]:0x%x, packet[2]:0x%x", packet_type, packet[0], packet[2]);
     switch (packet_type)
     {
@@ -331,6 +346,7 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
             {
                 case ATT_EVENT_CAN_SEND_NOW:
                     printf("ATT_EVENT_CAN_SEND_NOW");
+                    ble_server_send_done = true;
                     break;
 
                 case HCI_EVENT_LE_META:
@@ -343,6 +359,8 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
                             put_buf(&packet[8], 6);
                             // 发消息给消息队列去处理具体的事件
                             app_send_message(APP_MSG_BLE_CONNECTED, 0);
+                            connect_id = con_handle;
+                            printf("gap_connected! id=%d", connect_id);
                             break;
 
                         default:
@@ -351,9 +369,19 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
                     break;
 
                 case HCI_EVENT_DISCONNECTION_COMPLETE:
+                    connect_id = 0xff;
                     printf("HCI_EVENT_DISCONNECTION_COMPLETE: %0x", packet[5]);
                     // 发消息给消息队列去处理具体的事件
                     app_send_message(APP_MSG_BLE_DISCONNECTED, 0);
+                    break;
+
+                case ATT_EVENT_MTU_EXCHANGE_COMPLETE:
+                    mtu = att_event_mtu_exchange_complete_get_MTU(packet);
+                    
+                    printf("ATT MTU = %d", mtu);
+                    ble_op_att_set_send_mtu(mtu - 3);
+
+                    ble_server_mtu = mtu;
                     break;
 
                 default:
@@ -362,6 +390,60 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
             break;
     }
     return;
+}
+
+/************************************************************************
+**@brief: 蓝牙服务发送notify数据
+**@param[in] data:      发送的数据
+**@param[in] tx_len:    发送的数据长度
+*************************************************************************/
+void ble_server_send_notification(u8 *data, u16 tx_len)
+{
+    static uint8_t uart_ble_server_buf[BLE_NOTIFY_SEND_BUF_MAX_SIZE];
+    uint16_t _tx_len;
+
+    if(connect_id == 0xff)
+    {
+        printf("ble send none in disconnect!");
+        return;
+    }
+
+    // 未发送完成，先缓存起来
+    if(ble_server_send_done == false)
+    {
+        if((tx_len > 0) && (ble_server_rx_index + tx_len) <= BLE_NOTIFY_SEND_BUF_MAX_SIZE)
+        {
+            memcpy(&uart_ble_server_buf[ble_server_rx_index], data, tx_len);
+            ble_server_rx_index += tx_len;
+        }
+        printf("ble_data_put_buf:%d, %d", ble_server_rx_index, tx_len);
+    }
+    else if(connect_id != 0xff && tx_len <= BLE_NOTIFY_SEND_BUF_MAX_SIZE)
+    {
+        ble_server_send_done = false;
+        if(tx_len > 0 && (ble_server_rx_index+tx_len) <= BLE_NOTIFY_SEND_BUF_MAX_SIZE)
+        {
+            memcpy(&uart_ble_server_buf[ble_server_rx_index], data, tx_len);
+            ble_server_rx_index += tx_len;
+        }
+
+        _tx_len = ble_server_rx_index > MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN) ? MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN) : ble_server_rx_index;
+
+        if (ble_data_send_enable[GOOGLE_ADV_TYPE] == true) {
+            my_findmy_ble_google_send(uart_ble_server_buf, _tx_len);
+        } else if (ble_data_send_enable[APPLE_ADV_TYPE] == true) {
+            my_findmy_ble_ios_send(uart_ble_server_buf, _tx_len);
+        } else {
+            printf("ble_data_send_enable not enable!");
+            ble_server_send_done = true;
+            return ;
+        }
+
+        ble_server_rx_index -= _tx_len;
+        printf("ble_server_rx_index:%d", ble_server_rx_index);
+
+        memcpy(&uart_ble_server_buf[0], &uart_ble_server_buf[_tx_len], ble_server_rx_index);
+    }
 }
 
 // 暂未使用到这个回调，保留
@@ -400,13 +482,13 @@ static uint16_t custom_att_read_callback(void *hdl, hci_con_handle_t connection_
     return att_value_len;
 }
 
-// 暂未使用到这个回调，保留
+// APP开启监听FEB6值(需先设置att_set_ccc_config才能通过app_ble_att_send_data发送数据给APP)或APP下发数据会触发这个回调
 static int custom_att_write_google_callback(void *hdl, hci_con_handle_t connection_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size)
 {
     int result = 0;
     u16 tmp16;
     u16 handle = att_handle;
-    printf("<-------------write_callback, handle= 0x%04x,size = %d", handle, buffer_size);
+    printf("<-------------write_google_callback, handle= 0x%04x,size = %d", handle, buffer_size);
 
     switch (handle)
     {
@@ -416,11 +498,12 @@ static int custom_att_write_google_callback(void *hdl, hci_con_handle_t connecti
         case ATT_CHARACTERISTIC_ae01_01_VALUE_HANDLE:
             printf("rx(%d):\n", buffer_size);
             put_buf(buffer, buffer_size);
-            // test
-            my_findmy_ble_google_send(buffer, buffer_size);
+
+            BLE_DataInputBuffer(buffer, buffer_size);
             break;
 
         case ATT_CHARACTERISTIC_ae02_01_CLIENT_CONFIGURATION_HANDLE:
+            ble_data_send_enable[GOOGLE_ADV_TYPE] = true;
             printf("\nwrite ccc:%04x, %02x\n", handle, buffer[0]);
             att_set_ccc_config(handle, buffer[0]);
             break;
@@ -436,6 +519,12 @@ int my_findmy_ble_google_send(u8 *data, u32 len)
 {
     int ret = 0;
     int i;
+
+    if (data == NULL || len == 0) {
+        printf("invalid google params!!!");
+        return -1;
+    }
+
     printf("my_findmy_ble_google_send len = %d", len);
     put_buf(data, len);
     ret = app_ble_att_send_data(con_adv_obj_hdl[GOOGLE_ADV_TYPE].handle, ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE, data, len, ATT_OP_AUTO_READ_CCC);
@@ -445,13 +534,13 @@ int my_findmy_ble_google_send(u8 *data, u32 len)
     return ret;
 }
 
-// 暂未使用到这个回调，保留
+// APP开启监听FEB6值(需先设置att_set_ccc_config才能通过app_ble_att_send_data发送数据给APP)或APP下发数据会触发这个回调
 static int custom_att_write_ios_callback(void *hdl, hci_con_handle_t connection_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size)
 {
     int result = 0;
     u16 tmp16;
     u16 handle = att_handle;
-    printf("<-------------write_callback, handle= 0x%04x,size = %d", handle, buffer_size);
+    printf("<-------------write_ios_callback, handle= 0x%04x,size = %d", handle, buffer_size);
 
     switch (handle)
     {
@@ -462,10 +551,11 @@ static int custom_att_write_ios_callback(void *hdl, hci_con_handle_t connection_
             printf("rx(%d):\n", buffer_size);
             put_buf(buffer, buffer_size);
 
-            my_findmy_ble_ios_send(buffer, buffer_size);
+            BLE_DataInputBuffer(buffer, buffer_size);
             break;
 
         case ATT_CHARACTERISTIC_ae02_01_CLIENT_CONFIGURATION_HANDLE:
+            ble_data_send_enable[APPLE_ADV_TYPE] = true;
             printf("\nwrite ccc:%04x, %02x\n", handle, buffer[0]);
             att_set_ccc_config(handle, buffer[0]);
             break;
@@ -481,6 +571,12 @@ int my_findmy_ble_ios_send(u8 *data, u32 len)
 {
     int ret = 0;
     int i;
+
+    if (data == NULL || len == 0) {
+        printf("invalid ios params!!!");
+        return -1;
+    }
+
     printf("my_findmy_ble_ios_send len = %d", len);
     put_buf(data, len);
     ret = app_ble_att_send_data(con_adv_obj_hdl[APPLE_ADV_TYPE].handle, ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE, data, len, ATT_OP_AUTO_READ_CCC);
@@ -552,7 +648,7 @@ void my_findmy_init(void)
                 return;
             }
             app_ble_set_mac_addr(con_adv_obj_hdl[i].handle, (void *)edr_addr);
-            app_ble_profile_set(con_adv_obj_hdl[i].handle, custom_demo_profile_data);
+            app_ble_profile_set(con_adv_obj_hdl[i].handle, my_profile_data);
             app_ble_att_read_callback_register(con_adv_obj_hdl[i].handle, custom_att_read_callback);
             if (i == 0)
             {

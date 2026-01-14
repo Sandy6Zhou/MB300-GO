@@ -27,6 +27,7 @@ int my_findmy_ble_google_send(u8 *data, u32 len);
 int my_findmy_ble_ios_send(u8 *data, u32 len);
 int custom_demo_spp_send(u8 *data, u32 len);
 void set_adv_valid_status(int index, int status);
+void ble_server_send_notification(u8 *data, u16 tx_len);
 
 #endif
 

@@ -49,6 +49,7 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
     char *p = resp;
     const lic_ff_struct *lic_ff;
     const lic_gg_struct *lic_gg;
+    uint8 data_buff[64] = {0};
     int ret;
 
     memset(resp, 0, sizeof(resp));
@@ -61,7 +62,8 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
             lic_ff = my_param_get_ff();
             if (lic_ff->flag == FLAG_VALID)
             {
-                sprintf(resp, "RETURN_FF:,%s", lic_ff->hex);
+                hex2hexstr(lic_ff->hex, LICENSE_FF_STR_LEN / 2, data_buff, sizeof(data_buff));
+                sprintf(resp, "RETURN_FF:%s", data_buff);
             }
             else
             {
@@ -83,7 +85,8 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
             lic_gg = my_param_get_gg();
             if (lic_gg->flag == FLAG_VALID)
             {
-                sprintf(resp, "RETURN_GG:,%s", lic_gg->hex);
+                hex2hexstr(lic_gg->hex, LICENSE_GG_STR_LEN / 2, data_buff, sizeof(data_buff));
+                sprintf(resp, "RETURN_GG:%s", data_buff);
             }
             else
             {

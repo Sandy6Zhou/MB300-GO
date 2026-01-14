@@ -10,6 +10,20 @@
 #ifndef MY_TOOL_H
 #define MY_TOOL_H
 
+#ifndef MAX
+#define MAX(a, b)       (((a) > (b) ) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b)       (((a) < (b) ) ? (a) : (b))
+#endif
+#ifndef MID
+#define MID(a,b,c)      (MAX(a,b)>c?MAX(MIN(a,b),c):MIN(MAX(a,b),c))
+#endif
+
+#ifndef ABS
+#define ABS(x)  ((x) >= 0 ? (x) : -(x))
+#endif
+
 typedef void (*TIMER_FUN)(void *param);
 
 typedef struct
@@ -32,5 +46,7 @@ void my_get_os_cpu_usage(void);
 uint8 string_check_is_hex_str(const char* str);
 
 uint8 hexstr_to_hex(uint8 *dest, uint8 dest_size, const char *src);
+
+void hex2hexstr(uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len);
 
 #endif
