@@ -20,6 +20,8 @@
 const char FACTORY_CMD_HEADER[] = "AT^GT_CM=";
 char FACTORY_CMD_RETURN[] = "RETURN_";
 
+static int sh_test_led_impl(int argc, char *argv[]);
+
 /* { visible, command, help, function } */
 CMD_STRUC AT_CMD_INNER[] = {
 
@@ -163,8 +165,12 @@ int sh_at_test(int argc, char *argv[])
     }
     else if (strcmp(szValue, "LED") == 0)
     {
-        // TEST LED R G B NUM
-        my_led_set_rgb(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
+        if (argc < 3)
+        {
+            my_log_printf(1, "TEST LED: invalid");
+            return -1;
+        }
+        return sh_test_led_impl(argc - 2, argv + 2);
     }
     else
     {
@@ -172,6 +178,111 @@ int sh_at_test(int argc, char *argv[])
     }
 
     return 0;
+}
+
+/**
+ * @brief TEST LED ×ÓÃüÁîÊµÏÖ
+ * @note argv[0]=MODE|RGB|MODE7 »ò R G B NUM(¼æÈÝ¼òÐ´)
+ */
+static int sh_test_led_impl(int argc, char *argv[])
+{
+    if (argc < 1)
+    {
+        my_log_printf(1, "TEST LED: invalid");
+        return -1;
+    }
+
+    if (CMD_EQUAL2(argv[0], "MODE"))
+    {
+        if (argc < 2)
+        {
+            my_log_printf(1, "TEST LED: invalid");
+            return -1;
+        }
+
+        if (CMD_EQUAL2(argv[1], "LIST"))
+        {
+            my_log_printf(1, "mode list: 0 1 2 3 4 5 6 7");
+            return 0;
+        }
+
+        if (CMD_EQUAL2(argv[1], "START"))
+        {
+            uint8 pixel_cnt = LED_MAX_PIXELS;
+            uint8 mode_idx = 0;
+            if (argc < 3)
+            {
+                my_log_printf(1, "TEST LED: invalid");
+                return -1;
+            }
+            mode_idx = (uint8)atoi(argv[2]);
+            if (argc >= 4)
+            {
+                pixel_cnt = (uint8)atoi(argv[3]);
+            }
+            if ((mode_idx == 7) && (argc >= 5))
+            {
+                uint8 base_idx = (uint8)atoi(argv[4]);
+                my_led_mode7_set_base(base_idx);
+            }
+            my_led_mode_start(mode_idx, pixel_cnt);
+            return 0;
+        }
+
+        if (CMD_EQUAL2(argv[1], "STOP"))
+        {
+            my_led_mode_stop();
+            return 0;
+        }
+
+        my_log_printf(1, "TEST LED: invalid");
+        return -1;
+    }
+
+    if (CMD_EQUAL2(argv[0], "RGB"))
+    {
+        if (argc < 5)
+        {
+            my_log_printf(1, "TEST LED: invalid");
+            return -1;
+        }
+        my_led_mode_stop();
+        my_led_set_rgb(
+            (uint8)atoi(argv[1]),
+            (uint8)atoi(argv[2]),
+            (uint8)atoi(argv[3]),
+            (uint8)atoi(argv[4])
+        );
+        return 0;
+    }
+
+    if (CMD_EQUAL2(argv[0], "MODE7"))
+    {
+        if ((argc >= 3) && CMD_EQUAL2(argv[1], "STYLE"))
+        {
+            uint8 style = (uint8)atoi(argv[2]);
+            my_led_mode7_set_fill_style(style);
+            return 0;
+        }
+        my_log_printf(1, "TEST LED: invalid");
+        return -1;
+    }
+
+    /* ¼æÈÝ: TEST LED R G B NUM */
+    if (argc >= 4)
+    {
+        my_led_mode_stop();
+        my_led_set_rgb(
+            (uint8)atoi(argv[0]),
+            (uint8)atoi(argv[1]),
+            (uint8)atoi(argv[2]),
+            (uint8)atoi(argv[3])
+        );
+        return 0;
+    }
+
+    my_log_printf(1, "TEST LED: invalid");
+    return -1;
 }
 
 /************************************************************************

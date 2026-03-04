@@ -113,7 +113,7 @@
 #define TCFG_SPDIF_MASTER_NODE_ENABLE 0 // SPDIF_OUT
 #define TCFG_SPEAKER_EQ_NODE_ENABLE 0 // SpeakerEQ
 #define TCFG_SPECTRUM_ADVANCE_NODE_ENABLE 0 // Spectrum Advance
-#define TCFG_SPECTRUM_NODE_ENABLE 0 // Spectrum
+#define TCFG_SPECTRUM_NODE_ENABLE                 1                // Spectrum
 #define TCFG_SPLIT_GAIN_NODE_ENABLE 0 // Split Gain
 #define TCFG_STEREO_MTAPS_ECHO_NODE_ENABLE 0 // Stereo Mtaps Echo
 #define TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE 0 // Stereo Spatial Wider
@@ -241,7 +241,7 @@
 #define TCFG_AUDIO_EFX_1ECD_RUN_MODE EFx_BW_16t16 // SRC
 #define TCFG_AUDIO_EFX_FB00_RUN_MODE EFx_BW_UNUSED // SteroMix
 #define TCFG_AUDIO_EFX_8934_RUN_MODE EFx_BW_UNUSED // Surround Effect
-#define TCFG_AUDIO_EFX_F538_RUN_MODE EFx_BW_UNUSED // Spectrum
+#define TCFG_AUDIO_EFX_F538_RUN_MODE              EFx_BW_16t16     // Spectrum
 #define TCFG_AUDIO_EFX_3BE6_RUN_MODE EFx_BW_UNUSED // SpeakerEQ
 #define TCFG_AUDIO_EFX_88E5_RUN_MODE EFx_BW_UNUSED // Stereo Widener
 #define TCFG_AUDIO_EFX_FB3B_RUN_MODE EFx_BW_16t16 // SPDIF
