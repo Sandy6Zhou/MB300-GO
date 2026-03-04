@@ -1617,6 +1617,7 @@ c_SRC_FILES += \
     apps/soundbox/myproj/src/my_led_spi.c \
     apps/soundbox/myproj/src/ble_comunication.c \
     apps/soundbox/myproj/src/my_ble.c \
+    apps/soundbox/myproj/src/my_dc_uart.c \
 
 // *JIMI-MYPROJ*
 

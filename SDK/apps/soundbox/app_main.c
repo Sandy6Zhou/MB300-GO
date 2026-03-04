@@ -667,12 +667,14 @@ int app_get_message(int *msg, int max_num, const struct key_remap_table *key_tab
 *********************************************************************/
 const char *my_shell_task_name = "MY_SHELL";
 const char *my_ble_task_name = "MY_BLE";
+const char *my_dc_uart_task_name = "MY_DC_UART";
 char *g_my_task_info[MAX_MY_MOD_TYPE] = { 0 };
 
 void custom_task_info_init(void)
 {
     g_my_task_info[MOD_SHELL] = my_shell_task_name;
     g_my_task_info[MOD_BLE] = my_ble_task_name;
+    g_my_task_info[MOD_DC_UART] = my_dc_uart_task_name;
 }
 
 static void app_task_loop(void *p)
@@ -694,6 +696,11 @@ static void app_task_loop(void *p)
     err = os_task_create(my_ble_task, NULL, 1, 2 * 1024, 128, my_ble_task_name);
     if (err != OS_NO_ERR) {
         r_printf("creat ble task fail %x\n", err);
+    }
+
+    err = os_task_create(my_dc_uart_task, NULL, 1, 2 * 1024, 128, my_dc_uart_task_name);
+    if (err != OS_NO_ERR) {
+        r_printf("creat dc uart task fail %x\n", err);
     }
 #endif
 

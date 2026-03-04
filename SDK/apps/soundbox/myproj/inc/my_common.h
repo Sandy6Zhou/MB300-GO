@@ -37,6 +37,7 @@ typedef enum
     MOD_MAIN,             //主处理程序
     MOD_SHELL,
     MOD_BLE,
+    MOD_DC_UART,
     MAX_MY_MOD_TYPE,
 }module_type;
 
@@ -64,6 +65,7 @@ typedef enum
 #include "ble_comu_def.h"
 #include "ble_comunication.h"
 #include "my_ble.h"
+#include "my_dc_uart.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 

@@ -11,6 +11,7 @@
 #define MY_UART_H
 
 #define HAL_UART_1      0 // shell uart
+#define HAL_UART_2      2 // dc uart
 
 #define MY_SHELL_PORT   HAL_UART_1
 
@@ -53,6 +54,8 @@ int my_uart_init(const MY_UART_ST_STRUCT *param);
 void my_uart_deinit(const int port);
 
 int32 my_shell_uart_read_data(uint8 *buff, uint32 buff_len);
+
+int32 my_dc_uart_read_data(uint8 *buff, uint32 buff_len);
 
 uint32 my_uart_write_data(const int port, uint8 *data, uint32 size);
 

@@ -45,6 +45,17 @@ static void handle_uart1_event(int uart_num, enum uart_event event)
     }
 }
 
+static void handle_uart2_event(int uart_num, enum uart_event event)
+{
+    (void)uart_num;
+
+    if ((event & UART_EVENT_RX_TIMEOUT) ||
+        (event & UART_EVENT_RX_FIFO_OVF))
+    {
+        my_send_msg(MOD_MAIN, g_uart_owner[HAL_UART_2], MY_MSG_UART_RECV);
+    }
+}
+
 /************************************************************************
 **@brief: 串口初始化
 **@param[in] param: 初始化数据信息
@@ -81,6 +92,11 @@ int my_uart_init(const MY_UART_ST_STRUCT *param)
     if (param->port == HAL_UART_1) 
     {
         uart_event_cb = handle_uart1_event;
+        dma_buff_len = MY_UART_DMA_RX_BUF_LEN;
+    }
+    else if (param->port == HAL_UART_2)
+    {
+        uart_event_cb = handle_uart2_event;
         dma_buff_len = MY_UART_DMA_RX_BUF_LEN;
     }
 
@@ -155,6 +171,21 @@ int32 my_shell_uart_read_data(uint8 *buff, uint32 buff_len)
 }
 
 /************************************************************************
+**@brief: 读取dc缓冲区中的数据
+**@param[out] buff: 数据缓冲区
+**@param[in] buff_len: 数据缓冲区长度
+**@return: 实际读取的数据长度，负数表示错误
+*************************************************************************/
+int32 my_dc_uart_read_data(uint8 *buff, uint32 buff_len)
+{
+    int32 len = 0;
+
+    len = uart_recv_bytes(HAL_UART_2, (void *)buff, buff_len);
+
+    return len;
+}
+
+/************************************************************************
 **@brief: 向串口写入数据
 **@param[in] port: 端口号
 **@param[in] data: 数据缓冲区信息
@@ -176,4 +207,5 @@ uint32 my_uart_write_data(const int port, uint8 *data, uint32 size)
 
     return (uint32)bytesWrite;
 }
+
 
