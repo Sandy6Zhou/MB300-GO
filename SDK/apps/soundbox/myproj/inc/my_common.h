@@ -66,6 +66,7 @@ typedef enum
 #include "ble_comunication.h"
 #include "my_ble.h"
 #include "my_dc_uart.h"
+#include "my_gpio.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 

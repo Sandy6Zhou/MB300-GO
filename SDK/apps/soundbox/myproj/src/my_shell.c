@@ -21,6 +21,7 @@ const char FACTORY_CMD_HEADER[] = "AT^GT_CM=";
 char FACTORY_CMD_RETURN[] = "RETURN_";
 
 static int sh_test_led_impl(int argc, char *argv[]);
+static int sh_test_gpio_impl(int argc, char *argv[]);
 
 /* { visible, command, help, function } */
 CMD_STRUC AT_CMD_INNER[] = {
@@ -172,12 +173,77 @@ int sh_at_test(int argc, char *argv[])
         }
         return sh_test_led_impl(argc - 2, argv + 2);
     }
+    else if (strcmp(szValue, "GPIO") == 0)
+    {
+        if (argc >= 3)
+        {
+            return sh_test_gpio_impl(argc - 2, argv + 2);
+        }
+    }
     else
     {
         my_log_printf(1, "Unrecognized Testing.");
     }
 
     return 0;
+}
+
+/**
+ * @brief TEST GPIO 子命令实现
+ * @note argv[0]=GET|SET, argv[1]=IO号, argv[2]=0|1(仅SET)
+ *       例: TEST GPIO GET 104 / TEST GPIO SET 96 1
+ */
+static int sh_test_gpio_impl(int argc, char *argv[])
+{
+    uint32_t io;
+    uint8_t level;
+    int ret;
+
+    if (argc < 2)
+    {
+        my_log_printf(1, "TEST GPIO: usage GET <io> | SET <io> <0|1>");
+        return -1;
+    }
+
+    io = (uint32_t)atoi(argv[1]);
+
+    if (CMD_EQUAL2(argv[0], "GET"))
+    {
+        ret = my_gpio_get_level(io);
+        if (ret < 0)
+        {
+            my_log_printf(1, "GPIO %d read fail", io);
+            return -1;
+        }
+        my_log_printf(1, "GPIO %d READ=%d", io, ret);
+        return 0;
+    }
+
+    if (CMD_EQUAL2(argv[0], "SET"))
+    {
+        if (argc < 3)
+        {
+            my_log_printf(1, "TEST GPIO SET: need level 0|1");
+            return -1;
+        }
+        level = (uint8_t)atoi(argv[2]);
+        if (level != 0 && level != 1)
+        {
+            my_log_printf(1, "level must be 0 or 1");
+            return -1;
+        }
+        ret = my_gpio_set_level(io, level);
+        if (ret < 0)
+        {
+            my_log_printf(1, "GPIO %d set fail", io);
+            return -1;
+        }
+        my_log_printf(1, "GPIO %d SET=%d %s", io, level, level ? "HIGH" : "LOW");
+        return 0;
+    }
+
+    my_log_printf(1, "TEST GPIO: usage GET <io> | SET <io> <0|1>");
+    return -1;
 }
 
 /**

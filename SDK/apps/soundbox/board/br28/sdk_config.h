@@ -18,8 +18,8 @@
 // ------------板级配置.json------------
 #define TCFG_DEBUG_UART_ENABLE 1 // 调试串口
 #if TCFG_DEBUG_UART_ENABLE
-#define TCFG_DEBUG_UART_TX_PIN IO_PORTA_00 // 输出IO
-#define TCFG_DEBUG_UART_RX_PIN IO_PORTA_02 // 输入IO
+#define TCFG_DEBUG_UART_TX_PIN                    IO_PORTA_01      // 输出IO
+#define TCFG_DEBUG_UART_RX_PIN                    IO_PORTA_03      // 输入IO
 #define TCFG_DEBUG_UART_BAUDRATE 115200 // 波特率
 #define TCFG_EXCEPTION_LOG_ENABLE 1 // 打印异常信息
 #define TCFG_EXCEPTION_RESET_ENABLE 1 // 异常自动复位
@@ -65,7 +65,7 @@
 #define TCFG_PSRAM_PORT_SEL 0 // IO引脚组
 #endif // TCFG_PSRAM_DEV_ENABLE
 
-#define TCFG_SD0_ENABLE 1 // SD配置
+#define TCFG_SD0_ENABLE                           0                // SD配置(与PG0/PG1/PG2项目GPIO复用冲突，关闭)
 #if TCFG_SD0_ENABLE
 #define TCFG_SD0_DAT_MODE 1 // 线数设置
 #define TCFG_SD0_DET_MODE SD_CMD_DECT // 检测方式
@@ -258,7 +258,7 @@
 #define TCFG_LED7_PIN4 IO_PORTA_09 // LED引脚4
 #define TCFG_LED7_PIN5 IO_PORTA_10 // LED引脚5
 #define TCFG_LED7_PIN6 IO_PORTA_11 // LED引脚6
-#define TCFG_LCD_PIN_RESET IO_PORTB_06 // LCD RESET 
+#define TCFG_LCD_PIN_RESET IO_PORTB_06 // LCD RESET
 #define TCFG_LCD_PIN_CS IO_PORTA_03 // LCD CS
 #define TCFG_LCD_PIN_BL IO_PORTC_08 // LCD BLCKLIGHT
 #define TCFG_LCD_PIN_DC IO_PORTA_02 // LCD DC

@@ -1611,6 +1611,7 @@ c_SRC_FILES += \
 c_SRC_FILES += \
     apps/soundbox/myproj/src/my_uart.c \
     apps/soundbox/myproj/src/my_shell.c \
+    apps/soundbox/myproj/src/my_gpio.c \
     apps/soundbox/myproj/src/my_tool.c \
     apps/soundbox/myproj/src/my_log.c \
     apps/soundbox/myproj/src/my_vm_param.c \

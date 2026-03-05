@@ -10,8 +10,8 @@
 #define _MY_LED_SPI_H_
 
 // SPI 配置（主机模式，仅使用 DO 引脚传输数据）
-#define LED_SPI_CLK_PIN     IO_PORTA_07
-#define LED_SPI_DO_PIN      IO_PORTC_05
+#define LED_SPI_CLK_PIN     IO_PORTA_11
+#define LED_SPI_DO_PIN      IO_PORTC_02
 #define LED_SPI_CLK         8000000L     //spi时钟频率 8MHz
 
 #define LED_PIXEL_BITS      24      // 单个像素点数据长度（G8+R8+B8）

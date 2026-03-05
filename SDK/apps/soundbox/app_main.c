@@ -683,6 +683,8 @@ static void app_task_loop(void *p)
 
     mode = app_task_init();
 
+    my_gpio_init();
+
     my_shell_uart_init();
 
     my_led_5050_bt002_init(HW_SPI1);
