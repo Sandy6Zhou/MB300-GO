@@ -9,9 +9,6 @@
 #include "my_common.h"
 #include "mbedtls/aes.h"
 
-#define ECDH_G_VALUE    0x83A5;             // TODO G值暂时使用固定的，后续增加G值读写区域再替换这个宏
-#define SN_VALUE        "780901703201079"   // TODO SN号暂时使用固定的，后续增加SN读写区域再替换这个宏
-
 static uint8  rx_ble_buf[BLE_SVC_RX_MAX_LEN];
 static uint16 rx_ble_buf_index = 0;
 
@@ -227,7 +224,7 @@ static uint32 ble_comu_generate_pkey(void)
     prva_a |= rand32() & 0xff;
 
     prva_key = prva_a;
-    prva_key *= ECDH_G_VALUE;
+    prva_key *= my_param_get_Gvalue();
     return(prva_key);
 }
 
@@ -356,14 +353,73 @@ void ble_comu_response_cmd(uint8 cmd, uint8 param)
 
 static void ble_comu_cid_data_handle(const uint8 *data, uint16 len)
 {
-    if (memcmp(data, SN_VALUE, 15) == 0)   // 暂时使用固定的SN号代替
+    const GsmImei_t *gsmImei = my_param_get_imei();
+    if (gsmImei->flag == FLAG_VALID) // IMEI鉴权
     {
-        ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS);
+        if (memcmp(data, gsmImei->hex, GSM_IMEI_LENGTH) == 0)
+        {
+            ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS);
+        }
+        else
+        {
+            ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_FAIL);
+            my_log_printf(1, "ble_cid_compare_fail!");
+        }
     }
     else
     {
         ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_FAIL);
-        my_log_printf(1, "ble_cid_compare_fail!");
+        my_log_printf(1, "invalid imei param!");
+    }
+}
+
+/************************************************************************
+**@brief: 组成符合协议规则的应答数据包
+**@param[in] type:      应答数据类型
+**@param[in] str_data:  应答数据
+**@param[in] len:       应答数据长度
+*************************************************************************/
+void ble_comu_response_or_expansion_cmd(uint16 type, uint8 *str_data, uint8 len)
+{
+    uint8 out_data[BLE_SVC_RX_MAX_LEN] = {0};
+    uint8 send_len = 0;
+
+    memcpy(out_data, str_data, len);
+    send_len = len/16;
+    send_len *= 16;
+
+    if (len % 16)
+        send_len += 16;
+
+    ble_comu_send_packet(type, out_data, send_len);
+}
+
+/************************************************************************
+**@brief: 解析并处理对应的AT指令函数并发送应答数据
+**@param[in] data:  接收到的数据
+**@param[in] len:   接收到的数据长度
+*************************************************************************/
+static void ble_comu_at_cmd_handle(const uint8 *data, uint16 len)
+{
+    at_cmd_struc ble_at_msg = {0};
+    uint16 cmd_type = 0;
+
+#if 0
+    my_log_printf(1, "ble_comu_at_cmd_handle:%s, len=%d", data, len);
+
+    my_log_printf(1, "hex data:");
+    put_buf(data, len);
+#endif
+
+    ble_at_msg.rcv_length = len;
+    memcpy(ble_at_msg.rcv_msg, data, len);
+
+    cmd_type = at_recv_cmd_handler(&ble_at_msg);
+
+    // BLE_SERVER_MAX_DATA_LEN - 4是因为包头有四个字节的长度
+    if(ble_at_msg.resp_length > 0 && ble_at_msg.resp_length <= (BLE_SERVER_MAX_DATA_LEN - 4))
+    {
+        ble_comu_response_or_expansion_cmd(cmd_type, (uint8*)ble_at_msg.resp_msg, ble_at_msg.resp_length);
     }
 }
 
@@ -417,6 +473,18 @@ void ble_comu_app_handle(uint32 type, const uint8 *data, uint16 len)
                 {
                     // received CID data packet
                     ble_comu_cid_data_handle(dec_buf, len);
+                }
+                break;
+
+                case BLE_DATA_TYPE_AT_CMD:      //用户指令
+                {
+                    ble_comu_at_cmd_handle(dec_buf, len);
+                }
+                break;
+
+                case BLE_DATA_TYPE_EXPANSION_MODULE:    //扩展模块的应答,无需处理
+                {
+                    my_log_printf(1, "rev expansion response");
                 }
                 break;
 

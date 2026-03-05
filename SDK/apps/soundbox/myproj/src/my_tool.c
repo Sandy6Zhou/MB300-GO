@@ -260,3 +260,40 @@ void hex2hexstr(uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len)
     }
     buf[j] = 0;
 }
+
+/************************************************************************
+**@brief: 检测字符串是不是全是数字组成
+**@param[in] flag:  flag & 1 允许字符串中包含'+'或'-'
+                    flag & 2 允许字符串中包含'.'
+                    flag & 4 数字不允许大于7或小于1
+**@param[in] str:   传入的字符串
+**@return:          返回有效的字符数
+*************************************************************************/
+uint8 string_check_is_number(uint8 flag, const char* str)
+{
+    uint8 no_count = 0;
+    while (*str)
+    {
+        if ((flag & 1) && no_count == 0 && (*str == '+' || *str == '-'))
+        {
+            no_count++;
+            str++;
+        }
+        else if ((flag & 2) && *str == '.')
+        {
+            flag &= ~2;
+            no_count++;
+            str++;
+        }
+        else if (*str >= '0' && *str <= '9')
+        {
+            no_count++;
+            str++;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    return no_count;
+}

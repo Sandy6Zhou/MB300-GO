@@ -19,7 +19,7 @@
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN && (MY_FINDMY_EN == 1))
 
-#define DEV_CUST_UUID       0xFEE9  // 自定义UUID
+#define DEV_CUST_UUID       0xFEE5  // 自定义UUID
 #define FLAG_TYPE_VALUE     0x06    // google的flag值
 #define CON_ADV_OBJ_MAX_NUM 2       // 一路google，一路ios
 #define ADV_INTERVAL        3200    // 3200*0.625ms=2000ms
@@ -70,7 +70,7 @@ const uint8_t my_profile_data[] = {
     // 0x0004 PRIMARY_SERVICE  FEE9
     //
     //////////////////////////////////////////////////////
-    0x0a, 0x00, 0x02, 0x00, 0x04, 0x00, 0x00, 0x28, 0xE9, 0xFE,
+    0x0a, 0x00, 0x02, 0x00, 0x04, 0x00, 0x00, 0x28, 0xE5, 0xFE,
 
     /* CHARACTERISTIC,  FEB5, WRITE | WRITE_WITHOUT_RESPONSE | DYNAMIC, */
     // 0x0005 CHARACTERISTIC FEB5 WRITE | WRITE_WITHOUT_RESPONSE | DYNAMIC
@@ -100,6 +100,16 @@ const uint8_t my_profile_data[] = {
 #define ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE 0x0008
 #define ATT_CHARACTERISTIC_ae02_01_CLIENT_CONFIGURATION_HANDLE 0x0009
 
+// 检查BLE是否被连上
+bool check_connect_id_enable(void)
+{
+    if (connect_id == 0xff)
+    {
+        return false;
+    }
+    return true;
+}
+
 /************************************************************************
 **@brief: 设置哪一路广播生效
 **@param[in] index: 目前0代表google，1代表ios
@@ -128,7 +138,7 @@ static void get_adv_data(MY_ADV_TYPE adv_type, uint8_t **adv_data, uint8_t *adv_
     static u8 scan_rsp_data_len = 0;
 
     const char *local_name = NULL;
-    const char name_suffix[] = "01079";  // TODO暂定设备名字为soundbox-01079，后面确定广播名字及增加SN后，再修改这里
+    const GsmImei_t *gsmImei;   // TODO暂定设备名字为soundbox-xxxxx，后面确定广播名字，再修改这里
     u8 name_len = 0;
     u8 lic_len = 0;
     u16 uuid_user = 0;
@@ -149,10 +159,9 @@ static void get_adv_data(MY_ADV_TYPE adv_type, uint8_t **adv_data, uint8_t *adv_
     pos += name_len;
     *pos++ = '-';
 
-    //TODO 后续存储SN后，再使用SN最后5位作为name_suffix的值
-    name_len = strlen(name_suffix);
-    memcpy(pos, name_suffix, name_len);
-    pos += name_len;
+    gsmImei = my_param_get_imei();  // 使用IMEI后5位作为广播名字的后缀
+    memcpy(pos, &gsmImei->hex[DEV_NAME_USE_IMEI_POS], GSM_IMEI_LENGTH - DEV_NAME_USE_IMEI_POS);
+    pos += (GSM_IMEI_LENGTH - DEV_NAME_USE_IMEI_POS);
 
     // uuid
     uuid_user = DEV_CUST_UUID;

@@ -19,10 +19,20 @@ const AdvValidValue_t gDefaultAdvValidValue =
     .AppleValid = 1,
 };
 
+#define DEFAULT_ECDH_G_VALUE    0x83A5         // 默认G值
+
+const  GsmImei_t gDefaultImeiValue = 
+{
+    // 默认IMEI为123456789012345
+    .flag = 0,
+    .hex = {'1','2','3','4','5','6','7','8','9','0','1','2','3','4','5'}
+};
+
 void my_param_load_vm_config(void)
 {
     u16 length;
     int ret;
+    uint8 data_buff[64] = {0};
 
     //--------Load license gg data ---------------------
     length = sizeof(lic_gg_struct);
@@ -54,6 +64,25 @@ void my_param_load_vm_config(void)
     set_adv_valid_status(GOOGLE_ADV_ID, gConfigParam.adv_valid_value.GoogleValid);
     set_adv_valid_status(APPLE_ADV_ID, gConfigParam.adv_valid_value.AppleValid);
     // my_log_printf(1, "Adv Valid Value=GoogleValid(%d),AppleValid(%d)", ConfigParam.adv_valid_value.GoogleValid, ConfigParam.adv_valid_value.AppleValid);
+
+    //--------Load ECDH G Value ---------------------
+    length = sizeof(gConfigParam.ECDH_GValue);
+    ret = syscfg_read(CFG_ECDH_G_VALUE, &gConfigParam.ECDH_GValue, length);
+    if (ret != length)
+    {
+        gConfigParam.ECDH_GValue = DEFAULT_ECDH_G_VALUE;
+        my_log_printf(1, "ECDH G value not found. Use default:ECDH G value(%04x)", gConfigParam.ECDH_GValue);
+    }
+
+    //--------Load IMEI Value ---------------------
+    length = sizeof(GsmImei_t);
+    ret = syscfg_read(CFG_IMEI_VALUE, &gConfigParam.gsm_imei, length);
+    if (ret != length)
+    {
+        memcpy(&gConfigParam.gsm_imei, &gDefaultImeiValue, length);
+        memcpy(data_buff, gConfigParam.gsm_imei.hex, sizeof(gConfigParam.gsm_imei.hex));
+        my_log_printf(1, "imei not found. Use default:imei value(%s)", data_buff);
+    }
 }
 
 /************************************************************************
@@ -251,4 +280,88 @@ int my_param_set_jgtag_or_jatag(char *cmd, char *param)
     }
 
     return 0;
-}
+}
+
+int my_param_set_Gvalue(char *param)
+{
+    uint16 Gvalue;
+    int Gvalue_len;
+    int ret;
+
+    if (string_check_is_number(0, param))
+    {
+        Gvalue = atoi(param);
+
+        if (Gvalue < 10000 || Gvalue > 60000)
+        {
+            my_log_printf(1, "MODIFYGV set fail, range(10000~60000)");
+            return -1;
+        }
+        else
+        {
+            Gvalue_len = sizeof(gConfigParam.ECDH_GValue);
+            gConfigParam.ECDH_GValue = Gvalue;
+
+            ret = syscfg_write(CFG_ECDH_G_VALUE, &gConfigParam.ECDH_GValue, Gvalue_len);
+            if (ret != Gvalue_len)
+            {
+                my_log_printf(1, "vm set Gvalue Error!!!");
+                return -1;
+            }
+            else
+            {
+                my_log_printf(1, "vm set Gvalue OK!!!");
+            }
+        }
+    }
+    else 
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+const uint16 my_param_get_Gvalue(void)
+{
+    return gConfigParam.ECDH_GValue;
+}
+
+int my_param_set_imei(char *param, uint8 len)
+{
+    int ret;
+    int GsmImei_struct_len = sizeof(GsmImei_t);
+
+    if (len != GSM_IMEI_LENGTH)
+    {
+        my_log_printf(1, "my_param_set_imei len error!");
+        return -1;
+    }
+
+    if (string_check_is_hex_str((const char *)param) != GSM_IMEI_LENGTH)
+    {
+        my_log_printf(1, "invalid param");
+        return -1;
+    }
+
+    gConfigParam.gsm_imei.flag = FLAG_VALID;
+    memcpy(gConfigParam.gsm_imei.hex, param, len);
+
+    ret = syscfg_write(CFG_IMEI_VALUE, &gConfigParam.gsm_imei, sizeof(GsmImei_t));
+    if (ret != GsmImei_struct_len)
+    {
+        my_log_printf(1, "vm set imei Error!!!");
+        return -1;
+    }
+    else
+    {
+        my_log_printf(1, "vm set imei OK!!!");
+    }
+
+    return 0;
+}
+
+const GsmImei_t *my_param_get_imei(void)
+{
+    return &gConfigParam.gsm_imei;
+}

@@ -15,6 +15,9 @@
 
 #define FLAG_VALID 0xAA
 
+#define GSM_IMEI_LENGTH                     15
+#define DEV_NAME_USE_IMEI_POS               10
+
 typedef struct /* 存储的LICENSE GG信息 */
 {
     uint8 flag;
@@ -33,11 +36,19 @@ typedef struct
     uint8 AppleValid;
 }AdvValidValue_t;
 
+typedef struct /* 存储的IMEI信息 */
+{
+    uint8 flag;
+    uint8 hex[GSM_IMEI_LENGTH];
+}GsmImei_t;
+
 typedef struct
 {
     lic_gg_struct               lic_gg;
     lic_ff_struct               lic_ff;
     AdvValidValue_t             adv_valid_value;
+    uint16                      ECDH_GValue;
+    GsmImei_t                   gsm_imei;
 } ConfigParamStruct;
 
 extern ConfigParamStruct    gConfigParam;
@@ -48,5 +59,8 @@ const lic_gg_struct *my_param_get_gg(void);
 bool my_param_set_ff(char *param, uint8 len);
 const lic_ff_struct *my_param_get_ff(void);
 int my_param_set_jgtag_or_jatag(char *cmd, char *param);
-
-#endif
+int my_param_set_Gvalue(char *param);
+const uint16 my_param_get_Gvalue(void);
+int my_param_set_imei(char *param, uint8 len);
+const GsmImei_t *my_param_get_imei(void);
+#endif

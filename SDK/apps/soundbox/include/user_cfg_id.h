@@ -59,6 +59,8 @@
 #define     CFG_LICENSE_GG_VALUE             35
 #define     CFG_LICENSE_FF_VALUE             36
 #define     CFG_ADV_VALID_VALUE              37
+#define     CFG_ECDH_G_VALUE                 38
+#define     CFG_IMEI_VALUE                   39
 
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49

@@ -52,7 +52,9 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
     char *p = resp;
     const lic_ff_struct *lic_ff;
     const lic_gg_struct *lic_gg;
+    uint16 ECDH_GValue;
     uint8 data_buff[64] = {0};
+    const GsmImei_t *gsmImei;
     int ret;
 
     memset(resp, 0, sizeof(resp));
@@ -137,6 +139,68 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
             sprintf(resp, "RETURN_JATAG_SET_FAIL");
         }
     }
+    else if (CMD_MATCHED2(pParam[0], "MODIFYGV"))
+    {
+        // AT^GT_CM=MODIFYGV
+        if (nParam < 2)
+        {
+            ECDH_GValue = my_param_get_Gvalue();
+            sprintf(resp, "RETURN_GV:%d (%04X)", ECDH_GValue, ECDH_GValue);
+        }
+        // AT^GT_CM=MODIFYGV,xxxx
+        else
+        {
+            ret = my_param_set_Gvalue(pParam[1]);
+            if (ret == 0){
+                sprintf(resp, "RETURN_MODIFYGV_SET_OK");
+            } else {
+                sprintf(resp, "RETURN_MODIFYGV_SET_FAIL");
+            }
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "IMEI"))
+    {
+        // AT^GT_CM=IMEI
+        if (nParam < 2)
+        {
+            gsmImei = my_param_get_imei();
+            if (gsmImei->flag == FLAG_VALID)
+            {
+                memcpy(data_buff, gsmImei->hex, sizeof(gsmImei->hex));
+                sprintf(resp, "RETURN_IMEI:%s", data_buff);
+            }
+            else
+            {
+                sprintf(resp, "RETURN_IMEI");
+            }
+        }
+        // AT^GT_CM=IMEI,xxxx
+        else
+        {
+            ret = my_param_set_imei(pParam[1], strlen(pParam[1]));
+            if (ret == 0){
+                //TODO 更新广播数据？
+                sprintf(resp, "RETURN_IMEI_SET_OK");
+            } else {
+                sprintf(resp, "RETURN_IMEI_SET_FAIL");
+            }
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "SEND_STATUS")) //测试用
+    {
+        // AT^GT_CM=SEND_STATUS
+        if (nParam < 2)
+        {
+            // TODO 后续定时更新数据的话，调用这个接口
+            my_send_all_status_handle();
+            sprintf(resp, "RETURN_SEND_STATUS_OK");
+        }
+        else
+        {
+            sprintf(resp, "RETURN_SEND_STATUS_FAIL");
+        }
+    }
+
     return resp;
 }
 

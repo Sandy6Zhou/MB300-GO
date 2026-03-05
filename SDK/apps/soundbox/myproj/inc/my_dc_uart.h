@@ -18,6 +18,19 @@
 
 #define MY_DC_UART_RX_TMP_BUF_LEN    512
 
+typedef struct{
+    uint8 bat_percent;            // 电量百分比
+    uint16 remain_time;           // 剩余可用时间(单位min)
+    uint16 bat_temp;              // 电池温度(单位0.1℃)
+    uint16 output_total_power;    // 输出总功率(单位0.1W)
+    uint16 input_total_power;     // 输入总功率(单位0.1W)
+    uint16 ac_power;              // AC功率(单位0.1W)
+    uint16 dc_power;              // DC功率(单位0.1W)
+    uint16 usb_power;             // USB功率(单位0.1W)
+    uint16 led_power;             // LED功率(单位0.1W)
+    uint8 sw_status;              // 开关状态(bit0:AC,bit1:DC,bit2:USB,bit3:LED---O:关,1:开)
+}device_data;
+
 void my_dc_uart_init(void);
 void my_dc_uart_deinit(void);
 
