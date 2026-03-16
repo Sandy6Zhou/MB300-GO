@@ -58,6 +58,12 @@
 #define DC_MODBUS_FUNC_WRITE_COIL 0x05 /* 写单线圈 */
 #define DC_MODBUS_FUNC_WRITE_REG  0x06 /* 写单寄存器 */
 
+/* ========== 时序参数（协议 3.1：从机最大回复时间 500ms） ========== */
+#define DC_MODBUS_RESP_TIMEOUT_MS    500  /* 从机最大回复时间：超时则本次请求失败，置失败 */
+#define DC_OFFLINE_CONSECUTIVE_COUNT 3    /* 连续多少次超时判离线 */
+#define DC_SCHED_TICK_MS             100  /* 轮询定时器周期；仅蓝牙APP连接时运行 */
+#define DC_SESSION_POLL_INTERVAL_MS  1000 /* 轮询间隔 */
+
 /* 写单线圈控制命令（协议 3.3.3）：0xFF00=打开 0x0000=关闭 */
 #define DC_MODBUS_CTRL_ON  0xFF00
 #define DC_MODBUS_CTRL_OFF 0x0000
@@ -82,6 +88,25 @@
 #define DC_RX_CACHE_SIZE  128
 #define DC_TX_FRAME_MAX   16
 
+/* 在途 Modbus 请求上下文：同一时刻仅允许一个请求 */
+typedef struct
+{
+    uint8 func;        /* 功能码 */
+    uint16 start_addr; /* 起始地址 */
+    uint16 quantity;   /* 寄存器个数 */
+    uint16 value;      /* 写入值 */
+    uint16 wait_ms;    /* 等待时间 */
+    uint8 active;      /* 是否活动 */
+} dc_req_ctx_t;
+
+/* 排队中的开关控制请求：由 my_dc_ctrl_switch 写入，dc_try_send_ctrl_req 消费 */
+typedef struct
+{
+    uint8 valid;         /* 是否有效 */
+    my_dc_sw_id_t sw_id; /* 开关ID */
+    uint8 onoff;         /* 开关状态 */
+} dc_ctrl_req_t;
+
 /* 从机上报反推用：功能码 + 寄存器区间（协议 2.1），用于 byte_cnt 唯一匹配 */
 typedef struct
 {
@@ -94,8 +119,24 @@ typedef struct
 static uint16 g_dc_reg_cache[DC_REG_CACHE_SIZE] = {0}; /* Modbus 寄存器镜像 */
 static device_data g_dc_dev_data = {0};                /* 业务数据快照 */
 
+/* ========== 链路健康状态 ========== */
+static uint8 g_dc_online = 0;                             /* 链路健康：DC_OFFLINE_CONSECUTIVE_COUNT 次超时置 0 */
+static uint8 g_dc_timeout_count = 0;                      /* 连续超时计数，>= DC_OFFLINE_CONSECUTIVE_COUNT 时 g_dc_online=0 */
+static uint8 g_dc_last_ctrl_result = MY_DC_CTRL_RET_IDLE; /* 最近一次写线圈结果 */
+static uint8 g_dc_last_ctrl_err = 0;                      /* 异常应答时的错误码 */
+
+/* ========== 请求上下文 ========== */
+static dc_req_ctx_t g_dc_req = {0};       /* 在途 Modbus 请求，同一时刻仅一个 */
+static dc_ctrl_req_t g_dc_ctrl_req = {0}; /* 排队中的开关控制请求 */
+
 /* ========== 发送 DMA 缓冲（UART 驱动需 DMA 可访问内存） ========== */
 static uint8 *g_dc_tx_dma_buf = NULL; /* init 时分配，deinit 时释放 */
+
+/* ========== 轮询与调度状态 ========== */
+static uint32 g_dc_tick_ms = 0;               /* 软件 tick，仅定时器运行时累加 */
+static uint32 g_dc_last_poll_dispatch_ms = 0; /* 上次发起轮询的时刻，dc_poll_stop 时重置 */
+static uint8 g_dc_force_fast_poll = 0;        /* 1=因控制成功/超时/提交控制而触发，下一拍立即查询首项寄存器（0x0001~0x0002）以尽快刷新状态 */
+static uint8 g_dc_timer_running = 0;          /* 1=蓝牙APP连接定时器运行，0=断开完全停止 */
 
 /*
  * 上报 profile 表（协议 2.1 寄存器点表）：用于从机主动上报时根据 byte_cnt 反推寄存器区间
@@ -111,8 +152,8 @@ static dc_report_profile_t g_dc_report_profiles[] = {
     {DC_MODBUS_FUNC_READ_REG, 0x0021, 0x0007},
 };
 
-#define DC_LOG_FRAME_EN   1 /* 协议层提交：开启帧打印便于 review */
-#define DC_LOG_VERBOSE_EN 1 /* 开启解析/上报日志 */
+#define DC_LOG_FRAME_EN   0 /* 协议层提交：开启帧打印便于 review */
+#define DC_LOG_VERBOSE_EN 0 /* 开启解析/上报日志 */
 
 #if DC_LOG_VERBOSE_EN
 #define DC_LOG_VERBOSE(...) my_log_printf(1, __VA_ARGS__)
@@ -137,6 +178,8 @@ static void dc_log_frame(const char *tag, const uint8 *buf, uint16 len)
     (void)len;
 #endif
 }
+
+static void dc_poll_timer_cb(void *param);
 
 /*
  * ============================================================================
@@ -248,6 +291,39 @@ static void dc_update_device_data_cache(void)
 }
 
 /*
+ * 构造 Modbus RTU 请求帧（协议 3.2、3.3.1/3.3.2/3.3.3）
+ * 帧格式：| 地址(1B) | 功能码(1B) | 起始地址(2B) | 数量/控制值(2B) | CRC(2B) |
+ * - 01 读开关：addr=起始 bit，quantity=开关个数
+ * - 03 读寄存器：addr=起始地址，quantity=寄存器个数
+ * - 05 写线圈：addr=开关地址，value=0xFF00 开 / 0x0000 关
+ * 示例（协议 3.3.3）：打开地址 1 开关 -> 01 05 00 01 FF 00 xx xx
+ */
+static uint16 dc_build_req_frame(uint8 *out, uint8 func, uint16 addr, uint16 quantity_or_value)
+{
+    uint16 crc = 0;
+    uint16 len = 0;
+
+    if (out == NULL)
+    {
+        return 0;
+    }
+
+    out[0] = DC_MODBUS_ADDR;
+    out[1] = func;
+    out[2] = (uint8)(addr >> 8);
+    out[3] = (uint8)(addr & 0xFF);
+    out[4] = (uint8)(quantity_or_value >> 8);
+    out[5] = (uint8)(quantity_or_value & 0xFF);
+    len = 6;
+
+    crc = dc_modbus_crc16(out, len);
+    out[len++] = (uint8)(crc >> 8);
+    out[len++] = (uint8)(crc & 0xFF);
+
+    return len;
+}
+
+/*
  * 根据帧头估算完整帧长度（协议 3.2.3、3.3.1/3.3.2/3.3.3）
  * 用于粘包/拆包：需至少 2 字节看功能码，读应答需 3 字节取 byte_cnt
  * - 异常应答(func|0x80)：5 字节 [addr|func|err|CRC]
@@ -315,6 +391,39 @@ static int dc_modbus_check_frame(const uint8 *frame, uint16 frame_len)
     calc_crc = dc_modbus_crc16(frame, frame_len - 2);
     rx_crc = (uint16)((frame[frame_len - 2] << 8) | frame[frame_len - 1]);
     return (calc_crc == rx_crc) ? 1 : 0;
+}
+
+/*
+ * 业务开关 ID -> Modbus 写线圈地址（协议 2.2 0x0003 读写控制位）
+ * 0x0003-Bit1=逆变器 Bit2=USB Bit3=DC5521 Bit4=LED
+ * 写线圈地址：0x0001=逆变器 0x0002=USB 0x0003=DC5521 0x0004=LED
+ */
+static uint16 dc_sw_to_modbus_addr(my_dc_sw_id_t sw_id)
+{
+    switch (sw_id)
+    {
+        case MY_DC_SW_AC:
+            return 0x0001; /* 逆变器开关 */
+        case MY_DC_SW_DC:
+            return 0x0003; /* DC5521开关 */
+        case MY_DC_SW_USB:
+            return 0x0002; /* USB开关 */
+        case MY_DC_SW_LED:
+            return 0x0004; /* LED开关 */
+        default:
+            return 0xFFFF;
+    }
+}
+
+/* 判断帧是否为某功能码的应答（协议 3.2.2：正常=func，异常=func|0x80） */
+static int dc_is_expected_resp_frame(const uint8 *frame, uint8 func_expect)
+{
+    if (frame == NULL)
+    {
+        return 0;
+    }
+
+    return (frame[1] == func_expect || frame[1] == (uint8)(func_expect | 0x80));
 }
 
 /*
@@ -400,8 +509,132 @@ static int dc_try_handle_report_frame(const uint8 *frame, uint16 frame_len)
         return 0; /* byte_cnt 无唯一匹配 */
     }
     dc_update_read_reg_cache(frame, start_addr);
+    g_dc_online = 1;
+    g_dc_timeout_count = 0; // 重置超时计数
     DC_LOG_VERBOSE("dc report parsed. start=0x%x, qty=%d", start_addr, quantity);
     return 1;
+}
+
+/*
+ * ============================================================================
+ * 【运行层】任务/定时器/调度逻辑
+ * ============================================================================
+ */
+
+/* 启动 DC 轮询定时器（蓝牙APP连接时由 MY_MSG_DC_POLL_START 触发） */
+static void dc_poll_start(void)
+{
+    if (g_dc_timer_running)
+    {
+        return; // 定时器已运行，直接返回
+    }
+
+    g_dc_timer_running = 1;
+    my_start_timer(MY_TIMER_DC_POLL, DC_SCHED_TICK_MS, true, dc_poll_timer_cb);
+    my_log_printf(1, "dc poll start");
+}
+
+/* 完全停止 DC 轮询定时器（蓝牙APP断开时由 MY_MSG_DC_POLL_STOP 触发） */
+static void dc_poll_stop(void)
+{
+    if (!g_dc_timer_running)
+    {
+        return; // 定时器未运行，直接返回
+    }
+
+    g_dc_timer_running = 0;
+    g_dc_tick_ms = 0;               // 下次连接时 tick 从 0 开始
+    g_dc_last_poll_dispatch_ms = 0; // 下次连接时轮询节奏从新开始
+    g_dc_req.active = 0;            // 清在途请求，否则重连后无法发新请求
+    my_stop_timer(MY_TIMER_DC_POLL);
+    my_log_printf(1, "dc poll stop");
+}
+
+/*
+ * 发送 Modbus 请求（运行层）：构造帧、串口发送、填充 g_dc_req
+ * 调用者：dc_try_send_ctrl_req, dc_try_send_poll_req
+ * 返回 0：链路忙或发送失败；返回 1：已发送，等待应答
+ */
+static int dc_send_request(uint8 func, uint16 start_addr, uint16 quantity, uint16 value)
+{
+    uint8 frame[16] = {0};
+    uint16 frame_len = 0;
+    uint16 payload = 0;
+    uint32 send_len = 0;
+
+    if (g_dc_req.active)
+    {
+        return 0; // 有在途请求，直接返回
+    }
+
+    // 构建请求帧
+    if (func == DC_MODBUS_FUNC_READ_COIL || func == DC_MODBUS_FUNC_READ_REG)
+    {
+        payload = quantity; // 读寄存器或线圈，payload 为 quantity
+    }
+    else
+    {
+        payload = value; // 写寄存器，payload 为 value
+    }
+
+    frame_len = dc_build_req_frame(frame, func, start_addr, payload);
+    if (frame_len == 0)
+    {
+        return 0; // 构建请求帧失败，直接返回
+    }
+
+    dc_log_frame("dc tx frame", frame, frame_len);
+    send_len = my_dc_uart_send(frame, frame_len);
+    if (send_len != frame_len)
+    {
+        my_log_printf(1, "dc send fail. func=0x%x, addr=0x%x", func, start_addr);
+        if (func == DC_MODBUS_FUNC_WRITE_COIL)
+        {
+            g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL; // 写线圈发送失败，置发送失败
+            g_dc_last_ctrl_err = 0;                           // 写线圈发送失败，置错误码为0
+        }
+        return 0; // 发送失败，直接返回
+    }
+
+    // 设置请求参数
+    g_dc_req.func = func;
+    g_dc_req.start_addr = start_addr;
+    g_dc_req.quantity = quantity;
+    g_dc_req.value = value;
+    g_dc_req.wait_ms = 0;
+    g_dc_req.active = 1;
+
+    DC_LOG_VERBOSE("dc send ok. func=0x%x, addr=0x%x, qty=%d", func, start_addr, quantity);
+    return 1;
+}
+
+/* 请求成功：写线圈时置 g_dc_last_ctrl_result=OK，复位超时计数（运行层） */
+static void dc_handle_req_result_ok(void)
+{
+    if (g_dc_req.func == DC_MODBUS_FUNC_WRITE_COIL)
+    {
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_OK;
+        g_dc_last_ctrl_err = 0;
+    }
+
+    g_dc_online = 1;        // 置在线
+    g_dc_timeout_count = 0; // 重置超时计数
+    g_dc_req.active = 0;    // 清在途请求标志
+    g_dc_req.wait_ms = 0;   // 重置等待时间
+}
+
+/* 请求失败（协议 3.2.3.2 异常应答）：err_code 1=无效报文 2=地址 3=数值 6=忙 */
+static void dc_handle_req_result_fail(uint8 err_code)
+{
+    if (g_dc_req.func == DC_MODBUS_FUNC_WRITE_COIL)
+    {
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_EXCEPTION;
+        g_dc_last_ctrl_err = err_code;
+    }
+
+    g_dc_req.active = 0;  // 清在途请求标志
+    g_dc_req.wait_ms = 0; // 重置等待时间
+    my_log_printf(1, "dc modbus exception. func=0x%x, err=0x%x", g_dc_req.func, err_code);
 }
 
 /*
@@ -456,7 +689,52 @@ static void dc_try_parse_rx_cache(const uint8 *data, uint32 len)
         }
 
         dc_log_frame("dc rx frame", rx_cache, expected_len);
-        if (!dc_try_handle_report_frame(rx_cache, expected_len))
+        if (g_dc_req.active && dc_is_expected_resp_frame(rx_cache, g_dc_req.func))
+        {
+            // 异常应答，处理异常
+            if (rx_cache[1] == (uint8)(g_dc_req.func | 0x80))
+            {
+                dc_handle_req_result_fail(rx_cache[2]); // 异常应答，处理异常
+            }
+            // 读寄存器应答，处理读寄存器应答
+            else if (g_dc_req.func == DC_MODBUS_FUNC_READ_REG)
+            {
+                // 校验 byte_cnt 与请求 quantity 一致，避免把从机主动上报误当应答
+                if (rx_cache[2] != (uint8)(g_dc_req.quantity * 2))
+                {
+                    if (!dc_try_handle_report_frame(rx_cache, expected_len))
+                    {
+                        DC_LOG_VERBOSE("dc read reg resp byte_cnt mismatch. expect=%d rx=%d",
+                                       g_dc_req.quantity * 2, rx_cache[2]);
+                        dc_handle_req_result_fail(2); // 2=非预期应答，按异常清理在途请求
+                    }
+                }
+                else
+                {
+                    dc_update_read_reg_cache(rx_cache, g_dc_req.start_addr);
+                    dc_handle_req_result_ok();
+                }
+            }
+            // 写线圈应答，处理写线圈应答
+            else if (g_dc_req.func == DC_MODBUS_FUNC_WRITE_COIL)
+            {
+                // 写线圈应答：协议要求回显 addr+value
+                uint16 rx_addr = (uint16)((rx_cache[2] << 8) | rx_cache[3]);
+                uint16 rx_val = (rx_cache[4] << 8) | rx_cache[5];
+                if (rx_addr == g_dc_req.start_addr && rx_val == g_dc_req.value)
+                {
+                    g_dc_force_fast_poll = 1; // 设置成功，立即准备检查开关状态
+                    dc_handle_req_result_ok();
+                }
+                else
+                {
+                    DC_LOG_VERBOSE("dc write coil resp addr mismatch. rx=0x%x expect=0x%x",
+                                   rx_addr, g_dc_req.start_addr);
+                    dc_handle_req_result_fail(2); /* 2=地址/长度异常 */
+                }
+            }
+        }
+        else if (!dc_try_handle_report_frame(rx_cache, expected_len))
         {
             DC_LOG_VERBOSE("dc unknown frame. func=0x%x", rx_cache[1]);
         }
@@ -468,6 +746,190 @@ static void dc_try_parse_rx_cache(const uint8 *data, uint32 len)
             memmove(rx_cache, rx_cache + consume_len, rx_len - consume_len);
         }
         rx_len -= consume_len;
+    }
+}
+
+/* 100ms 定时器回调：向 DC 任务发送 MY_MSG_DC_POLL_TICK，驱动轮询/超时/控制调度 */
+static void dc_poll_timer_cb(void *param)
+{
+    (void)param;
+    my_send_msg(MOD_DC_UART, MOD_DC_UART, MY_MSG_DC_POLL_TICK);
+}
+
+/*
+ * 是否到了轮询时刻（整体节奏门控）：
+ * - 返回 1：定时器运行 且 距上次“成功发起轮询”已超过 DC_SESSION_POLL_INTERVAL_MS
+ * - 返回 0：定时器未运行 或 间隔未到
+ * - 作用：限制轮询频率，避免 100ms tick 下每拍都发轮询
+ */
+static int dc_need_poll_now(void)
+{
+    if (!g_dc_timer_running)
+    {
+        return 0; // 定时器停止，不轮询
+    }
+
+    if ((g_dc_tick_ms - g_dc_last_poll_dispatch_ms) < DC_SESSION_POLL_INTERVAL_MS)
+    {
+        return 0; // 距上次调度不足 interval
+    }
+
+    g_dc_last_poll_dispatch_ms = g_dc_tick_ms; // 本次允许调度，更新基准
+    return 1;
+}
+
+/*
+ * 是否允许刷新快速轮询窗口：
+ * - 定时器运行时返回 1，用于超时/控制后允许立即发首项轮询
+ * - 定时器停止时返回 0
+ */
+static int dc_allow_fast_window_refresh(void)
+{
+    return g_dc_timer_running ? 1 : 0;
+}
+
+/*
+ * 在途请求超时检查（每 tick 调用）：
+ * - 协议：从机回复一定在 500ms 内，否则本次请求视为失败
+ * - 无在途请求：直接返回
+ * - 有在途请求：累加 wait_ms，超 DC_MODBUS_RESP_TIMEOUT_MS 则置失败，
+ *   g_dc_timeout_count++，>= DC_OFFLINE_CONSECUTIVE_COUNT 时 g_dc_online=0；
+ *   若为写线圈则 g_dc_last_ctrl_result=TIMEOUT；允许刷新快速轮询窗口
+ */
+static void dc_req_timeout_check(void)
+{
+    if (!g_dc_req.active)
+    {
+        return; /* 无在途请求，无需检查 */
+    }
+
+    g_dc_req.wait_ms += DC_SCHED_TICK_MS;
+    if (g_dc_req.wait_ms < DC_MODBUS_RESP_TIMEOUT_MS)
+    {
+        return; /* 未超从机最大回复时间，继续等待 */
+    }
+
+    /* 已超时：置失败，清在途请求 */
+    g_dc_req.active = 0;
+    g_dc_req.wait_ms = 0;
+    if (g_dc_timeout_count < 0xFF)
+    {
+        g_dc_timeout_count++;
+    }
+
+    // 连续超时达阈值，置离线
+    if (g_dc_timeout_count >= DC_OFFLINE_CONSECUTIVE_COUNT)
+    {
+        g_dc_online = 0;
+    }
+
+    // 写线圈超时，触发立即查询以刷新开关状态
+    if (g_dc_req.func == DC_MODBUS_FUNC_WRITE_COIL)
+    {
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_TIMEOUT;
+        g_dc_last_ctrl_err = 0;
+        if (dc_allow_fast_window_refresh())
+        {
+            g_dc_force_fast_poll = 1; // 触发立即查询
+        }
+    }
+    /* 读寄存器超时：不置 g_dc_force_fast_poll，否则会一直重发首项，轮转无法推进 */
+}
+
+/*
+ * 尝试下发排队中的控制命令（写线圈）：
+ * - 无有效控制请求：返回 0
+ * - sw_id 映射失败：置 SEND_FAIL，返回 0
+ * - 发送成功：清 g_dc_ctrl_req.valid，激活 g_dc_req，返回 1
+ * - 发送失败（如已有在途请求）：返回 0，valid 保留，下次再试
+ */
+static int dc_try_send_ctrl_req(void)
+{
+    uint16 sw_addr = 0;
+    uint16 sw_val = 0;
+
+    if (!g_dc_ctrl_req.valid)
+    {
+        return 0; // 无待发控制请求
+    }
+
+    sw_addr = dc_sw_to_modbus_addr(g_dc_ctrl_req.sw_id);
+    if (sw_addr == 0xFFFF)
+    {
+        g_dc_ctrl_req.valid = 0;
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
+        g_dc_last_ctrl_err = 0;
+        return 0; // sw_id 非法，映射失败
+    }
+
+    sw_val = g_dc_ctrl_req.onoff ? DC_MODBUS_CTRL_ON : DC_MODBUS_CTRL_OFF;
+    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_COIL, sw_addr, 1, sw_val))
+    {
+        return 0; // 发送失败（如 g_dc_req 已有在途请求）
+    }
+
+    g_dc_ctrl_req.valid = 0; // 已受理，清控制请求
+    return 1;
+}
+
+/*
+ * 尝试发送轮询请求（读寄存器）：
+ * - g_dc_force_fast_poll 置位时，立即查询首项（0x0001~0x0002 开关量），轮转归零
+ * - 否则按 poll_round_robin 轮转发下一项；节奏由 dc_need_poll_now 保证
+ */
+static int dc_try_send_poll_req(void)
+{
+    static uint8 poll_round_robin = 0; /* 轮转起点，每次成功发送后更新为 (idx+1)%num */
+    uint8 idx = 0;
+    uint8 num = ARRAY_SIZE(g_dc_report_profiles);
+
+    /* 强制快速轮询：控制/超时后优先刷新首项 */
+    if (g_dc_force_fast_poll)
+    {
+        g_dc_force_fast_poll = 0;
+        if (dc_send_request(g_dc_report_profiles[0].func, g_dc_report_profiles[0].start_addr, g_dc_report_profiles[0].quantity, 0))
+        {
+            poll_round_robin = 0;
+            return 1;
+        }
+    }
+
+    /* 按轮转发下一项；节奏由 dc_need_poll_now 保证 */
+    idx = poll_round_robin;
+    if (dc_send_request(g_dc_report_profiles[idx].func, g_dc_report_profiles[idx].start_addr, g_dc_report_profiles[idx].quantity, 0))
+    {
+        poll_round_robin = (uint8)((idx + 1) % num);
+        return 1;
+    }
+    return 0;
+}
+
+/*
+ * 处理 POLL_TICK：更新 tick、超时检查、控制/轮询调度
+ * - 定时器已停止（BLE 断开等）则不处理
+ * - 更新软件 tick，供超时/轮询间隔计算
+ * - 在途请求超时检查：可能置失败、离线
+ * - 无在途请求时，优先发控制请求；无控制请求或发送失败时，距上次调度已满 interval 才发轮询
+ */
+static void dc_handle_poll_tick(void)
+{
+    if (!g_dc_timer_running)
+    {
+        return; // 定时器已停止（BLE 断开等），不处理 tick
+    }
+
+    g_dc_tick_ms += DC_SCHED_TICK_MS; // 更新软件 tick，供超时/轮询间隔计算
+    dc_req_timeout_check();           // 在途请求超时检查：可能置失败、离线
+
+    if (!g_dc_req.active) // 无在途请求时，才可发新请求
+    {
+        if (!dc_try_send_ctrl_req()) // 优先发控制请求；无控制请求或发送失败时再轮询
+        {
+            if (dc_need_poll_now()) // 距上次轮询调度已满 interval，才发轮询
+            {
+                dc_try_send_poll_req();
+            }
+        }
     }
 }
 
@@ -540,6 +1002,179 @@ void my_dc_proto_feed(const uint8 *data, uint32 len)
     dc_try_parse_rx_cache(data, len);
 }
 
+/* 获取设备数据快照；供 mb300_get_status_handler、my_send_all_status_handle 使用 */
+int my_dc_get_data(device_data *out)
+{
+    if (out == NULL)
+    {
+        return -1;
+    }
+
+    memcpy(out, &g_dc_dev_data, sizeof(device_data));
+    return 0;
+}
+
+/* ========== DC 控制 ACK 机制（BLE 推送 RETURN_xx_xx_OK/FAIL） ========== */
+#define DC_CTRL_ACK_CHECK_MS  500
+#define DC_CTRL_ACK_MAX_CHECK 3
+
+typedef struct
+{
+    uint8 valid;         // 是否有效
+    uint8 check_count;   // 轮询次数
+    uint8 retry_count;   // 失败重发次数，最多 DC_CTRL_ACK_MAX_CHECK 次
+    char cmd[24];        // 命令
+    char state[8];       // 状态
+} dc_ctrl_ack_ctx_t;
+
+static dc_ctrl_ack_ctx_t g_dc_ctrl_ack_ctx = {0};
+
+/* 清除 ACK 上下文；dc_ctrl_ack_send_result 或启动定时器失败时调用 */
+static void dc_ctrl_ack_ctx_clear(void)
+{
+    memset(&g_dc_ctrl_ack_ctx, 0, sizeof(g_dc_ctrl_ack_ctx));
+}
+
+/* 通过 BLE 主动推送控制结果：RETURN_<cmd>_<state>_OK 或 FAIL，并清除 ACK 上下文 */
+static void dc_ctrl_ack_send_result(uint8 is_ok)
+{
+    char buf[64];
+    uint16 cmd_type = BLE_DATA_TYPE_AT_CMD;
+    int len;
+
+    if (!g_dc_ctrl_ack_ctx.valid)
+    {
+        return;
+    }
+
+    if (check_connect_id_enable() == 0) // BLE 已断开则不再推送，避免无效发送
+    {
+        my_stop_timer(MY_TIMER_DC_CTRL_ACK);
+        dc_ctrl_ack_ctx_clear();
+        return;
+    }
+
+    len = snprintf(buf, sizeof(buf), "RETURN_%s_%s_%s",
+                   g_dc_ctrl_ack_ctx.cmd, g_dc_ctrl_ack_ctx.state, is_ok ? "OK" : "FAIL");
+    if (len > 0 && len <= (BLE_SERVER_MAX_DATA_LEN - 4))
+    {
+        ble_comu_response_or_expansion_cmd(cmd_type, (uint8 *)buf, (uint8)len);
+    }
+
+    my_stop_timer(MY_TIMER_DC_CTRL_ACK);
+    dc_ctrl_ack_ctx_clear();
+}
+
+/* 轮询控制结果定时器回调：每 500ms 轮询一次，最多 3 次，超时则推送 FAIL */
+static void dc_ctrl_ack_timer_cb(void *param)
+{
+    uint8 ctrl_result = MY_DC_CTRL_RET_IDLE;
+    uint8 err_code = 0;
+
+    (void)param;
+
+    if (!g_dc_ctrl_ack_ctx.valid) // 无待确认控制指令，直接返回
+    {
+        my_stop_timer(MY_TIMER_DC_CTRL_ACK);
+        return;
+    }
+
+    if (my_dc_get_last_ctrl_result(&ctrl_result, &err_code) != 0) // 查询控制结果失败，推送 FAIL
+    {
+        dc_ctrl_ack_send_result(0);
+        return;
+    }
+
+    if (ctrl_result == MY_DC_CTRL_RET_OK) // 控制成功，推送 OK
+    {
+        dc_ctrl_ack_send_result(1);
+        return;
+    }
+
+    if (ctrl_result == MY_DC_CTRL_RET_EXCEPTION || /* 控制失败：重发次数未达上限则重发，否则推送 FAIL */
+        ctrl_result == MY_DC_CTRL_RET_TIMEOUT ||
+        ctrl_result == MY_DC_CTRL_RET_SEND_FAIL)
+    {
+        if (g_dc_ctrl_ack_ctx.retry_count < DC_CTRL_ACK_MAX_CHECK)
+        {
+            g_dc_ctrl_ack_ctx.retry_count++;
+            g_dc_ctrl_ack_ctx.check_count = 0; /* 重发后重置轮询计数，给新请求完整 3 次检查机会 */
+            my_dc_ctrl_switch(g_dc_ctrl_req.sw_id, g_dc_ctrl_req.onoff);
+            return;
+        }
+        my_log_printf(1, "dc ctrl fail. result=%d, err=0x%x", ctrl_result, err_code);
+        dc_ctrl_ack_send_result(0);
+        return;
+    }
+
+    g_dc_ctrl_ack_ctx.check_count++; // 轮询次数+1
+    if (g_dc_ctrl_ack_ctx.check_count >= DC_CTRL_ACK_MAX_CHECK)
+    {
+        my_log_printf(1, "dc ctrl ack pending timeout"); // 轮询超时，推送 FAIL
+        dc_ctrl_ack_send_result(0);
+    }
+}
+
+/* 提交开关控制：写入 g_dc_ctrl_req，发 MY_MSG_DC_CTRL_REQ；仅蓝牙APP连接时定时器运行可发送 */
+int my_dc_ctrl_switch(my_dc_sw_id_t sw_id, uint8 onoff)
+{
+    if (sw_id > MY_DC_SW_LED)
+    {
+        return -1;
+    }
+
+    g_dc_ctrl_req.valid = 1;
+    g_dc_ctrl_req.sw_id = sw_id;
+    g_dc_ctrl_req.onoff = onoff ? 1 : 0;
+    g_dc_last_ctrl_result = MY_DC_CTRL_RET_PENDING;
+    g_dc_last_ctrl_err = 0;
+    g_dc_force_fast_poll = 1;
+
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_CTRL_REQ);
+    return 0;
+}
+
+/* 提交开关控制并启动 ACK 定时器；结果通过 BLE 推送 RETURN_<cmd>_<state>_OK/FAIL */
+int my_dc_ctrl_switch_with_ack(my_dc_sw_id_t sw_id, uint8 onoff, const char *cmd, const char *state)
+{
+    if (my_dc_ctrl_switch(sw_id, onoff) != 0)
+    {
+        return -1;
+    }
+
+    g_dc_ctrl_ack_ctx.valid = 1;
+    g_dc_ctrl_ack_ctx.check_count = 0;
+    g_dc_ctrl_ack_ctx.retry_count = 0;
+    snprintf(g_dc_ctrl_ack_ctx.cmd, sizeof(g_dc_ctrl_ack_ctx.cmd), "%s", cmd ? cmd : "");
+    snprintf(g_dc_ctrl_ack_ctx.state, sizeof(g_dc_ctrl_ack_ctx.state), "%s", state ? state : "");
+
+    if (!my_start_timer(MY_TIMER_DC_CTRL_ACK, DC_CTRL_ACK_CHECK_MS, true, dc_ctrl_ack_timer_cb))
+    {
+        dc_ctrl_ack_ctx_clear();
+        return -1;
+    }
+    return 0;
+}
+
+/* 查询 DC 链路在线状态；连续 3 次超时后为 0 */
+int my_dc_is_online(void)
+{
+    return g_dc_online ? 1 : 0;
+}
+
+/* 查询最近一次开关控制结果；供 dc_ctrl_ack_timer_cb 轮询 */
+int my_dc_get_last_ctrl_result(uint8 *result, uint8 *err_code)
+{
+    if (result == NULL || err_code == NULL)
+    {
+        return -1;
+    }
+
+    *result = g_dc_last_ctrl_result;
+    *err_code = g_dc_last_ctrl_err;
+    return 0;
+}
+
 void my_dc_uart_task(void *p_arg)
 {
     int ret = 0;
@@ -573,8 +1208,29 @@ void my_dc_uart_task(void *p_arg)
                 len = my_dc_uart_read_data(rx_buff, MY_DC_UART_RX_TMP_BUF_LEN);
                 if (len > 0)
                 {
-                    // my_dc_uart_send(rx_buff, (uint32)len); // 临时回环验证：收到什么就回发什么
                     my_dc_proto_feed(rx_buff, (uint32)len);
+                }
+                break;
+            }
+
+            case MY_MSG_DC_POLL_START:
+                dc_poll_start();
+                break;
+
+            case MY_MSG_DC_POLL_STOP:
+                dc_poll_stop();
+                break;
+
+            case MY_MSG_DC_POLL_TICK:
+                dc_handle_poll_tick();
+                break;
+
+            case MY_MSG_DC_CTRL_REQ:
+            {
+                // 无在途请求时，才可发新请求
+                if (!g_dc_req.active)
+                {
+                    dc_try_send_ctrl_req(); // 发控制请求
                 }
                 break;
             }
@@ -590,4 +1246,3 @@ void my_dc_uart_task(void *p_arg)
         rx_buff = NULL;
     }
 }
-

@@ -44,6 +44,8 @@ typedef enum
 typedef enum
 {
     MY_TIMER_TEST = 0,
+    MY_TIMER_DC_POLL,       /* DC轮询定时器：100ms，仅蓝牙APP连接时运行 */
+    MY_TIMER_DC_CTRL_ACK,   /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
     MY_TIMER_MAX_ID,
 } MY_E_TIMER;
 
@@ -53,7 +55,11 @@ typedef enum
     MY_MSG_TEST,
     MY_MSG_UART_RECV,
     MY_MSG_BLE_RX,
-}MY_MAIN_TASK_MSG;
+    MY_MSG_DC_POLL_TICK,   /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
+    MY_MSG_DC_POLL_START,  /* 蓝牙APP连接：启动 DC 轮询定时器 */
+    MY_MSG_DC_POLL_STOP,   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
+    MY_MSG_DC_CTRL_REQ,    /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
+} MY_MAIN_TASK_MSG;
 
 #include "my_uart.h"
 #include "my_shell.h"

@@ -312,6 +312,7 @@ void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable)
 
 void ble_connect_api(void)
 {
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);  /* 蓝牙APP连接：启动 DC 轮询定时器 */
     printf("stop connect adv obj, start no_connect adv obj.");
     // 关闭两个可连接广播对象
     os_time_dly(10); 
@@ -327,6 +328,7 @@ void ble_connect_api(void)
 
 void ble_disconnect_api(void)
 {
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
     printf("stop no_connect adv obj, start connect adv obj.");
     // 断开ble连接时，设置发送蓝牙数据的标志为false，防止断开后还继续发送
     ble_data_send_enable[GOOGLE_ADV_TYPE] = false;

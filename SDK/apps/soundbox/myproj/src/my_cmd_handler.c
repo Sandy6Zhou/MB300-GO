@@ -158,26 +158,16 @@ uint16 pack_device_data_packet(uint8 *out_buf, uint16 buf_size, const device_dat
 *************************************************************************/
 static int mb300_get_status_handler(at_cmd_struc* msg)
 {
-#if 1
-    // 测试数据
-    device_data dev = {
-        .bat_percent = 90,        // 电量90% 0x5a
-        .remain_time = 3600,      // 剩余时长3600min 0x0e 0x10
-        .bat_temp = 250,          // 电池温度25.0℃ 0xfa
-        .output_total_power = 6000,// 输出功率600W 0x17 0x70
-        .input_total_power = 1200, // 输入功率120W 0x04 0xb0
-        .ac_power = 3000,          // AC功率300W 0x0B 0xB8
-        .dc_power = 2000,          // DC功率300W 0x07 0xd0
-        .usb_power = 200,         // USB功率20W 0x00 0xc8
-        .led_power = 100,          // LED功率10W 0x00 0x64
-        .sw_status = 0x03         // 开关状态：0x03
-    };
-#else
-    //TODO 后续需获取整个设备全局结构体数据
-#endif
-    // 打包设备状态数据到响应缓冲区
-    msg->resp_length = pack_device_data_packet(msg->resp_msg, sizeof(msg->resp_msg), &dev);
+    device_data dev = {0};
 
+    // 检查 DC 是否在线 或 获取数据失败
+    if (!my_dc_is_online() || my_dc_get_data(&dev) != 0)
+    {
+        msg->resp_length = 0;
+        return BLE_DATA_TYPE_EXPANSION_MODULE;
+    }
+
+    msg->resp_length = pack_device_data_packet((uint8 *)msg->resp_msg, sizeof(msg->resp_msg), &dev);
     return BLE_DATA_TYPE_EXPANSION_MODULE;
 }
 
@@ -188,6 +178,8 @@ static int mb300_get_status_handler(at_cmd_struc* msg)
 *************************************************************************/
 static int mb300_sw_cmd_handler(at_cmd_struc* msg)
 {
+    my_dc_sw_id_t sw_id = MY_DC_SW_AC;
+    uint8 sw_on = 0;
     uint16 remaining = sizeof(msg->resp_msg);
 
     if(msg->parm_count == 1)
@@ -195,73 +187,49 @@ static int mb300_sw_cmd_handler(at_cmd_struc* msg)
         my_log_printf(1, "%s=>%s,%s", __func__, msg->parm[0], msg->parm[1]);
         if (!strcmp(msg->parm[0], "MB300_SW_AC"))
         {
-            if (!strcmp(msg->parm[1], "ON"))
-            {
-                
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO 发消息给DC板串口线程
-            } 
-            else if (!strcmp(msg->parm[1], "OFF"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO 发消息给DC板串口线程
-            } 
-            else
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
-            }
+            sw_id = MY_DC_SW_AC;
         }
         else if (!strcmp(msg->parm[0], "MB300_SW_DC"))
         {
-            if (!strcmp(msg->parm[1], "ON"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else if (!strcmp(msg->parm[1], "OFF"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
-            }
+            sw_id = MY_DC_SW_DC;
         }
         else if (!strcmp(msg->parm[0], "MB300_SW_USB"))
         {
-            if (!strcmp(msg->parm[1], "ON"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else if (!strcmp(msg->parm[1], "OFF"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
-            }
+            sw_id = MY_DC_SW_USB;
         }
         else if (!strcmp(msg->parm[0], "MB300_SW_LED"))
         {
-            if (!strcmp(msg->parm[1], "ON"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else if (!strcmp(msg->parm[1], "OFF"))
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
-                // TODO
-            } 
-            else
-            {
-                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
-            }
+            sw_id = MY_DC_SW_LED;
         }
+        else
+        {
+            msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_FAIL", msg->parm[0]);
+            return BLE_DATA_TYPE_AT_CMD;
+        }
+
+        if (!strcmp(msg->parm[1], "ON"))
+        {
+            sw_on = 1;
+        }
+        else if (!strcmp(msg->parm[1], "OFF"))
+        {
+            sw_on = 0;
+        }
+        else
+        {
+            msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
+            return BLE_DATA_TYPE_AT_CMD;
+        }
+
+        if (my_dc_ctrl_switch_with_ack(sw_id, sw_on, msg->parm[0], msg->parm[1]) != 0)
+        {
+            msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
+            return BLE_DATA_TYPE_AT_CMD;
+        }
+
+        /* 异步模式：ACK 由 DC 模块定时器推送，resp_length=0 告知上层勿发 BLE 响应 */
+        msg->resp_length = 0;
+        return 0;
     }
     else
     {
