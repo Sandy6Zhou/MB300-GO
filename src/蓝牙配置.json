@@ -978,7 +978,7 @@
           "label": "电量显示",
           "tag": "el-switch",
           "tagIcon": "switch",
-          "defaultValue": 1,
+          "defaultValue": 0,
           "span": 6,
           "showLabel": true,
           "labelWidth": 80,
@@ -4434,7 +4434,7 @@
        "tag": "el-checkbox-group",
        "tagIcon": "checkbox",
        "defaultValue": [
-        0
+        "CUSTOM_DEMO_EN"
        ],
        "span": 11,
        "showLabel": true,
@@ -4518,7 +4518,7 @@
      }
     ],
     "eventField": [],
-    "disable": true,
+    "disable": false,
     "saveWay": "macro"
    },
    "type": "default",

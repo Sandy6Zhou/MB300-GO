@@ -42,7 +42,7 @@
         "gpio"
        ],
        "saveWay": "macro",
-       "defaultValue": "id_1647485267192_71",
+       "defaultValue": "id_1647485267192_67",
        "uuid": "TCFG_DEBUG_UART_TX_PIN"
       },
       "__slot__": {
@@ -336,7 +336,7 @@
        "eventField": [],
        "saveWay": "macro",
        "uuid": "TCFG_DEBUG_UART_BAUDRATE",
-       "defaultValue": 2000000
+       "defaultValue": 115200
       },
       "__slot__": {
        "options": [
@@ -5917,7 +5917,7 @@
      }
     ],
     "eventField": [],
-    "disable": false
+    "disable": true
    },
    "type": "default",
    "justify": "start",
@@ -6042,7 +6042,7 @@
              "label": "USB主机总开关",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -6079,7 +6079,7 @@
              "label": "主机使用malloc",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -6314,7 +6314,7 @@
              "label": "U盘使能",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -6414,7 +6414,7 @@
              "label": "从机使用malloc",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -6556,7 +6556,7 @@
              "label": "读卡器使能",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -6594,7 +6594,7 @@
              "label": "HID使能",
              "tag": "el-switch",
              "tagIcon": "switch",
-             "defaultValue": 1,
+             "defaultValue": 0,
              "span": 4,
              "showLabel": true,
              "labelWidth": 120,
@@ -9789,7 +9789,8 @@
       "id": "id_1678631394463_77"
      }
     ],
-    "eventField": []
+    "eventField": [],
+    "disable": true
    },
    "type": "default",
    "justify": "start",
@@ -10912,7 +10913,8 @@
       "id": "id_1678631468269_85"
      }
     ],
-    "eventField": []
+    "eventField": [],
+    "disable": true
    },
    "type": "default",
    "justify": "start",

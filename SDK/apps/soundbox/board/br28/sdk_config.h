@@ -84,15 +84,15 @@
 #endif // TCFG_SD0_ENABLE
 
 #define FUSB_MODE 1 // USB工作模式
-#define TCFG_USB_HOST_ENABLE 1 // USB主机总开关
-#define USB_H_MALLOC_ENABLE 1 // 主机使用malloc
+#define TCFG_USB_HOST_ENABLE                      0                // USB主机总开关
+#define USB_H_MALLOC_ENABLE                       0                // 主机使用malloc
 #define TCFG_USB_HOST_MOUNT_RESET 40 // usb reset时间
 #define TCFG_USB_HOST_MOUNT_TIMEOUT 50 // 握手超时时间
 #define TCFG_USB_HOST_MOUNT_RETRY 3 // 枚举失败重试次数
-#define TCFG_UDISK_ENABLE 1 // U盘使能
-#define USB_MALLOC_ENABLE 1 // 从机使用malloc
-#define TCFG_USB_SLAVE_MSD_ENABLE 1 // 读卡器使能
-#define TCFG_USB_SLAVE_HID_ENABLE 1 // HID使能
+#define TCFG_UDISK_ENABLE                         0                // U盘使能
+#define USB_MALLOC_ENABLE                         0                // 从机使用malloc
+#define TCFG_USB_SLAVE_MSD_ENABLE                 0                // 读卡器使能
+#define TCFG_USB_SLAVE_HID_ENABLE                 0                // HID使能
 #define MSD_BLOCK_NUM 1 // MSD缓存块数
 #define USB_AUDIO_VERSION USB_AUDIO_VERSION_1_0 // UAC协议版本
 #define TCFG_USB_APPLE_DOCK_EN 0 // 苹果IAP使能
@@ -157,10 +157,10 @@
 
 // ------------功能配置.json------------
 #define TCFG_APP_BT_EN 1 // 蓝牙模式
-#define TCFG_APP_MUSIC_EN 1 // 音乐模式
-#define TCFG_APP_LINEIN_EN 1 // LINEIN模式
+#define TCFG_APP_MUSIC_EN                         0                // 音乐模式
+#define TCFG_APP_LINEIN_EN                        0                // LINEIN模式
 #define TCFG_APP_FM_EN 0 // FM模式
-#define TCFG_APP_PC_EN 1 // PC模式
+#define TCFG_APP_PC_EN                            0                // PC模式
 #define TCFG_APP_RTC_EN 0 // RTC模式
 #define TCFG_APP_IIS_EN 0 // IIS模式
 #define TCFG_APP_RECORD_EN 0 // 录音模式

@@ -745,7 +745,8 @@
     "saveWay": "",
     "uuid": "",
     "eventField": [],
-    "enableUuid": "TCFG_SYS_LVD_EN"
+    "enableUuid": "TCFG_SYS_LVD_EN",
+    "disable": true
    },
    "type": "default",
    "justify": "start",

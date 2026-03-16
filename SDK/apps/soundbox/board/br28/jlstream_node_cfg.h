@@ -113,7 +113,7 @@
 #define TCFG_SPDIF_MASTER_NODE_ENABLE 0 // SPDIF_OUT
 #define TCFG_SPEAKER_EQ_NODE_ENABLE 0 // SpeakerEQ
 #define TCFG_SPECTRUM_ADVANCE_NODE_ENABLE 0 // Spectrum Advance
-#define TCFG_SPECTRUM_NODE_ENABLE                 1                // Spectrum
+#define TCFG_SPECTRUM_NODE_ENABLE                 0                // Spectrum
 #define TCFG_SPLIT_GAIN_NODE_ENABLE 0 // Split Gain
 #define TCFG_STEREO_MTAPS_ECHO_NODE_ENABLE 0 // Stereo Mtaps Echo
 #define TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE 0 // Stereo Spatial Wider
@@ -125,7 +125,7 @@
 #define TCFG_TONE_NODE_ENABLE 1 // 提示音
 #define TCFG_TREMOLO_NODE_ENABLE 0 // Tremolo
 #define TCFG_UART_NODE_ENABLE 0 // 串口打印
-#define TCFG_VBASS_NODE_ENABLE 0 // Virtual Bass
+#define TCFG_VBASS_NODE_ENABLE                    1                // Virtual Bass
 #define TCFG_VIBRATO_NODE_ENABLE 0 // Vibrato
 #define TCFG_VIRTUAL_BASS_CLASSIC_NODE_ENABLE 0 // Multi Frequency Generator
 #define TCFG_VIRTUAL_BASS_PRO_MODULE_NODE_ENABLE 0 // Virtual Bass Pro
@@ -241,7 +241,7 @@
 #define TCFG_AUDIO_EFX_1ECD_RUN_MODE EFx_BW_16t16 // SRC
 #define TCFG_AUDIO_EFX_FB00_RUN_MODE EFx_BW_UNUSED // SteroMix
 #define TCFG_AUDIO_EFX_8934_RUN_MODE EFx_BW_UNUSED // Surround Effect
-#define TCFG_AUDIO_EFX_F538_RUN_MODE              EFx_BW_16t16     // Spectrum
+#define TCFG_AUDIO_EFX_F538_RUN_MODE              EFx_BW_UNUSED    // Spectrum
 #define TCFG_AUDIO_EFX_3BE6_RUN_MODE EFx_BW_UNUSED // SpeakerEQ
 #define TCFG_AUDIO_EFX_88E5_RUN_MODE EFx_BW_UNUSED // Stereo Widener
 #define TCFG_AUDIO_EFX_FB3B_RUN_MODE EFx_BW_16t16 // SPDIF
@@ -259,7 +259,7 @@
 #define TCFG_AUDIO_EFX_8C21_RUN_MODE EFx_BW_UNUSED // ThreeD
 #define TCFG_AUDIO_EFX_FB27_RUN_MODE EFx_BW_UNUSED // Tremolo
 #define TCFG_AUDIO_EFX_B542_RUN_MODE EFx_BW_UNUSED // upmix 2to5
-#define TCFG_AUDIO_EFX_B0D5_RUN_MODE EFx_BW_UNUSED // Virtual Bass
+#define TCFG_AUDIO_EFX_B0D5_RUN_MODE              EFx_BW_16t16     // Virtual Bass
 #define TCFG_AUDIO_EFX_7293_RUN_MODE EFx_BW_16t16 // Voice Changer
 #define TCFG_AUDIO_EFX_2F7A_RUN_MODE EFx_BW_16t16 // Vocal Remover
 #define TCFG_AUDIO_EFX_320E_RUN_MODE EFx_BW_UNUSED // Voice Changer Adv
@@ -311,7 +311,7 @@
 #define EQ_CFG_TYPE_LOW_SHELF 0 // Low Shelf
 #define EQ_CFG_TYPE_HIGH_SHELF_Q 0 // High Shelf Q
 #define EQ_CFG_TYPE_LOW_SHELF_Q 0 // Low Shelf Q
-#define EQ_CFG_TYPE_HP 0 // Hp
+#define EQ_CFG_TYPE_HP                            1                // Hp
 #define EQ_CFG_TYPE_LP 0 // Lp
 // ------------流程图EQ节点类型宏定义------------
 #endif
