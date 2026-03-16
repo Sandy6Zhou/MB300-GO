@@ -353,7 +353,11 @@ void ble_comu_response_cmd(uint8 cmd, uint8 param)
 
 static void ble_comu_cid_data_handle(const uint8 *data, uint16 len)
 {
+#if 1 // 产品杨工要求，蓝牙连接不进行IMEI鉴权
+    ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS);
+#else
     const GsmImei_t *gsmImei = my_param_get_imei();
+
     if (gsmImei->flag == FLAG_VALID) // IMEI鉴权
     {
         if (memcmp(data, gsmImei->hex, GSM_IMEI_LENGTH) == 0)
@@ -371,6 +375,7 @@ static void ble_comu_cid_data_handle(const uint8 *data, uint16 len)
         ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_FAIL);
         my_log_printf(1, "invalid imei param!");
     }
+#endif
 }
 
 /************************************************************************

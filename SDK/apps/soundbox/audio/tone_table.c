@@ -55,6 +55,21 @@ static const struct tone_files chinese_tone_files = {
     .iis_mode        	= "tone_zh/iis.*",
     .surround_sound_mode = "tone_zh/surround_sound.*",
     .mic_mode    		= "tone_zh/mic.*",
+#if 1 // custom tone
+    .low_power_c        = "tone_zh/low_power_c.*",
+    .bt_pairing         = "tone_zh/bt_pairing.*",
+    .bt_reset           = "tone_zh/bt_reset.*",
+    .bt_unpaired        = "tone_zh/bt_unpaired.*",
+    .charge_done        = "tone_zh/charge_done.*",
+    .light_on           = "tone_zh/light_on.*",
+    .light_off          = "tone_zh/light_off.*",
+    .muted              = "tone_zh/muted.*",
+    .unmuted            = "tone_zh/unmuted.*",
+    .overload           = "tone_zh/overload.*",
+    .temp_high          = "tone_zh/temp_high.*",
+    .switch_on          = "tone_zh/switch_on.*",
+    .switch_off         = "tone_zh/switch_off.*",
+#endif
 };
 
 static const struct tone_files english_tone_files = {
@@ -100,6 +115,21 @@ static const struct tone_files english_tone_files = {
     .iis_mode        	= "tone_en/iis.*",
     .surround_sound_mode = "tone_en/surround_sound.*",
     .mic_mode    		= "tone_en/mic.*",
+#if 1 // custom tone
+    .low_power_c        = "tone_en/low_power_c.*",
+    .bt_pairing         = "tone_en/bt_pairing.*",
+    .bt_reset           = "tone_en/bt_reset.*",
+    .bt_unpaired        = "tone_en/bt_unpaired.*",
+    .charge_done        = "tone_en/charge_done.*",
+    .light_on           = "tone_en/light_on.*",
+    .light_off          = "tone_en/light_off.*",
+    .muted              = "tone_en/muted.*",
+    .unmuted            = "tone_en/unmuted.*",
+    .overload           = "tone_en/overload.*",
+    .temp_high          = "tone_en/temp_high.*",
+    .switch_on          = "tone_en/switch_on.*",
+    .switch_off         = "tone_en/switch_off.*",
+#endif
 };
 
 #if TCFG_TONE_EN_ENABLE

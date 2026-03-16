@@ -47,6 +47,7 @@ typedef struct{
     uint16 usb_power;             // USB功率(单位0.1W)
     uint16 led_power;             // LED功率(单位0.1W)
     uint8 sw_status;              // 开关状态(bit0:AC,bit1:DC,bit2:USB,bit3:LED---O:关,1:开)
+    uint8 fault_status;           // 故障状态(bit0:逆变器过载,bit1:逆变器过温,bit2:电池过温)
 }device_data;
 
 void my_dc_uart_init(void);

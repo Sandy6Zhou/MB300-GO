@@ -53,7 +53,7 @@ static int g_led_mode_timer_id;
 static uint8 g_led_mode_pixel_cnt;
 static uint8 g_led_mode_idx;
 static uint8 g_led_mode7_base_idx = 1;
-static uint8 g_led_mode7_fill_style = 0;
+static uint8 g_led_mode7_fill_style = 1; // 0=单边，1=两边往中间，适配横条灯带
 static int g_led_mode_step_cnt;
 static int g_led_mode_cnt[3];
 #if MY_LED_SPI_SPECTRUM_EN
@@ -96,9 +96,20 @@ static u8 my_mode7_should_light(int idx_in_sec, int sec_len, int led_on_num);
 static void my_led_get_spectrum(void);
 #endif
 
+/**
+ * 灯带模式配置说明：
+ * mode_idx: 模式编号
+ * div_sec_num: 分段数量
+ * sec_led_num: 每段灯数量
+ * cnt_freq: 计数频率
+ * rgb_val_max: 最大亮度值
+ * rgb_val_min: 最小亮度值
+ * init_cnt: 初始计数值
+ * next_cnt_dir: 下一个计数值的增量方向
+ */
 static const my_led_mode_t g_led_modes[] = {
     {
-        .mode_idx = 0, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 0, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 30, 60}, .next_cnt_dir = {-10, -10, -10}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {90, 90, 90},
@@ -107,7 +118,7 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {30, 30, 30}, .pd_cnt_end = {60, 60, 60},
     },
     {
-        .mode_idx = 1, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 1, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 36, 72}, .next_cnt_dir = {6, 6, 6}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {108, 108, 108},
@@ -116,7 +127,7 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {54, 54, 54}, .pd_cnt_end = {54, 54, 54},
     },
     {
-        .mode_idx = 2, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 2, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 30, 60}, .next_cnt_dir = {-5, -5, -5}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {90, 90, 90},
@@ -125,7 +136,7 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {30, 30, 30}, .pd_cnt_end = {30, 30, 30},
     },
     {
-        .mode_idx = 3, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 3, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 36, 72}, .next_cnt_dir = {2, 2, 2}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {108, 108, 108},
@@ -134,7 +145,7 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {36, 36, 36}, .pd_cnt_end = {36, 36, 36},
     },
     {
-        .mode_idx = 4, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 4, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 36, 72}, .next_cnt_dir = {-12, -12, -12}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {108, 108, 108},
@@ -143,7 +154,7 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {24, 24, 24}, .pd_cnt_end = {36, 36, 36},
     },
     {
-        .mode_idx = 5, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 5, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 255, 255}, .rgb_val_min = {0, 0, 0},
         .init_cnt = {0, 36, 72}, .next_cnt_dir = {2, 2, 2}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {1, 1, 1}, .cnt_max_prd = {108, 108, 108},
@@ -152,16 +163,16 @@ static const my_led_mode_t g_led_modes[] = {
         .pd_cnt_start = {2, 2, 2}, .pd_cnt_end = {2, 2, 2},
     },
     {
-        .mode_idx = 6, .div_sec_num = 4, .sec_led_num = 6, .cnt_freq = 1,
+        .mode_idx = 6, .div_sec_num = 5, .sec_led_num = 5, .cnt_freq = 1,
         .rgb_val_max = {255, 128, 0}, .rgb_val_min = {200, 32, 0},
-        .init_cnt = {0, 0, 0}, .next_cnt_dir = {-18, 18, 0}, .next_sec_cnt_phase = {18, 0, 0},
+        .init_cnt = {0, 0, 0}, .next_cnt_dir = {-18, 18, 0}, .next_sec_cnt_phase = {5, 0, 0},
         .cnt_unit = {1, 0, 0}, .cnt_max_prd = {48, 108, 0},
         .pu_cnt_start = {0, 0, 0}, .pu_cnt_end = {0, 0, 0},
         .keep_cnt_start = {0, 0, 0}, .keep_cnt_end = {24, 1, 0},
         .pd_cnt_start = {24, 1, 0}, .pd_cnt_end = {24, 108, 0},
     },
     {
-        .mode_idx = 7, .div_sec_num = 6, .sec_led_num = 18, .cnt_freq = 1,
+        .mode_idx = 7, .div_sec_num = 1, .sec_led_num = 25, .cnt_freq = 1,
         .rgb_val_max = {255, 0, 0}, .rgb_val_min = {255, 0, 0},
         .init_cnt = {0, 0, 0}, .next_cnt_dir = {0, 0, 0}, .next_sec_cnt_phase = {0, 0, 0},
         .cnt_unit = {0, 0, 0}, .cnt_max_prd = {0, 0, 0},

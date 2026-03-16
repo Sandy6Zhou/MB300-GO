@@ -34,7 +34,7 @@
 
 #define CONFIG_SPI_DATA_WIDTH 2 // flash通信
 #define CONFIG_SPI_MODE 0 // flash模式
-#define CONFIG_FLASH_SIZE 1048576 // flash容量
+#define CONFIG_FLASH_SIZE                         2097152          // flash容量
 #define TCFG_VM_SIZE 32 // VM大小（K）
 
 #define TCFG_NORFLASH_DEV_ENABLE 0 // 外置flash配置

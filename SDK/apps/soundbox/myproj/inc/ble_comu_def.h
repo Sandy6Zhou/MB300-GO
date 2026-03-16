@@ -41,6 +41,7 @@
 #define USB_POWER                               0x800A          //USB功率
 #define LED_POWER                               0x800B          //LED功率
 #define SW_STATUS                               0x800C          //开关状态
+#define FAULT_STATUS                            0x800D          //故障状态
 
 #define BLE_COMU_DEV_CODE                       0xB3
 #define BLE_COMU_APP_CODE                       0xC2

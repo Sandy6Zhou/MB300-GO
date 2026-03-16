@@ -155,6 +155,8 @@ static dc_report_profile_t g_dc_report_profiles[] = {
 #define DC_LOG_FRAME_EN   0 /* 协议层提交：开启帧打印便于 review */
 #define DC_LOG_VERBOSE_EN 0 /* 开启解析/上报日志 */
 
+#define MY_DC_MOCK_EN 0 // 模拟数据，不依赖真实 DC 板
+
 #if DC_LOG_VERBOSE_EN
 #define DC_LOG_VERBOSE(...) my_log_printf(1, __VA_ARGS__)
 #else
@@ -287,6 +289,24 @@ static void dc_update_device_data_cache(void)
     if (reg_sw & (1 << 4))
     {
         g_dc_dev_data.sw_status |= (1 << 3); /* LED */
+    }
+
+    /* 协议扩展 0x800D 故障状态：
+     * reg 0x0001 bit10=逆变器过载、bit14=逆变器过温、bit15=电池过温
+     * 映射到 fault_status bit0~bit2
+     */
+    g_dc_dev_data.fault_status = 0;
+    if (reg_sw & (1 << 10))
+    {
+        g_dc_dev_data.fault_status |= (1 << 0);
+    }
+    if (reg_sw & (1 << 14))
+    {
+        g_dc_dev_data.fault_status |= (1 << 1);
+    }
+    if (reg_sw & (1 << 15))
+    {
+        g_dc_dev_data.fault_status |= (1 << 2);
     }
 }
 
@@ -1010,8 +1030,24 @@ int my_dc_get_data(device_data *out)
         return -1;
     }
 
+#if MY_DC_MOCK_EN
+    /* 模拟数据：用于无 DC 板时的联调测试 */
+    out->bat_percent = 85;
+    out->remain_time = 360;        /* 6 小时 360min */
+    out->bat_temp = 250;           /* 25.0℃ */
+    out->output_total_power = 100; /* 10.0W */
+    out->input_total_power = 50;   /* 5.0W */
+    out->ac_power = 80;            /* 8.0W */
+    out->dc_power = 20;            /* 2.0W */
+    out->usb_power = 10;           /* 1.0W */
+    out->led_power = 5;            /* 0.5W */
+    out->sw_status = 0x0F;         /* 全部开关打开 */
+    out->fault_status = 0x07;      /* bit0~bit2 全置1：逆变器过载/逆变器过温/电池过温 */
+    return 0;
+#else
     memcpy(out, &g_dc_dev_data, sizeof(device_data));
     return 0;
+#endif
 }
 
 /* ========== DC 控制 ACK 机制（BLE 推送 RETURN_xx_xx_OK/FAIL） ========== */
@@ -1137,6 +1173,27 @@ int my_dc_ctrl_switch(my_dc_sw_id_t sw_id, uint8 onoff)
 /* 提交开关控制并启动 ACK 定时器；结果通过 BLE 推送 RETURN_<cmd>_<state>_OK/FAIL */
 int my_dc_ctrl_switch_with_ack(my_dc_sw_id_t sw_id, uint8 onoff, const char *cmd, const char *state)
 {
+#if MY_DC_MOCK_EN
+    /* 模拟模式：不发送 Modbus，直接置成功，定时器首次回调时推送 OK */
+    if (sw_id > MY_DC_SW_LED)
+    {
+        return -1;
+    }
+    g_dc_last_ctrl_result = MY_DC_CTRL_RET_OK;
+    g_dc_last_ctrl_err = 0;
+    g_dc_ctrl_ack_ctx.valid = 1;
+    g_dc_ctrl_ack_ctx.check_count = 0;
+    g_dc_ctrl_ack_ctx.retry_count = 0;
+    snprintf(g_dc_ctrl_ack_ctx.cmd, sizeof(g_dc_ctrl_ack_ctx.cmd), "%s", cmd ? cmd : "");
+    snprintf(g_dc_ctrl_ack_ctx.state, sizeof(g_dc_ctrl_ack_ctx.state), "%s", state ? state : "");
+
+    if (!my_start_timer(MY_TIMER_DC_CTRL_ACK, DC_CTRL_ACK_CHECK_MS, true, dc_ctrl_ack_timer_cb))
+    {
+        dc_ctrl_ack_ctx_clear();
+        return -1;
+    }
+    return 0;
+#else
     if (my_dc_ctrl_switch(sw_id, onoff) != 0)
     {
         return -1;
@@ -1154,12 +1211,17 @@ int my_dc_ctrl_switch_with_ack(my_dc_sw_id_t sw_id, uint8 onoff, const char *cmd
         return -1;
     }
     return 0;
+#endif
 }
 
 /* 查询 DC 链路在线状态；连续 3 次超时后为 0 */
 int my_dc_is_online(void)
 {
+#if MY_DC_MOCK_EN
+    return 1; /* 模拟模式：始终在线 */
+#else
     return g_dc_online ? 1 : 0;
+#endif
 }
 
 /* 查询最近一次开关控制结果；供 dc_ctrl_ack_timer_cb 轮询 */

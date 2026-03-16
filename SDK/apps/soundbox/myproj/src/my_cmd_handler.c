@@ -144,6 +144,10 @@ uint16 pack_device_data_packet(uint8 *out_buf, uint16 buf_size, const device_dat
     ret = pack_single_module(out_buf, buf_size, &offset, SW_STATUS, &dev_data->sw_status, sizeof(dev_data->sw_status));
     if (ret != 0) return -1;
 
+    // 2.11 故障状态（双字节ID，单字节数据）
+    ret = pack_single_module(out_buf, buf_size, &offset, FAULT_STATUS, &dev_data->fault_status, sizeof(dev_data->fault_status));
+    if (ret != 0) return -1;
+
     // 第一个index存放后面的所有数据的长度(不包括本身)
     out_buf[0] = (offset-1);
 

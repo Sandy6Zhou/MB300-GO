@@ -138,7 +138,6 @@ static void get_adv_data(MY_ADV_TYPE adv_type, uint8_t **adv_data, uint8_t *adv_
     static u8 scan_rsp_data_len = 0;
 
     const char *local_name = NULL;
-    const GsmImei_t *gsmImei;   // TODO暂定设备名字为soundbox-xxxxx，后面确定广播名字，再修改这里
     u8 name_len = 0;
     u8 lic_len = 0;
     u16 uuid_user = 0;
@@ -153,15 +152,10 @@ static void get_adv_data(MY_ADV_TYPE adv_type, uint8_t **adv_data, uint8_t *adv_
     pos = &scan_response_data[0];
     name_len = strlen((const char *)local_name);
 
-    *pos++ = name_len + 6 + 1;  // devname len + "-xxxxx" + type
+    *pos++ = name_len + 1;  // devname len + type
     *pos++ = HCI_EIR_DATATYPE_SHORTENED_LOCAL_NAME;
     memcpy(pos, local_name, name_len);
     pos += name_len;
-    *pos++ = '-';
-
-    gsmImei = my_param_get_imei();  // 使用IMEI后5位作为广播名字的后缀
-    memcpy(pos, &gsmImei->hex[DEV_NAME_USE_IMEI_POS], GSM_IMEI_LENGTH - DEV_NAME_USE_IMEI_POS);
-    pos += (GSM_IMEI_LENGTH - DEV_NAME_USE_IMEI_POS);
 
     // uuid
     uuid_user = DEV_CUST_UUID;

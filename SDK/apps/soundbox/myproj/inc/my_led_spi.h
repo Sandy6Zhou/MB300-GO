@@ -15,12 +15,12 @@
 #define LED_SPI_CLK         8000000L     //spi时钟频率 8MHz
 
 #define LED_PIXEL_BITS      24      // 单个像素点数据长度（G8+R8+B8）
-#define LED_MAX_PIXELS      15      // 最大级联像素数
+#define LED_MAX_PIXELS      25      // 最大级联像素数
 
 // 复位码长度(Byte)
 #define LED_RESET_CODE_LEN  80      // 复位时间(≥80us) / 1bit周期(0.125us) / 8bit
-// RGB数据最大长度(Byte)
-#define LED_DATA_MAX_LEN    360     // (spi数据(8bit) * rgb数据(24bit) / 8bit) * 级联像素(15个)
+// RGB数据最大长度(Byte)：每像素24bit编码为24字节，需随 LED_MAX_PIXELS 同步修改
+#define LED_DATA_MAX_LEN    (LED_PIXEL_BITS * LED_MAX_PIXELS)
 
 void my_led_set_rgb(uint8 red, uint8 green, uint8 blue, uint8 pixel_cnt);
 

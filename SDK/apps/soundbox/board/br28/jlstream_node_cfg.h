@@ -10,15 +10,15 @@
 #define JLSTREAM_NODE_CFG_H
 
 // ------------提示音宏定义------------
-#define TCFG_TONE_EN_ENABLE 0
-#define TCFG_TONE_ZH_ENABLE 1
+#define TCFG_TONE_EN_ENABLE                       1               
+#define TCFG_TONE_ZH_ENABLE                       0               
 #define TCFG_TONE_AAC_ENABLE 0 // AAC
 #define TCFG_TONE_F2A_ENABLE 0 // F2A
 #define TCFG_TONE_MP3_ENABLE 1 // MP3
 #define TCFG_TONE_MSBC_ENABLE 0 // MSBC
 #define TCFG_TONE_MTY_ENABLE 0 // MTY
 #define TCFG_TONE_SBC_ENABLE 0 // SBC
-#define TCFG_TONE_SIN_ENABLE 1 // SIN
+#define TCFG_TONE_SIN_ENABLE                      0                // SIN
 #define TCFG_TONE_WAV_ENABLE 0 // WAV
 #define TCFG_TONE_WTG_ENABLE 0 // WTG
 #define TCFG_TONE_WTS_ENABLE 0 // WTS
@@ -113,7 +113,7 @@
 #define TCFG_SPDIF_MASTER_NODE_ENABLE 0 // SPDIF_OUT
 #define TCFG_SPEAKER_EQ_NODE_ENABLE 0 // SpeakerEQ
 #define TCFG_SPECTRUM_ADVANCE_NODE_ENABLE 0 // Spectrum Advance
-#define TCFG_SPECTRUM_NODE_ENABLE                 0                // Spectrum
+#define TCFG_SPECTRUM_NODE_ENABLE                 1                // Spectrum
 #define TCFG_SPLIT_GAIN_NODE_ENABLE 0 // Split Gain
 #define TCFG_STEREO_MTAPS_ECHO_NODE_ENABLE 0 // Stereo Mtaps Echo
 #define TCFG_STEREO_SPATIAL_WIDER_NODE_ENABLE 0 // Stereo Spatial Wider
@@ -241,7 +241,7 @@
 #define TCFG_AUDIO_EFX_1ECD_RUN_MODE EFx_BW_16t16 // SRC
 #define TCFG_AUDIO_EFX_FB00_RUN_MODE EFx_BW_UNUSED // SteroMix
 #define TCFG_AUDIO_EFX_8934_RUN_MODE EFx_BW_UNUSED // Surround Effect
-#define TCFG_AUDIO_EFX_F538_RUN_MODE              EFx_BW_UNUSED    // Spectrum
+#define TCFG_AUDIO_EFX_F538_RUN_MODE              EFx_BW_16t16     // Spectrum
 #define TCFG_AUDIO_EFX_3BE6_RUN_MODE EFx_BW_UNUSED // SpeakerEQ
 #define TCFG_AUDIO_EFX_88E5_RUN_MODE EFx_BW_UNUSED // Stereo Widener
 #define TCFG_AUDIO_EFX_FB3B_RUN_MODE EFx_BW_16t16 // SPDIF

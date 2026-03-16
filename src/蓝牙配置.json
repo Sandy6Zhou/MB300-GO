@@ -210,7 +210,7 @@
           "changeTag": true,
           "tag": "el-input",
           "tagIcon": "input",
-          "defaultValue": "soundbox",
+          "defaultValue": "Go 3 (0000)",
           "required": false,
           "layout": "colFormItem",
           "span": 7,
