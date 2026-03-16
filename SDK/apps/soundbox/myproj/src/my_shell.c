@@ -56,6 +56,9 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
     uint8 data_buff[64] = {0};
     const GsmImei_t *gsmImei;
     int ret;
+    uint8 audio_state; // 当前音频状态 (APP_AUDIO_STATE_xxx)
+    int16 max_vol;     // 最大音量
+    int vol;           // 音量值，查询/设置复用
 
     memset(resp, 0, sizeof(resp));
 
@@ -198,6 +201,34 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
         else
         {
             sprintf(resp, "RETURN_SEND_STATUS_FAIL");
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "VOLUME"))
+    {
+        // AT^GT_CM=VOLUME 查询
+        if (nParam < 2)
+        {
+            audio_state = app_audio_get_state();
+            vol = app_audio_get_volume(audio_state);
+            max_vol = app_audio_get_max_volume();
+            sprintf(resp, "RETURN_VOLUME:%d (max:%d)", (int)vol, (int)max_vol);
+        }
+        // AT^GT_CM=VOLUME,volume 设置
+        else
+        {
+            vol = atoi(pParam[1]);
+            max_vol = app_audio_get_max_volume();
+
+            if (vol < 0 || vol > (int)max_vol)
+            {
+                sprintf(resp, "RETURN_VOLUME_SET_FAIL");
+            }
+            else
+            {
+                audio_state = app_audio_get_state();
+                app_audio_set_volume(audio_state, (int16)vol, 0);
+                sprintf(resp, "RETURN_VOLUME_SET_OK");
+            }
         }
     }
 

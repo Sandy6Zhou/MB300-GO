@@ -68,6 +68,7 @@ typedef enum
 #include "my_dc_uart.h"
 #include "my_gpio.h"
 #include "my_cmd_handler.h"
+#include "audio_config.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 
