@@ -15,5 +15,6 @@
 #define my_log_printf my_log_printf_internal
 
 void my_log_printf_internal(int log_level, char *fmt, ...);
+void my_log_mutex_init(void);
 
 #endif

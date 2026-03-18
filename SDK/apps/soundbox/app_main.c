@@ -683,6 +683,8 @@ static void app_task_loop(void *p)
 
     mode = app_task_init();
 
+    my_log_mutex_init();
+
     my_gpio_init();
 
     my_shell_uart_init();

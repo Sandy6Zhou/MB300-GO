@@ -17,10 +17,22 @@
 #include "my_common.h"
 
 char LOG_BUFFER[UART_LOG_MAX_LEN];
+static OS_MUTEX my_log_mutex;
+
+/* 增加日志锁保护机制：
+ * 防止关掉底层SDK日志后(宏控TCFG_DEBUG_UART_ENABLE)，系统起来打印日志异常导致系统奔溃
+ */
+void my_log_mutex_init(void)
+{
+    int ret = os_mutex_create(&my_log_mutex);
+    printf("%s=>ret:%d", __func__, ret);
+}
 
 void my_log_printf_internal(int log_level, char *fmt, ...)
 {
     va_list ap;
+
+    os_mutex_pend(&my_log_mutex, 0);
 
     memset(LOG_BUFFER, 0, sizeof(LOG_BUFFER));
 
@@ -35,4 +47,6 @@ void my_log_printf_internal(int log_level, char *fmt, ...)
 #else
     my_uart_write_data(MY_SHELL_PORT, (uint8 *)LOG_BUFFER, strlen(LOG_BUFFER));
 #endif
+
+    os_mutex_post(&my_log_mutex);
 }

@@ -28,6 +28,7 @@ const  GsmImei_t gDefaultImeiValue =
     .hex = {'1','2','3','4','5','6','7','8','9','0','1','2','3','4','5'}
 };
 
+// 加载vm固件存储参数,这接口在shell线程初始化前被调用,所以里面的打印均不能采用自定义打印
 void my_param_load_vm_config(void)
 {
     u16 length;
@@ -39,7 +40,7 @@ void my_param_load_vm_config(void)
     ret = syscfg_read(CFG_LICENSE_GG_VALUE, &gConfigParam.lic_gg, length);
     if (ret != length)
     {
-        my_log_printf(1, "get vm gg fail");
+        printf("get vm gg fail\n");
         memset(&gConfigParam.lic_gg, 0, length);
     }
 
@@ -48,7 +49,7 @@ void my_param_load_vm_config(void)
     ret = syscfg_read(CFG_LICENSE_FF_VALUE, &gConfigParam.lic_ff, length);
     if (ret != length)
     {
-        my_log_printf(1, "get vm ff fail");
+        printf("get vm ff fail\n");
         memset(&gConfigParam.lic_ff, 0, length);
     }
 
@@ -58,7 +59,7 @@ void my_param_load_vm_config(void)
     if (ret != length)
     {
         memcpy(&gConfigParam.adv_valid_value, &gDefaultAdvValidValue, length);
-        my_log_printf(1, "Adv valid value not found. Use default:GoogleValid(%d),AppleValid(%d)", gConfigParam.adv_valid_value.GoogleValid, gConfigParam.adv_valid_value.AppleValid);
+        printf("Adv valid value not found. Use default:GoogleValid(%d),AppleValid(%d)\n", gConfigParam.adv_valid_value.GoogleValid, gConfigParam.adv_valid_value.AppleValid);
     }
 
     set_adv_valid_status(GOOGLE_ADV_ID, gConfigParam.adv_valid_value.GoogleValid);
@@ -71,7 +72,7 @@ void my_param_load_vm_config(void)
     if (ret != length)
     {
         gConfigParam.ECDH_GValue = DEFAULT_ECDH_G_VALUE;
-        my_log_printf(1, "ECDH G value not found. Use default:ECDH G value(%04x)", gConfigParam.ECDH_GValue);
+        printf("ECDH G value not found. Use default:ECDH G value(%04x)\n", gConfigParam.ECDH_GValue);
     }
 
     //--------Load IMEI Value ---------------------
@@ -81,7 +82,7 @@ void my_param_load_vm_config(void)
     {
         memcpy(&gConfigParam.gsm_imei, &gDefaultImeiValue, length);
         memcpy(data_buff, gConfigParam.gsm_imei.hex, sizeof(gConfigParam.gsm_imei.hex));
-        my_log_printf(1, "imei not found. Use default:imei value(%s)", data_buff);
+        printf("imei not found. Use default:imei value(%s)\n", data_buff);
     }
 }
 
