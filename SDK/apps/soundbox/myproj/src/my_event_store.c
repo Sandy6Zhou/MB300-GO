@@ -19,6 +19,9 @@
 /* 运行态关键日志开关：跨日、开关边沿、告警上升沿。 */
 #define MY_EVT_LOG_EVENT_EN 1
 
+/* 打印 FF01/5C01 明文（仅日志，不发 GATT）。*/
+#define MY_EMS_BLE_PROTO_LOG_EN 1
+
 /* 日统计 VM：结构体首字段 uint32 magic，与设备小端一致（片上 Flash 中低字节在前） */
 #define MY_DEP_EVT_BLOB_MAGIC 0x454D5344u /* EMSD */
 #define MY_DEP_EVT_BLOB_VER   2u          /* 布局版本号 */
@@ -271,6 +274,254 @@ static void evt_alarm_push(uint8 kind, uint32 ts_unix)
     s_alarm_evt.count++;
 }
 
+
+// FF01/5C01 明文组包辅助
+#define EVT_BLE_EMS_IOS_SAFE_PKT 180 // iOS 安全包长度
+#define EVT_STD_ALARM_PL_MAX     (EVT_BLE_EMS_IOS_SAFE_PKT - 5)
+#define EVT_STD_ALARM_HDR_SZ     3 // 3 字节帧头：0x8A, len, 0xB3
+#define EVT_STD_ALARM_ENTRY_SZ   6 // 6 字节告警条目：4B UTC 时间戳，2B 告警位号
+
+static uint16 evt_ble_w16be(uint8 *dst, uint16 val)
+{
+    if (dst == NULL)
+    {
+        my_log_printf(1, "[EMS] evt_ble_w16be dst null");
+        return 0;
+    }
+
+    uint16 be = my_swap16(val); // wire 大端；RAM 小端时 swap 后再按字节拷贝
+
+    memcpy(dst, &be, sizeof(be));
+    return 2;
+}
+
+static uint16 evt_ble_w32be(uint8 *dst, uint32 val)
+{
+    if (dst == NULL)
+    {
+        my_log_printf(1, "[EMS] evt_ble_w32be dst null");
+        return 0;
+    }
+
+    uint32 be = my_swap32(val); // 同上，32bit
+
+    memcpy(dst, &be, sizeof(be));
+    return 4;
+}
+
+static uint16 evt_ble_plain_round_up_16(uint16 len)
+{
+    uint16 send_len = (uint16)((len / 16u) * 16u); // 已整除 16 时保持不动
+
+    if (len % 16u)
+    {
+        send_len = (uint16)(send_len + 16u); // 否则进一档到下一个 16 边界，padding 填 0
+    }
+    return send_len;
+}
+
+/* FF01 TLV 里 module_id / len 的 u16 变长编码；成功返回字节数，失败 0 */
+static uint8 evt_ble_encode_varint_u16(uint16 value, uint8 *out, uint8 out_size)
+{
+    uint8 idx = 0;
+    uint8 b = 0;
+
+    /* 参数合法性检查 */
+    if (out == NULL || out_size == 0)
+    {
+        return 0;
+    }
+
+    /* 编码 value 为 varint 格式 */
+    do
+    {
+        b = (uint8)(value & 0x7Fu); // 本字节承载低 7 位
+
+        /* 右移 7 位，继续编码下一个字节 */
+        value = (uint16)(value >> 7);
+        if (value != 0)
+        {
+            b |= 0x80u; // 高位 1：后面还有字节（支持 0x800E 等大 module_id）
+        }
+
+        /* 检查是否超出输出缓冲区大小 */
+        if (idx >= out_size)
+        {
+            return 0;
+        }
+
+        /* 将编码后的字节写入输出缓冲区，并递增索引 */
+        out[idx++] = b;
+    } while (value != 0);
+
+    return idx;
+}
+
+/* FF01 body 从索引 1 起追加一节 TLV；buf[0] 由调用方事后写模块区总长 */
+static int evt_ble_pack_varint_module(uint8 *out_buf, uint16 buf_size, uint16 *offset,
+                                      uint16 module_id, const uint8 *data, uint16 len)
+{
+    uint8 id_varint[3] = {0};
+    uint8 len_varint[3] = {0};
+    uint8 id_len;
+    uint8 l_len;
+    uint16 need;
+
+    if (out_buf == NULL || offset == NULL || (len > 0 && data == NULL))
+    {
+        return -1;
+    }
+
+    // TLV 头两段变长：ble_comu_def 中的 UTC_TIMESTAMP / EVENT_DAY_STAT 等
+    id_len = evt_ble_encode_varint_u16(module_id, id_varint, sizeof(id_varint));
+    l_len = evt_ble_encode_varint_u16(len, len_varint, sizeof(len_varint));
+    if (id_len == 0 || l_len == 0)
+    {
+        return -1;
+    }
+
+    need = (uint16)(id_len + l_len + len); // 本节总占用 = id + len 编码 + payload
+    if ((uint16)(*offset + need) > buf_size)
+    {
+        return -1;
+    }
+
+    memcpy(&out_buf[*offset], id_varint, id_len); // [module_id varint]
+    *offset = (uint16)(*offset + id_len);
+    memcpy(&out_buf[*offset], len_varint, l_len); // [len varint]
+    *offset = (uint16)(*offset + l_len);
+    if (len > 0)
+    {
+        memcpy(&out_buf[*offset], data, len); // [payload]，len==0 时不拷贝
+        *offset = (uint16)(*offset + len);
+    }
+    return 0;
+}
+
+/* EVENT_DAY_STAT(0x800E)：固定 28B，大端 */
+static uint16 evt_ble_build_day_800e_payload(const my_ems_day_wire_t *day, uint8 *out, uint16 out_size)
+{
+    uint16 offset = 0;
+
+    if (day == NULL || out == NULL || out_size < 28)
+    {
+        return 0;
+    }
+
+    offset += evt_ble_w32be(&out[offset], day->day_unix_utc0); // offset 0，4B：当日零点 UTC 时间戳（秒）
+    offset += evt_ble_w16be(&out[offset], day->chg_min_total); // 4，2B：充电分钟累计（预留）
+    offset += evt_ble_w16be(&out[offset], day->dsg_min_total); // 6，2B：放电分钟累计（预留）
+    offset += evt_ble_w16be(&out[offset], 0);                  // 8，2B：预留
+    offset += evt_ble_w16be(&out[offset], 0);                  // 10，2B：预留
+    offset += evt_ble_w16be(&out[offset], 0);                  // 12，2B：预留（三路放电分钟等，现填 0）
+    offset += evt_ble_w16be(&out[offset], day->cnt_power);     // 14，2B：电源输出开关计数
+    offset += evt_ble_w16be(&out[offset], day->cnt_inv);       // 16，2B：逆变输出开关计数
+    offset += evt_ble_w16be(&out[offset], day->cnt_usb);       // 18，2B：USB 输出开关计数
+    offset += evt_ble_w16be(&out[offset], day->cnt_dc5521);    // 20，2B：DC5521 输出开关计数
+    offset += evt_ble_w16be(&out[offset], day->cnt_led);       // 22，2B：LED 输出开关计数
+    offset += evt_ble_w16be(&out[offset], 0);                  // 24，2B：末尾预留
+    offset += evt_ble_w16be(&out[offset], 0);                  // 26，2B：末尾预留
+    return offset;
+}
+
+/* 打印 FF01/5C01 明文 */
+#if MY_EMS_BLE_PROTO_LOG_EN
+#define EVT_BLE_EMS_LOG_BUF_MAX 256
+static void evt_ble_proto_log_snapshot(const my_ems_day_wire_t *day)
+{
+    uint8 log_buf[EVT_BLE_EMS_LOG_BUF_MAX] = {0};
+    uint8 mod09[4] = {0};    // 4B UTC_TIMESTAMP
+    uint8 mod800e[28] = {0}; // 28B EVENT_DAY_STAT
+    uint16 off = 0;          // body[0] 预留给「后续 module 区总长」，不含自身 1 字节
+    uint16 raw_len = 0;      // 原始长度
+    uint16 pad_len = 0;      // 16 字节对齐 padding
+    uint16 idx = 0;          // 告警序号
+    uint16 n = 0;            // 告警数量
+    uint16 pay_lim = 0;      // 最大载荷
+
+    if (day == NULL || day->day_unix_utc0 == 0)
+    {
+        return;
+    }
+
+    // ------- BLE_DATA_TYPE_EXPANSION_MODULE(0xFF01) 扩展模块明文 body -------
+    memset(log_buf, 0, sizeof(log_buf));
+    off = 1; // body[0] 预留给「后续 module 区总长」，不含自身 1 字节
+
+    // 步骤 A：TLV — UTC_TIMESTAMP，payload 为 4B「当日零点 UTC 时间戳(day_unix_utc0)」大端
+    evt_ble_w32be(mod09, day->day_unix_utc0);
+    if (evt_ble_pack_varint_module(log_buf, sizeof(log_buf), &off, UTC_TIMESTAMP, mod09, sizeof(mod09)) != 0)
+    {
+        my_log_printf(1, "[EMS] ble log pack UTC fail");
+        return;
+    }
+
+    // 步骤 B：先组 EVENT_DAY_STAT(0x800E) 28B，再作为第二段 TLV 的 payload 追加
+    raw_len = evt_ble_build_day_800e_payload(day, mod800e, sizeof(mod800e));
+    if (raw_len != 28)
+    {
+        my_log_printf(1, "[EMS] ble log 800E len %u", raw_len);
+        return;
+    }
+    if (evt_ble_pack_varint_module(log_buf, sizeof(log_buf), &off, EVENT_DAY_STAT, mod800e, 28) != 0)
+    {
+        my_log_printf(1, "[EMS] ble log pack 800E fail");
+        return;
+    }
+
+    // 步骤 C：body[0]=body[1..] 总长；打 raw 与 16 字节对齐 padding（余字节填 0）
+    log_buf[0] = (uint8)(off - 1);
+    raw_len = off;
+    pad_len = evt_ble_plain_round_up_16(raw_len);
+    my_log_printf(1, "[EMS] FF01 plaintext (store) raw=%u pad16=%u type=0x%04X", raw_len, pad_len,
+                  BLE_DATA_TYPE_EXPANSION_MODULE);
+    put_buf((u8 *)log_buf, raw_len);
+    if (pad_len > raw_len)
+    {
+        put_buf((u8 *)&log_buf[raw_len], pad_len - raw_len);
+    }
+
+    if (s_alarm_evt.count == 0)
+    {
+        return;
+    }
+
+    // ------- BLE_DATA_TYPE_STD_ALARM_REPORT(0x5C01) -------
+    memset(log_buf, 0, sizeof(log_buf));
+    off = EVT_STD_ALARM_HDR_SZ;        // 先占满 3 字节帧头，告警数据从 log_buf[3] 起写
+    log_buf[0] = BLE_STD_REPORT_START; // 0x8A，与 ble_comu_def 中 BLE_STD_REPORT_START 一致
+    log_buf[2] = BLE_COMU_DEV_CODE;    // 设备端识别字节
+    // buf[1]：写满载荷后再填 = off-2，表示 buf[2]～buf[off-1] 共多少字节（dev_code + 告警条目）
+    pay_lim = (uint16)(EVT_STD_ALARM_HDR_SZ + EVT_STD_ALARM_PL_MAX); // 头 + 最大载荷，防超长
+    idx = s_alarm_evt.head;
+    for (n = 0; n < s_alarm_evt.count; n++)
+    {
+        if ((uint16)(off + EVT_STD_ALARM_ENTRY_SZ) > sizeof(log_buf) ||
+            (uint16)(off + EVT_STD_ALARM_ENTRY_SZ) > pay_lim)
+        {
+            break; // local buf 或 EVT_STD_ALARM_PL_MAX 限制
+        }
+        off += evt_ble_w32be(&log_buf[off], s_alarm_evt.ring[idx].ts_unix);      // 4B BE
+        off += evt_ble_w16be(&log_buf[off], (uint16)s_alarm_evt.ring[idx].kind); // 2B BE，故障位号
+        idx = (uint16)((idx + 1) % MY_EVT_ALARM_CAP);                            // FIFO：自 head 起先旧后新
+    }
+    if (off <= EVT_STD_ALARM_HDR_SZ)
+    {
+        return;
+    }
+    log_buf[1] = (uint8)(off - 2);
+    raw_len = off;
+    pad_len = evt_ble_plain_round_up_16(raw_len);
+    my_log_printf(1, "[EMS] 5C01 plaintext (store fifo n=%u) raw=%u pad16=%u", (unsigned)s_alarm_evt.count,
+                  raw_len, pad_len);
+    put_buf((u8 *)log_buf, raw_len);
+    if (pad_len > raw_len)
+    {
+        put_buf((u8 *)&log_buf[raw_len], pad_len - raw_len);
+    }
+}
+#endif
+
 /* ========== VM：日数据块/告警数据块均为定长结构体 ========== */
 
 static void evt_save_day_vm(void)
@@ -511,6 +762,9 @@ void my_evt_on_dc_sample(uint16 reg_sw, uint16 reg_fault)
 #endif
                 }
             }
+#if MY_EMS_BLE_PROTO_LOG_EN
+            evt_ble_proto_log_snapshot(today_wire);
+#endif
         }
         s_prev_alarm_bits = cur;
     }
@@ -538,4 +792,3 @@ uint8 my_evt_alarm_vm_magic_ok(void)
 {
     return evt_check_vm_magic(CFG_EMS_ALARM_FIFO_BLOB, MY_DEP_ALARM_BLOB_MAGIC);
 }
-

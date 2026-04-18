@@ -24,6 +24,17 @@
 #define ABS(x)  ((x) >= 0 ? (x) : -(x))
 #endif
 
+#ifndef my_swap16
+#define my_swap16(s)  (uint16)((((uint16)(s) & 0x00FFu) << 8) | ((((uint16)(s) >> 8) & 0x00FFu)))
+#endif
+
+#ifndef my_swap32
+#define my_swap32(l)  (uint32)(((((uint32)(l) >> 24) & 0x000000FFu)) | \
+                               ((((uint32)(l) & 0x00FF0000u) >> 8)) | \
+                               ((((uint32)(l) & 0x0000FF00u) << 8)) | \
+                               ((((uint32)(l) & 0x000000FFu) << 24)))
+#endif
+
 typedef void (*TIMER_FUN)(void *param);
 
 typedef struct

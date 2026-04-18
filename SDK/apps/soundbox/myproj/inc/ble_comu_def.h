@@ -28,10 +28,12 @@
 #define BLE_DATA_TYPE_SET_ADV                   0x5606          //设置广播名称
 #define BLE_DATA_TYPE_SET_IMEI                  0x5707          //设置IMEI号
 #define BLE_DATA_TYPE_AT_CMD                    0x5808          //用户指令
+#define BLE_DATA_TYPE_STD_ALARM_REPORT          0x5C01          //标准告警上报（UTC+告警字）
 #define BLE_DATA_TYPE_EXPANSION_MODULE          0xFF01          //扩展模块
 
 /* 扩展模块module id */
 #define BAT_PERCENT                             0x02            //电量百分比
+#define UTC_TIMESTAMP                           0x09            //UTC：len=0 或 len=4
 #define REMAIN_TIME                             0x8004          //剩余可用时间
 #define BAT_TEMP                                0x8005          //电池温度
 #define OUTPUT_TOTAL_POWER                      0x8006          //输出总功率
@@ -42,10 +44,12 @@
 #define LED_POWER                               0x800B          //LED功率
 #define SW_STATUS                               0x800C          //开关状态
 #define FAULT_STATUS                            0x800D          //故障状态
+#define EVENT_DAY_STAT                          0x800E          //单日统计 28B
 
 #define BLE_COMU_DEV_CODE                       0xB3
 #define BLE_COMU_APP_CODE                       0xC2
 #define BLE_COMU_CMD_START                      0x89
+#define BLE_STD_REPORT_START                    0x8A            //5C01 载荷首字节
 #define BLE_COMU_ALARM_START                    0x78
 
 #define BLE_PKEY_RX_CMD                         0x8900C200
