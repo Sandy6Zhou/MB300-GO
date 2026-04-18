@@ -11,7 +11,7 @@
 #define MY_DC_UART_H
 
 #define MY_DC_UART_PORT              HAL_UART_2
-#define MY_DC_UART_BAUD              MY_UART_BAUD_9600
+#define MY_DC_UART_BAUD              MY_UART_BAUD_115200
 
 #define MY_DC_UART_TX_PIN            IO_PORTA_07
 #define MY_DC_UART_RX_PIN            IO_PORTA_08

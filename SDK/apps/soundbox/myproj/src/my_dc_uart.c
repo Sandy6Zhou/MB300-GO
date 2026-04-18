@@ -18,42 +18,35 @@
 
 /*
  * ============================================================================
- * 【协议文档】DC EMS PPS001 Modbus485 通信协议 V1.5
+ * 【协议文档】DC EMS PPS001 Modbus 通信协议 V1.7 + 蓝牙下发 8 字节格式
  * ============================================================================
  *
- * 1. 通讯参数（协议 3.1）：
- *    - RS485，1 起始位，8 数据位，1 停止位，无校验，波特率 9600
+ * 1. 通讯参数：
+ *    - TTL，1 起始位，8 数据位，1 停止位，无校验，波特率 115200
  *    - 装置地址固定 0x01
- *    - 每帧不超过 255 字节；正确命令 500ms 内正常响应；错误命令 500ms 内异常响应
+ *    - 蓝牙模块下发指令统一 8 字节、大端
  *
- * 2. 数据格式（协议 3.2）：
- *    | 装置地址(1B) | 功能码(1B) | 数据区(NB) | CRC(2B) |
- *    - 数据区 Big Endian，先发高字节
+ * 2. 功能码：
+ *    | 01 | 读开关   | DC 主动上报或查询应答 |
+ *    | 02 | DC 主动上报事件 | 过载、过压、过温、解除蓝牙连接等 |
+ *    | 03 | 读寄存器 | DC 主动上报或查询应答 |
+ *    | 05 | 设置开关 | 8 字节：01 05 00 01 [bit] [onoff] CRC，bit=0x01~0x04 |
  *
- * 3. 功能码（协议 3.2.2）：
- *    | 01 | 读开关   | 读取一个或多个开关量状态 |
- *    | 03 | 读寄存器 | 读取一个或多个寄存器（模拟量） |
- *    | 05 | 写单线圈 | 写入控制开关，0xFF00=开 0x0000=关 |
- *    | 06 | 写单寄存器| 写入一个寄存器 |
- *    - 异常应答：功能码|0x80，数据区为错误码（1=无效报文 2=地址/长度 3=数值无效 6=装置忙）
+ * 3. 寄存器点表：
+ *    | 0x0001 | 开关量(读写) Bit0-7 控制 Bit8 推送开关 | 0x0003 故障状态(只读) |
+ *    | 0x0004 | 充电功率 0.1W | 0x0007 电池SOC 0.1% | 0x0012 DC5521功率 |
+ *    | 0x0013 | LED功率 | 0x000E 逆变器功率 | 0x000F USB总功率 |
  *
- * 4. 寄存器点表（协议 2.1 节选）：
- *    | 0x0001 | 开关量电表(只读) | 0x0004 充电功率 0.1W | 0x0007 电池SOC 0.1% |
- *    | 0x0009 | 剩余可用时间 0.1H | 0x000B 电池温度 0.1℃ | 0x000D 输出总功率 0.1W |
- *    | 0x000E | 逆变器功率 0.1W | 0x000F USB总功率 0.1W | 0x0013 DC5521功率 0.1W |
- *    | 0x0014 | LED功率 0.1W |
+ * 4. 05 设置开关 bit 位：0x01=逆变器 0x02=USB 0x03=DC5521 0x04=LED
  *
- * 5. 开关量点表（协议 2.2，0x0003 读写控制位）：
- *    | Bit0 | 开机 | Bit1 逆变器 | Bit2 USB | Bit3 DC5521 | Bit4 LED |
- *    - 写线圈地址：0x0001=逆变器 0x0002=USB 0x0003=DC5521 0x0004=LED
- *
- * 6. CRC16（协议 3.4）：初值 0xFFFF，多项式 0xA001，最后高低字节交换
+ * 5. CRC16：初值 0xFFFF，多项式 0xA001，最后高低字节交换
  * ============================================================================
  */
 
 /* ========== Modbus 协议参数（协议 3.2.1、3.2.2） ========== */
 #define DC_MODBUS_ADDR            0x01 /* 装置地址固定 0x01 */
 #define DC_MODBUS_FUNC_READ_COIL  0x01 /* 读开关量 */
+#define DC_MODBUS_FUNC_DC_REPORT  0x02 /* DC 板主动上报事件 */
 #define DC_MODBUS_FUNC_READ_REG   0x03 /* 读寄存器 */
 #define DC_MODBUS_FUNC_WRITE_COIL 0x05 /* 写单线圈 */
 #define DC_MODBUS_FUNC_WRITE_REG  0x06 /* 写单寄存器 */
@@ -64,15 +57,12 @@
 #define DC_SCHED_TICK_MS             100  /* 轮询定时器周期；仅蓝牙APP连接时运行 */
 #define DC_SESSION_POLL_INTERVAL_MS  1000 /* 轮询间隔 */
 
-/* 写单线圈控制命令（协议 3.3.3）：0xFF00=打开 0x0000=关闭 */
-#define DC_MODBUS_CTRL_ON  0xFF00
-#define DC_MODBUS_CTRL_OFF 0x0000
-
 /*
- * 业务关注的寄存器地址（协议 2.1 寄存器点表）
+ * 业务关注的寄存器地址（寄存器点表）
  * 实际值=寄存器值/10（系数 0.1），单位见协议
  */
-#define DC_REG_STATUS_1        0x0001 /* 开关量电表 0x0001~0x0002，Bit 见 2.2 */
+#define DC_REG_STATUS_1        0x0001 /* 开关量；05 写线圈目标寄存器也是 0x0001，bit 见 dc_sw_to_bit_pos */
+#define DC_REG_FAULT_STATUS    0x0003 /* 故障状态(只读) Bit4 逆变过载 Bit8 逆变过温 Bit9 电池过温 */
 #define DC_REG_CHARGE_POWER    0x0004 /* 充电功率 0.1W */
 #define DC_REG_BAT_SOC         0x0007 /* 电池SOC 0.1% */
 #define DC_REG_REMAIN_TIME     0x0009 /* 剩余可用时间 0.1H */
@@ -80,13 +70,22 @@
 #define DC_REG_TOTAL_POWER     0x000D /* 输出总功率 0.1W */
 #define DC_REG_AC_POWER        0x000E /* 逆变器功率 0.1W */
 #define DC_REG_USB_TOTAL_POWER 0x000F /* USB总功率 0.1W */
-#define DC_REG_DC5521_POWER    0x0013 /* DC5521输出功率 0.1W */
-#define DC_REG_LED_POWER       0x0014 /* LED输出功率 0.1W */
+#define DC_REG_DC5521_POWER    0x0012 /* DC5521输出功率 0.1W */
+#define DC_REG_LED_POWER       0x0013 /* LED输出功率 0.1W */
 
-/* 缓存容量：寄存器镜像、接收拼包缓存、单帧发送缓存 */
-#define DC_REG_CACHE_SIZE 0x0028
-#define DC_RX_CACHE_SIZE  128
-#define DC_TX_FRAME_MAX   16
+/*
+ * 主动上报 03：byte_cnt = 2*寄存器个数；块起点与 DC_REG_CHARGE_POWER(0x0004) 相同，至 0x0027
+ */
+#define DC_03_REPORT_QTY      36
+#define DC_03_REPORT_START    DC_REG_CHARGE_POWER
+#define DC_03_REPORT_BYTE_CNT ((uint8)((DC_03_REPORT_QTY)*2))
+
+/* 寄存器镜像长度：覆盖 0x0000~(DC_03_REPORT_START+块长-1)，与协议最大连续块一致 */
+#define DC_REG_CACHE_SIZE (DC_03_REPORT_START + DC_03_REPORT_QTY)
+
+/* 接收拼包缓存、单帧发送缓存 */
+#define DC_RX_CACHE_SIZE 128
+#define DC_TX_FRAME_MAX  16
 
 /* 在途 Modbus 请求上下文：同一时刻仅允许一个请求 */
 typedef struct
@@ -106,14 +105,6 @@ typedef struct
     my_dc_sw_id_t sw_id; /* 开关ID */
     uint8 onoff;         /* 开关状态 */
 } dc_ctrl_req_t;
-
-/* 从机上报反推用：功能码 + 寄存器区间（协议 2.1），用于 byte_cnt 唯一匹配 */
-typedef struct
-{
-    uint8 func;        /* 功能码 */
-    uint16 start_addr; /* 起始地址 */
-    uint16 quantity;   /* 寄存器个数 */
-} dc_report_profile_t;
 
 /* ========== 寄存器与设备数据 ========== */
 static uint16 g_dc_reg_cache[DC_REG_CACHE_SIZE] = {0}; /* Modbus 寄存器镜像 */
@@ -137,20 +128,6 @@ static uint32 g_dc_tick_ms = 0;               /* 软件 tick，仅定时器运行时累加 *
 static uint32 g_dc_last_poll_dispatch_ms = 0; /* 上次发起轮询的时刻，dc_poll_stop 时重置 */
 static uint8 g_dc_force_fast_poll = 0;        /* 1=因控制成功/超时/提交控制而触发，下一拍立即查询首项寄存器（0x0001~0x0002）以尽快刷新状态 */
 static uint8 g_dc_timer_running = 0;          /* 1=蓝牙APP连接定时器运行，0=断开完全停止 */
-
-/*
- * 上报 profile 表（协议 2.1 寄存器点表）：用于从机主动上报时根据 byte_cnt 反推寄存器区间
- * - 0x0001~0x0002: 开关量电表（2 寄存器，byte_cnt=4）
- * - 0x0004~0x000F: 核心实时量（12 寄存器，byte_cnt=24）
- * - 0x0011~0x0016: 分路功率（6 寄存器，byte_cnt=12）
- * - 0x0021~0x0027: 事件计数（7 寄存器，byte_cnt=14）
- */
-static dc_report_profile_t g_dc_report_profiles[] = {
-    {DC_MODBUS_FUNC_READ_REG, 0x0001, 0x0002},
-    {DC_MODBUS_FUNC_READ_REG, 0x0004, 0x000C},
-    {DC_MODBUS_FUNC_READ_REG, 0x0011, 0x0006},
-    {DC_MODBUS_FUNC_READ_REG, 0x0021, 0x0007},
-};
 
 #define DC_LOG_FRAME_EN   0 /* 协议层提交：开启帧打印便于 review */
 #define DC_LOG_VERBOSE_EN 0 /* 开启解析/上报日志 */
@@ -291,20 +268,18 @@ static void dc_update_device_data_cache(void)
         g_dc_dev_data.sw_status |= (1 << 3); /* LED */
     }
 
-    /* 协议扩展 0x800D 故障状态：
-     * reg 0x0001 bit10=逆变器过载、bit14=逆变器过温、bit15=电池过温
-     * 映射到 fault_status bit0~bit2
-     */
+    /* 故障状态：0x0003 Bit4=逆变器过载 Bit8=逆变器过温 Bit9=电池过温 */
+    uint16 reg_fault = dc_get_reg_value(DC_REG_FAULT_STATUS, 0);
     g_dc_dev_data.fault_status = 0;
-    if (reg_sw & (1 << 10))
+    if (reg_fault & (1 << 4))
     {
         g_dc_dev_data.fault_status |= (1 << 0);
     }
-    if (reg_sw & (1 << 14))
+    if (reg_fault & (1 << 8))
     {
         g_dc_dev_data.fault_status |= (1 << 1);
     }
-    if (reg_sw & (1 << 15))
+    if (reg_fault & (1 << 9))
     {
         g_dc_dev_data.fault_status |= (1 << 2);
     }
@@ -344,11 +319,11 @@ static uint16 dc_build_req_frame(uint8 *out, uint8 func, uint16 addr, uint16 qua
 }
 
 /*
- * 根据帧头估算完整帧长度（协议 3.2.3、3.3.1/3.3.2/3.3.3）
- * 用于粘包/拆包：需至少 2 字节看功能码，读应答需 3 字节取 byte_cnt
- * - 异常应答(func|0x80)：5 字节 [addr|func|err|CRC]
- * - 05/06 写应答：8 字节，与请求相同
- * - 01/03 读应答：5 + byte_cnt，byte_cnt 在 buf[2]
+ * 根据帧头估算完整帧长度
+ * - 异常应答(func|0x80)：5 字节
+ * - 02 DC 主动上报事件：8 字节固定
+ * - 05/06 写应答：8 字节
+ * - 01/03 读应答：5 + byte_cnt
  */
 static uint8 dc_modbus_resp_expected_len_any(const uint8 *buf, uint16 len)
 {
@@ -359,19 +334,19 @@ static uint8 dc_modbus_resp_expected_len_any(const uint8 *buf, uint16 len)
 
     if ((buf[1] & 0x80) != 0)
     {
-        return 5; /* 异常应答：addr|func|err|CRC */
+        return 5; /* 异常应答 */
     }
 
-    if (buf[1] == DC_MODBUS_FUNC_WRITE_COIL || buf[1] == DC_MODBUS_FUNC_WRITE_REG)
+    if (buf[1] == DC_MODBUS_FUNC_DC_REPORT || buf[1] == DC_MODBUS_FUNC_WRITE_COIL || buf[1] == DC_MODBUS_FUNC_WRITE_REG)
     {
-        return 8; /* 写应答固定 8 字节 */
+        return 8; /* 02/05/06 固定 8 字节 */
     }
 
     if (buf[1] == DC_MODBUS_FUNC_READ_COIL || buf[1] == DC_MODBUS_FUNC_READ_REG)
     {
         if (len < 3)
         {
-            return 0; /* 需 byte_cnt 在 buf[2] */
+            return 0;
         }
         return (uint8)(5 + buf[2]); /* 5 + byte_cnt */
     }
@@ -401,6 +376,7 @@ static int dc_modbus_check_frame(const uint8 *frame, uint16 frame_len)
 
     func = (uint8)(frame[1] & 0x7F);
     if (func != DC_MODBUS_FUNC_READ_COIL &&
+        func != DC_MODBUS_FUNC_DC_REPORT &&
         func != DC_MODBUS_FUNC_READ_REG &&
         func != DC_MODBUS_FUNC_WRITE_COIL &&
         func != DC_MODBUS_FUNC_WRITE_REG)
@@ -414,25 +390,48 @@ static int dc_modbus_check_frame(const uint8 *frame, uint16 frame_len)
 }
 
 /*
- * 业务开关 ID -> Modbus 写线圈地址（协议 2.2 0x0003 读写控制位）
- * 0x0003-Bit1=逆变器 Bit2=USB Bit3=DC5521 Bit4=LED
- * 写线圈地址：0x0001=逆变器 0x0002=USB 0x0003=DC5521 0x0004=LED
+ * 业务开关 ID -> 05 指令 bit 位（蓝牙下发 8 字节格式）
+ * 寄存器固定 0x0001，bit：0x01=逆变器 0x02=USB 0x03=DC5521 0x04=LED
  */
-static uint16 dc_sw_to_modbus_addr(my_dc_sw_id_t sw_id)
+static uint8 dc_sw_to_bit_pos(my_dc_sw_id_t sw_id)
 {
     switch (sw_id)
     {
         case MY_DC_SW_AC:
-            return 0x0001; /* 逆变器开关 */
+            return 0x01; /* 逆变器 */
         case MY_DC_SW_DC:
-            return 0x0003; /* DC5521开关 */
+            return 0x03; /* DC5521 */
         case MY_DC_SW_USB:
-            return 0x0002; /* USB开关 */
+            return 0x02; /* USB */
         case MY_DC_SW_LED:
-            return 0x0004; /* LED开关 */
+            return 0x04; /* LED */
         default:
-            return 0xFFFF;
+            return 0xFF;
     }
+}
+
+/* 构造 05 设置开关帧（8 字节）：01 05 00 01 [bit] [onoff] CRC */
+static uint16 dc_build_05_frame(uint8 *out, uint8 bit_pos, uint8 onoff)
+{
+    uint16 crc = 0;
+
+    if (out == NULL || bit_pos == 0xFF)
+    {
+        return 0;
+    }
+
+    out[0] = DC_MODBUS_ADDR;
+    out[1] = DC_MODBUS_FUNC_WRITE_COIL;
+    out[2] = (uint8)(DC_REG_STATUS_1 >> 8);
+    out[3] = (uint8)(DC_REG_STATUS_1 & 0xFF);
+    out[4] = bit_pos;
+    out[5] = onoff ? 0x01 : 0x00;
+
+    crc = dc_modbus_crc16(out, 6);
+    out[6] = (uint8)(crc >> 8);
+    out[7] = (uint8)(crc & 0xFF);
+
+    return 8;
 }
 
 /* 判断帧是否为某功能码的应答（协议 3.2.2：正常=func，异常=func|0x80） */
@@ -446,39 +445,10 @@ static int dc_is_expected_resp_frame(const uint8 *frame, uint8 func_expect)
     return (frame[1] == func_expect || frame[1] == (uint8)(func_expect | 0x80));
 }
 
-/*
- * 根据从机上报的 byte_cnt 反推寄存器区间；仅当唯一匹配时返回 1
- * 避免不同区间长度相同导致误判（如后续协议新增同长度类型需增加区分字段）
- */
-static int dc_get_report_profile(uint8 byte_cnt, uint16 *start_addr, uint16 *quantity)
+/* 03 主动上报 byte_cnt=72 唯一对应 0x0004~0x0027 */
+static int dc_is_03_report_frame(uint8 byte_cnt)
 {
-    uint8 i = 0;
-    uint8 match_idx = 0xFF;
-    uint8 match_cnt = 0;
-
-    /* 遍历 profile 表，统计 byte_cnt == quantity*2 的匹配数 */
-    for (i = 0; i < ARRAY_SIZE(g_dc_report_profiles); i++)
-    {
-        if (g_dc_report_profiles[i].func != DC_MODBUS_FUNC_READ_REG)
-        {
-            continue;
-        }
-        if (byte_cnt == (uint8)(g_dc_report_profiles[i].quantity * 2))
-        {
-            match_idx = i;
-            match_cnt++;
-        }
-    }
-
-    // NOTE: 目前因为 byte_cnt 对应 g_dc_report_profiles 只有一种情况
-    if (match_cnt != 1 || match_idx == 0xFF)
-    {
-        return 0; /* 无匹配或多匹配均拒绝 */
-    }
-
-    *start_addr = g_dc_report_profiles[match_idx].start_addr;
-    *quantity = g_dc_report_profiles[match_idx].quantity;
-    return 1;
+    return (byte_cnt == DC_03_REPORT_BYTE_CNT) ? 1 : 0;
 }
 
 /*
@@ -510,28 +480,86 @@ static void dc_update_read_reg_cache(const uint8 *frame, uint16 start_addr)
 }
 
 /*
- * 尝试按从机主动上报解析：功能码 03 + byte_cnt 唯一匹配才做解析，避免误判
- * 返回 1 表示解析成功并已更新 reg_cache、device_data
+ * 解析 01 主动上报：byte_cnt=8，8 字节按 4 个 16 位大端寄存器写入 0x0001~0x0004
  */
-static int dc_try_handle_report_frame(const uint8 *frame, uint16 frame_len)
+static int dc_try_handle_01_report(const uint8 *frame, uint16 frame_len)
 {
-    uint16 start_addr = 0;
-    uint16 quantity = 0;
+    uint8 i = 0;
+    uint16 reg_val = 0;
 
+    if (frame[1] != DC_MODBUS_FUNC_READ_COIL || frame_len < 13)
+    {
+        return 0;
+    }
+
+    if (frame[2] != 8)
+    {
+        return 0; /* 仅处理 8 字节数据 */
+    }
+
+    for (i = 0; i < 4; i++)
+    {
+        reg_val = (uint16)((frame[3 + i * 2] << 8) | frame[4 + i * 2]);
+        dc_set_reg_value((uint16)(0x0001 + i), reg_val);
+    }
+    dc_update_device_data_cache();
+    g_dc_online = 1;
+    g_dc_timeout_count = 0;
+    DC_LOG_VERBOSE("dc 01 report parsed. reg 0x0001~0x0004");
+    return 1;
+}
+
+/*
+ * 解析 02 DC 主动上报事件：8 字节 01 02 [reg_addr 2B] [bit_pos 1B] [value 1B] CRC
+ * 如过载、过压、过温、解除蓝牙连接等，可扩展回调
+ */
+static int dc_try_handle_02_report(const uint8 *frame, uint16 frame_len)
+{
+    uint16 reg_addr = 0;
+    uint8 bit_pos = 0;
+    uint8 value = 0;
+    const char *evt_name = NULL;
+
+    (void)frame_len;
+    if (frame[1] != DC_MODBUS_FUNC_DC_REPORT)
+    {
+        return 0;
+    }
+
+    reg_addr = (uint16)((frame[2] << 8) | frame[3]);
+    bit_pos = frame[4];
+    value = frame[5];
+
+    g_dc_online = 1;
+    g_dc_timeout_count = 0;
+    DC_LOG_VERBOSE("dc 02 event. reg=0x%x bit=%d val=%d", reg_addr, bit_pos, value);
+
+    /* 0x0001-Bit9=解除蓝牙连接，可在此扩展 BLE 断开等逻辑 */
+    if (reg_addr == 0x0001 && bit_pos == 0x09 && value == 0x01)
+    {
+        /* TODO：DC 板请求解除蓝牙连接 */
+    }
+    return 1;
+}
+
+/*
+ * 解析 03 主动上报：byte_cnt=72 对应 0x0004~0x0027
+ */
+static int dc_try_handle_03_report(const uint8 *frame, uint16 frame_len)
+{
     (void)frame_len;
     if (frame[1] != DC_MODBUS_FUNC_READ_REG)
     {
-        return 0; /* 非 03 帧 */
+        return 0;
     }
-
-    if (!dc_get_report_profile(frame[2], &start_addr, &quantity))
+    if (!dc_is_03_report_frame(frame[2]))
     {
-        return 0; /* byte_cnt 无唯一匹配 */
+        return 0;
     }
-    dc_update_read_reg_cache(frame, start_addr);
+    dc_update_read_reg_cache(frame, DC_03_REPORT_START);
     g_dc_online = 1;
-    g_dc_timeout_count = 0; // 重置超时计数
-    DC_LOG_VERBOSE("dc report parsed. start=0x%x, qty=%d", start_addr, quantity);
+    g_dc_timeout_count = 0;
+    DC_LOG_VERBOSE("dc 03 report parsed. start=0x%x qty=%d", DC_03_REPORT_START, DC_03_REPORT_QTY);
     return 1;
 }
 
@@ -574,6 +602,7 @@ static void dc_poll_stop(void)
  * 发送 Modbus 请求（运行层）：构造帧、串口发送、填充 g_dc_req
  * 调用者：dc_try_send_ctrl_req, dc_try_send_poll_req
  * 返回 0：链路忙或发送失败；返回 1：已发送，等待应答
+ * 05 使用 8 字节格式：quantity=bit_pos, value=onoff(0/1)
  */
 static int dc_send_request(uint8 func, uint16 start_addr, uint16 quantity, uint16 value)
 {
@@ -587,17 +616,24 @@ static int dc_send_request(uint8 func, uint16 start_addr, uint16 quantity, uint1
         return 0; // 有在途请求，直接返回
     }
 
-    // 构建请求帧
-    if (func == DC_MODBUS_FUNC_READ_COIL || func == DC_MODBUS_FUNC_READ_REG)
+    if (func == DC_MODBUS_FUNC_WRITE_COIL)
     {
-        payload = quantity; // 读寄存器或线圈，payload 为 quantity
+        /* 05 使用 8 字节格式：01 05 00 01 [bit] [onoff] CRC */
+        frame_len = dc_build_05_frame(frame, (uint8)quantity, (uint8)(value ? 1 : 0));
     }
     else
     {
-        payload = value; // 写寄存器，payload 为 value
+        if (func == DC_MODBUS_FUNC_READ_COIL || func == DC_MODBUS_FUNC_READ_REG)
+        {
+            payload = quantity; // 读寄存器或线圈，payload 为 quantity
+        }
+        else
+        {
+            payload = value; // 写寄存器，payload 为 value
+        }
+        frame_len = dc_build_req_frame(frame, func, start_addr, payload);
     }
 
-    frame_len = dc_build_req_frame(frame, func, start_addr, payload);
     if (frame_len == 0)
     {
         return 0; // 构建请求帧失败，直接返回
@@ -669,6 +705,9 @@ static void dc_try_parse_rx_cache(const uint8 *data, uint32 len)
     static uint16 rx_len = 0;                      /* 缓存有效长度 */
     uint8 expected_len = 0;
     uint16 consume_len = 0;
+    uint16 rx_addr = 0;
+    uint8 rx_bit = 0;
+    uint8 rx_onoff = 0;
 
     /* 追加新数据 */
     if (data != NULL && len > 0)
@@ -720,43 +759,57 @@ static void dc_try_parse_rx_cache(const uint8 *data, uint32 len)
             else if (g_dc_req.func == DC_MODBUS_FUNC_READ_REG)
             {
                 // 校验 byte_cnt 与请求 quantity 一致，避免把从机主动上报误当应答
-                if (rx_cache[2] != (uint8)(g_dc_req.quantity * 2))
-                {
-                    if (!dc_try_handle_report_frame(rx_cache, expected_len))
-                    {
-                        DC_LOG_VERBOSE("dc read reg resp byte_cnt mismatch. expect=%d rx=%d",
-                                       g_dc_req.quantity * 2, rx_cache[2]);
-                        dc_handle_req_result_fail(2); // 2=非预期应答，按异常清理在途请求
-                    }
-                }
-                else
+                if (dc_is_03_report_frame(rx_cache[2]) &&
+                    rx_cache[2] == (uint8)(g_dc_req.quantity * 2))
                 {
                     dc_update_read_reg_cache(rx_cache, g_dc_req.start_addr);
                     dc_handle_req_result_ok();
                 }
+                else if (!dc_try_handle_03_report(rx_cache, expected_len))
+                {
+                    DC_LOG_VERBOSE("dc 03 resp mismatch");
+                    dc_handle_req_result_fail(2);
+                }
             }
-            // 写线圈应答，处理写线圈应答
+            // 05 应答：8 字节格式 01 05 00 01 [bit] [onoff] CRC，成功=同帧回显，失败=倒数第三字节 0x00
             else if (g_dc_req.func == DC_MODBUS_FUNC_WRITE_COIL)
             {
-                // 写线圈应答：协议要求回显 addr+value
-                uint16 rx_addr = (uint16)((rx_cache[2] << 8) | rx_cache[3]);
-                uint16 rx_val = (rx_cache[4] << 8) | rx_cache[5];
-                if (rx_addr == g_dc_req.start_addr && rx_val == g_dc_req.value)
+                rx_addr = (uint16)((rx_cache[2] << 8) | rx_cache[3]);
+                rx_bit = rx_cache[4];
+                rx_onoff = rx_cache[5];
+                if (rx_addr == DC_REG_STATUS_1 && rx_bit == (uint8)g_dc_req.quantity)
                 {
-                    g_dc_force_fast_poll = 1; // 设置成功，立即准备检查开关状态
-                    dc_handle_req_result_ok();
+                    if (rx_onoff == (uint8)g_dc_req.value)
+                    {
+                        g_dc_force_fast_poll = 1; // 设置成功，立即准备检查开关状态
+                        dc_handle_req_result_ok();
+                    }
+                    else if (g_dc_req.value != 0 && rx_onoff == 0)
+                    {
+                        // 下发开而回执关，视为失败
+                        dc_handle_req_result_fail(3);
+                    }
+                    else
+                    {
+                        dc_handle_req_result_ok();
+                    }
                 }
                 else
                 {
-                    DC_LOG_VERBOSE("dc write coil resp addr mismatch. rx=0x%x expect=0x%x",
-                                   rx_addr, g_dc_req.start_addr);
-                    dc_handle_req_result_fail(2); /* 2=地址/长度异常 */
+                    DC_LOG_VERBOSE("dc 05 resp mismatch. rx_addr=0x%x bit=%d", rx_addr, rx_bit);
+                    dc_handle_req_result_fail(2);
                 }
             }
         }
-        else if (!dc_try_handle_report_frame(rx_cache, expected_len))
+        else
         {
-            DC_LOG_VERBOSE("dc unknown frame. func=0x%x", rx_cache[1]);
+            /* 主动上报：01/02/03 */
+            if (!dc_try_handle_01_report(rx_cache, expected_len) &&
+                !dc_try_handle_02_report(rx_cache, expected_len) &&
+                !dc_try_handle_03_report(rx_cache, expected_len))
+            {
+                DC_LOG_VERBOSE("dc unknown frame. func=0x%x", rx_cache[1]);
+            }
         }
 
         /* 消费一帧，剩余数据前移 */
@@ -865,16 +918,15 @@ static void dc_req_timeout_check(void)
  */
 static int dc_try_send_ctrl_req(void)
 {
-    uint16 sw_addr = 0;
-    uint16 sw_val = 0;
+    uint8 bit_pos = 0;
 
     if (!g_dc_ctrl_req.valid)
     {
         return 0; // 无待发控制请求
     }
 
-    sw_addr = dc_sw_to_modbus_addr(g_dc_ctrl_req.sw_id);
-    if (sw_addr == 0xFFFF)
+    bit_pos = dc_sw_to_bit_pos(g_dc_ctrl_req.sw_id);
+    if (bit_pos == 0xFF)
     {
         g_dc_ctrl_req.valid = 0;
         g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
@@ -882,8 +934,8 @@ static int dc_try_send_ctrl_req(void)
         return 0; // sw_id 非法，映射失败
     }
 
-    sw_val = g_dc_ctrl_req.onoff ? DC_MODBUS_CTRL_ON : DC_MODBUS_CTRL_OFF;
-    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_COIL, sw_addr, 1, sw_val))
+    /* 05 格式：start_addr=DC_REG_STATUS_1, quantity=bit_pos, value=onoff */
+    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_COIL, DC_REG_STATUS_1, bit_pos, g_dc_ctrl_req.onoff ? 1 : 0))
     {
         return 0; // 发送失败（如 g_dc_req 已有在途请求）
     }
@@ -893,34 +945,10 @@ static int dc_try_send_ctrl_req(void)
 }
 
 /*
- * 尝试发送轮询请求（读寄存器）：
- * - g_dc_force_fast_poll 置位时，立即查询首项（0x0001~0x0002 开关量），轮转归零
- * - 否则按 poll_round_robin 轮转发下一项；节奏由 dc_need_poll_now 保证
+ * 设置主动上报模式：DC 板主动发 01/03
  */
 static int dc_try_send_poll_req(void)
 {
-    static uint8 poll_round_robin = 0; /* 轮转起点，每次成功发送后更新为 (idx+1)%num */
-    uint8 idx = 0;
-    uint8 num = ARRAY_SIZE(g_dc_report_profiles);
-
-    /* 强制快速轮询：控制/超时后优先刷新首项 */
-    if (g_dc_force_fast_poll)
-    {
-        g_dc_force_fast_poll = 0;
-        if (dc_send_request(g_dc_report_profiles[0].func, g_dc_report_profiles[0].start_addr, g_dc_report_profiles[0].quantity, 0))
-        {
-            poll_round_robin = 0;
-            return 1;
-        }
-    }
-
-    /* 按轮转发下一项；节奏由 dc_need_poll_now 保证 */
-    idx = poll_round_robin;
-    if (dc_send_request(g_dc_report_profiles[idx].func, g_dc_report_profiles[idx].start_addr, g_dc_report_profiles[idx].quantity, 0))
-    {
-        poll_round_robin = (uint8)((idx + 1) % num);
-        return 1;
-    }
     return 0;
 }
 
@@ -1051,16 +1079,16 @@ int my_dc_get_data(device_data *out)
 }
 
 /* ========== DC 控制 ACK 机制（BLE 推送 RETURN_xx_xx_OK/FAIL） ========== */
-#define DC_CTRL_ACK_CHECK_MS  500
+#define DC_CTRL_ACK_CHECK_MS  DC_MODBUS_RESP_TIMEOUT_MS /* 与从机应答时限一致 */
 #define DC_CTRL_ACK_MAX_CHECK 3
 
 typedef struct
 {
-    uint8 valid;         // 是否有效
-    uint8 check_count;   // 轮询次数
-    uint8 retry_count;   // 失败重发次数，最多 DC_CTRL_ACK_MAX_CHECK 次
-    char cmd[24];        // 命令
-    char state[8];       // 状态
+    uint8 valid;       // 是否有效
+    uint8 check_count; // 轮询次数
+    uint8 retry_count; // 失败重发次数，最多 DC_CTRL_ACK_MAX_CHECK 次
+    char cmd[24];      // 命令
+    char state[8];     // 状态
 } dc_ctrl_ack_ctx_t;
 
 static dc_ctrl_ack_ctx_t g_dc_ctrl_ack_ctx = {0};
