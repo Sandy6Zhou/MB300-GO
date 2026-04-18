@@ -47,6 +47,8 @@ static uint16_t ble_server_rx_index = 0;
 
 static bool ble_server_send_done = true;
 static bool ble_data_send_enable[2] = {0};
+
+static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable);
 /*************************************************
                   BLE 相关内容
 *************************************************/
@@ -242,8 +244,52 @@ static void get_adv_data(MY_ADV_TYPE adv_type, uint8_t **adv_data, uint8_t *adv_
 
 int my_findmy_adv_enable(u8 enable)
 {
-    // TODO此接口暂未看到有触发过，这里仅打印参数
+    int i = 0;
+    u8 has_conn = 0;
     printf("my_findmy_adv_enable:%d", enable);
+
+    if (enable)
+    {
+        /*
+         * 恢复广播时实时检查连接句柄，避免 connect_id 残留导致恢复到不可连接广播。
+         * 这里仅检查两个“可连接对象”的连接句柄：
+         * - 任一对象已连接 -> 保持不可连接广播（用于连接后状态广播）
+         * - 均未连接      -> 打开可连接广播（供APP发起连接）
+         */
+        has_conn =
+            ((con_adv_obj_hdl[GOOGLE_ADV_TYPE].handle &&
+              app_ble_get_hdl_con_handle(con_adv_obj_hdl[GOOGLE_ADV_TYPE].handle)) ||
+             (con_adv_obj_hdl[APPLE_ADV_TYPE].handle &&
+              app_ble_get_hdl_con_handle(con_adv_obj_hdl[APPLE_ADV_TYPE].handle)))
+                ? 1
+                : 0;
+
+        // 如果有连接，则关闭可连接广播，开启不可连接广播
+        if (has_conn)
+        {
+            for (i = 0; i < CON_ADV_OBJ_MAX_NUM; i++)
+            {
+                start_adv(&con_adv_obj_hdl[i], 0);
+                start_adv(&no_con_adv_obj_hdl[i], 1);
+            }
+        }
+        else
+        {
+            for (i = 0; i < CON_ADV_OBJ_MAX_NUM; i++)
+            {
+                start_adv(&no_con_adv_obj_hdl[i], 0);
+                start_adv(&con_adv_obj_hdl[i], 1);
+            }
+        }
+    }
+    else // 关闭广播
+    {
+        for (i = 0; i < CON_ADV_OBJ_MAX_NUM; i++)
+        {
+            start_adv(&con_adv_obj_hdl[i], 0);
+            start_adv(&no_con_adv_obj_hdl[i], 0);
+        }
+    }
     return 0;
 }
 
@@ -252,12 +298,17 @@ int my_findmy_adv_enable(u8 enable)
 **@param[in] adv_obj_hdl: 广播对象结构体指针
 **@param[in] enable: 0:关闭,1:开启
 *************************************************************************/
-void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable)
+static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable)
 {
     uint8_t *advertising_data = NULL;
     uint8_t *scan_response_data = NULL;
     uint8_t adv_data_len = 0;
     uint8_t scan_rsp_data_len = 0;
+
+    // 句柄为空说明对象尚未初始化，直接返回避免访问空指针
+    if ((adv_obj_hdl == NULL) || (adv_obj_hdl->handle == NULL)) {
+        return;
+    }
 
     // 如果传入的adv_obj_hdl->valid为0，说明对应的对象句柄不需要广播
     if (adv_obj_hdl->valid == 0) {

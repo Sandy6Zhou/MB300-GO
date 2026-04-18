@@ -468,6 +468,9 @@ const int config_delete_link_key          = 1;           //配置是否连接失
         const int config_btctler_le_hw_nums = 5;
     #elif ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN)))
         const int config_btctler_le_hw_nums = 5;
+    #elif ((THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN) && (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN))
+        // RCSP + MY_FINDMY(2可连接+2不可连接)并开时，4个广播对象不够，预留1个资源位
+        const int config_btctler_le_hw_nums = 6;
     #else
         const int config_btctler_le_hw_nums = 4;    //广播对象有几个，这里需要配置成几个(目前两个可连接，两个不可连接)
     #endif

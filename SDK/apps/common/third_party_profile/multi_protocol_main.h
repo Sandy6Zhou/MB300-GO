@@ -35,6 +35,7 @@ extern void multi_protocol_state_update_callback(void *_hdl, uint8_t state, uint
 extern void multi_protocol_tws_sync_send(void);
 
 extern void multi_protocol_bt_ble_enable(u8 enable);
+extern void multi_protocol_rcsp_adv_ota_mode_set(u8 enable);
 
 extern int multi_protocol_bt_ble_connect_num(void);
 #endif

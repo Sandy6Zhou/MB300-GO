@@ -8,7 +8,10 @@
 ************************************************************************************************/
 #include "my_common.h"
 
+extern void multi_protocol_rcsp_adv_ota_mode_set(u8 enable);
+
 static int mb300_sw_cmd_handler(at_cmd_struc* msg);
+static int mb300_ota_mode_handler(at_cmd_struc* msg);
 static int mb300_get_status_handler(at_cmd_struc* msg);
 
 static const at_cmd_attr_t at_cmd_attr_table[] =
@@ -17,6 +20,7 @@ static const at_cmd_attr_t at_cmd_attr_table[] =
     {"MB300_SW_DC",         mb300_sw_cmd_handler},
     {"MB300_SW_USB",        mb300_sw_cmd_handler},
     {"MB300_SW_LED",        mb300_sw_cmd_handler},
+    {"MB300_SW_OTA",        mb300_ota_mode_handler},
     {"MB300_GET_STATUS",    mb300_get_status_handler},
 };
 
@@ -241,6 +245,49 @@ static int mb300_sw_cmd_handler(at_cmd_struc* msg)
         msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_FAIL", msg->parm[0]);
     }
 
+    return BLE_DATA_TYPE_AT_CMD;
+}
+
+/************************************************************************
+**@brief: 处理OTA模式切换指令(MB300_SW_OTA,ON/OFF)
+**@param[in] msg: AT指令结构体指针，包含指令参数和响应缓冲区信息
+**@return: 返回BLE数据类型（AT指令响应类型）
+*************************************************************************/
+static int mb300_ota_mode_handler(at_cmd_struc *msg)
+{
+    uint8 ota_en = 0;
+    uint16 remaining = sizeof(msg->resp_msg);
+
+    if (msg->parm_count != 1)
+    {
+        msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_FAIL", msg->parm[0]);
+        return BLE_DATA_TYPE_AT_CMD;
+    }
+
+    my_log_printf(1, "%s=>%s,%s", __func__, msg->parm[0], msg->parm[1]);
+
+    if (!strcmp(msg->parm[1], "ON"))
+    {
+        ota_en = 1;
+    }
+    else if (!strcmp(msg->parm[1], "OFF"))
+    {
+        ota_en = 0;
+    }
+    else
+    {
+        msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
+        return BLE_DATA_TYPE_AT_CMD;
+    }
+
+    /*
+     * 生效时机说明：
+     * 1) 本指令只切换“后续广播策略”，不会强制断开当前BLE连接。
+     * 2) 若APP当前已连在FEE5(JIMI协议)通道，设置ON后本次连接仍保持FEE5可继续通信。
+     * 3) 需要APP主动断开并再次连接，新的连接才会命中AE00(RCSP协议)用于OTA流程。
+     */
+    multi_protocol_rcsp_adv_ota_mode_set(ota_en);
+    msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
     return BLE_DATA_TYPE_AT_CMD;
 }
 

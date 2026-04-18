@@ -365,7 +365,11 @@ static u8 update_dev_battery_level(void)
 #if CONFIG_DISPLAY_DETAIL_BAT
     master_bat = get_vbat_percent();
 #else
+#if TCFG_SYS_LVD_EN // JIMI_CUSTOM 无电池电量检测
     master_bat = get_self_battery_level() * 10 + 10;
+#else
+    master_bat = 100;
+#endif
 #endif
     if (master_bat > 100) {
         master_bat = 100;

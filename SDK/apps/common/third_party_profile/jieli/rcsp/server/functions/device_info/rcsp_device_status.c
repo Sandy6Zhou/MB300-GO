@@ -439,7 +439,11 @@ static u32 common_function_attr_battery_get(void *priv, u8 attr, u8 *buf, u16 bu
 {
     u32 rlen = 0;
     extern u8 get_vbat_percent(void);
+#if TCFG_SYS_LVD_EN // JIMI_CUSTOM 无电池电量检测
     u8 vbat = get_vbat_percent();
+#else
+    u8 vbat = 100;
+#endif
     rlen = add_one_attr(buf, buf_size, offset, attr, &vbat, sizeof(vbat));
     return rlen;
 }

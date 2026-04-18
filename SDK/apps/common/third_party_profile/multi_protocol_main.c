@@ -35,6 +35,14 @@ typedef struct {
 	const sdp_protocal_item_t  handler sec(.sdp_record_item)
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+/*
+ * 默认关闭RCSP广播，仅在OTA模式显式打开，避免平时与CUSTOM可连接广播竞争入口。
+ * 需要进入OTA时调用 multi_protocol_rcsp_adv_ota_mode_set(1)。
+ */
+static u8 rcsp_adv_ota_mode_enable = 0;
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 
 extern const u8 sdp_spp_service_data[];
 SDP_RECORD_REGISTER(rcsp_sdp_record_item) = {
@@ -375,6 +383,12 @@ void multi_protocol_bt_init(void)
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     rcsp_bt_ble_init();
+
+    // 初始化时，如果OTA模式未开启，则关闭RCSP广播
+    if (!rcsp_adv_ota_mode_enable)
+    {
+        rcsp_bt_ble_adv_enable(0);
+    }
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
@@ -496,7 +510,15 @@ void multi_protocol_bt_ble_disconnect(void)
 void multi_protocol_bt_ble_enable(u8 enable)
 {
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
-    rcsp_bt_ble_adv_enable(enable);
+    // 如果OTA模式开启，则开启RCSP广播
+    if (rcsp_adv_ota_mode_enable)
+    {
+        rcsp_bt_ble_adv_enable(enable);
+    }
+    else
+    {
+        rcsp_bt_ble_adv_enable(0);
+    }
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
     gfps_bt_ble_adv_enable(enable);
@@ -522,6 +544,38 @@ void multi_protocol_bt_ble_enable(u8 enable)
     my_findmy_adv_enable(enable);
 #else
     custom_demo_adv_enable(enable);
+#endif
+#endif
+}
+
+void multi_protocol_rcsp_adv_ota_mode_set(u8 enable)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    // 设置OTA模式
+    rcsp_adv_ota_mode_enable = enable;
+
+    /*
+     * 先切RCSP广播状态：
+     * - OTA模式: 打开RCSP广播
+     * - 普通模式: 关闭RCSP广播
+     * 注：当存在活动连接时，底层可能返回adv_enable失败，这属于协议栈保护行为，
+     * 不代表本接口逻辑失败；通常在连接断开后会按目标模式生效。
+     */
+    rcsp_bt_ble_adv_enable(rcsp_adv_ota_mode_enable);
+    printf("multi_protocol_rcsp_adv_ota_mode_set=%d\n", rcsp_adv_ota_mode_enable);
+#else
+    (void)enable;
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+#if MY_FINDMY_EN
+    /*
+     * OTA窗口打开RCSP广播时，关闭CUSTOM广播，避免入口竞争和底层广播使能失败。
+     * 退出OTA窗口后，恢复CUSTOM广播（恢复可连接/不可连接由my_findmy内部按连接态决定）。
+     */
+    my_findmy_adv_enable(!enable);
+#else
+    custom_demo_adv_enable(!enable);
 #endif
 #endif
 }

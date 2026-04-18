@@ -51,7 +51,11 @@ static u32 target_feature_attr_sys_info(void *priv, u8 attr, u8 *buf, u16 buf_si
     struct _SYS_info sys_info = {0};
 #if (RCSP_MODE != RCSP_MODE_EARPHONE)
     extern u8 get_vbat_percent(void);
+#if TCFG_SYS_LVD_EN // JIMI_CUSTOM 无电池电量检测
     sys_info.bat_lev = get_vbat_percent(); //get_battery_level() / 10;
+#else
+    sys_info.bat_lev = 100;
+#endif
     rcsp_get_max_vol_info(&sys_info.max_vol);
     rcsp_get_cur_dev_vol_info(&sys_info.sys_vol);
 #endif
