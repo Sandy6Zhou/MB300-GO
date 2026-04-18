@@ -15,6 +15,9 @@
 #endif
 
 #include "my_common.h"
+#if TCFG_EQ_ENABLE
+#include "effects/eq_config.h"
+#endif
 
 // 产测指令
 const char FACTORY_CMD_HEADER[] = "AT^GT_CM=";
@@ -26,6 +29,9 @@ extern int bt_modify_name(u8 *new_name);
 
 static int sh_test_led_impl(int argc, char *argv[]);
 static int sh_test_gpio_impl(int argc, char *argv[]);
+#if TCFG_EQ_ENABLE
+static int sh_test_eq_impl(int argc, char *argv[]);
+#endif
 
 /* { visible, command, help, function } */
 CMD_STRUC AT_CMD_INNER[] = {
@@ -288,6 +294,20 @@ int sh_at_test(int argc, char *argv[])
         }
         return sh_test_led_impl(argc - 2, argv + 2);
     }
+    else if (strcmp(szValue, "EQ") == 0)
+    {
+        if (argc < 3)
+        {
+            my_log_printf(1, "TEST EQ: usage TEST EQ <0-6|LIST>");
+            return -1;
+        }
+#if TCFG_EQ_ENABLE
+        return sh_test_eq_impl(argc - 2, argv + 2);
+#else
+        my_log_printf(1, "TEST EQ: TCFG_EQ_ENABLE is 0");
+        return -1;
+#endif
+    }
     else if (strcmp(szValue, "GPIO") == 0)
     {
         if (argc >= 3)
@@ -465,6 +485,45 @@ static int sh_test_led_impl(int argc, char *argv[])
     my_log_printf(1, "TEST LED: invalid");
     return -1;
 }
+
+#if TCFG_EQ_ENABLE
+/**
+ * @brief TEST EQ：SDK 预置系数表 eq_mode_set（Eq0Media / MusicEqBt）
+ * @note 例: TEST EQ LIST / TEST EQ 0 … 6  (0=Normal … 6=Custom)
+ */
+static int sh_test_eq_impl(int argc, char *argv[])
+{
+    int mode = 0;
+
+    if (argc < 1)
+    {
+        my_log_printf(1, "TEST EQ: invalid");
+        return -1;
+    }
+
+    if (CMD_EQUAL2(argv[0], "LIST"))
+    {
+        my_log_printf(1, "0=NORMAL 1=ROCK 2=POP 3=CLASSIC 4=JAZZ 5=COUNTRY 6=CUSTOM");
+        return 0;
+    }
+
+    mode = atoi(argv[0]);
+    if (mode < (int)EQ_MODE_NORMAL || mode >= (int)EQ_MODE_MAX)
+    {
+        my_log_printf(1, "TEST EQ: mode %d out of 0-%d", mode, (int)EQ_MODE_MAX - 1);
+        return -1;
+    }
+
+    if (eq_mode_set((EQ_MODE)mode) != 0)
+    {
+        my_log_printf(1, "TEST EQ: eq_mode_set(%d) failed", mode);
+        return -1;
+    }
+
+    my_log_printf(1, "TEST EQ: mode %d OK", mode);
+    return 0;
+}
+#endif
 
 /************************************************************************
 **@brief: SHELL命令执行体
