@@ -45,7 +45,7 @@
 #define TCFG_FLASH_DEV_SPI_CS_PORT IO_PORTA_07 // CS片选IO
 #endif // TCFG_NORFLASH_DEV_ENABLE
 
-#define TCFG_PWMLED_ENABLE 1 // LED配置
+#define TCFG_PWMLED_ENABLE                        0                // LED配置
 #if TCFG_PWMLED_ENABLE
 #define TCFG_LED_LAYOUT ONE_IO_TWO_LED // 连接方式
 #define TCFG_LED_RED_ENABLE 1 // 红灯(Red)
@@ -161,7 +161,7 @@
 #define TCFG_APP_LINEIN_EN                        0                // LINEIN模式
 #define TCFG_APP_FM_EN 0 // FM模式
 #define TCFG_APP_PC_EN                            0                // PC模式
-#define TCFG_APP_RTC_EN 0 // RTC模式
+#define TCFG_APP_RTC_EN                           1                // RTC模式
 #define TCFG_APP_IIS_EN 0 // IIS模式
 #define TCFG_APP_RECORD_EN 0 // 录音模式
 #define TCFG_APP_SURROUND_SOUND_EN 0 // 环绕声接收模式
