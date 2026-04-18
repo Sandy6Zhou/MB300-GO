@@ -69,6 +69,8 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
     uint8 audio_state; // 当前音频状态 (APP_AUDIO_STATE_xxx)
     int16 max_vol;     // 最大音量
     int vol;           // 音量值，查询/设置复用
+    uint8 day_ok;      // EMS 日数据块 MAGIC NUM 校验结果
+    uint8 alarm_ok;    // EMS 告警数据块 MAGIC NUM 校验结果
 
     memset(resp, 0, sizeof(resp));
 
@@ -238,6 +240,33 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
                 audio_state = app_audio_get_state();
                 app_audio_set_volume(audio_state, (int16)vol, 0);
                 sprintf(resp, "RETURN_VOLUME_SET_OK");
+            }
+        }
+    }
+    else if (CMD_MATCHED2(pParam[0], "EMS"))
+    {
+        // AT^GT_CM=EMS
+        if (nParam < 2)
+        {
+            day_ok = my_evt_day_vm_magic_ok();
+            alarm_ok = my_evt_alarm_vm_magic_ok();
+            sprintf(resp, "RETURN_EMS fifo=%u vm_d=%u vm_a=%u", (unsigned)my_evt_alarm_pending_count(),
+                    (unsigned)day_ok, (unsigned)alarm_ok);
+        }
+        // AT^GT_CM=EMS,FLUSH
+        else if (CMD_MATCHED2(pParam[1], "FLUSH"))
+        {
+            my_evt_flush_vm();
+            day_ok = my_evt_day_vm_magic_ok();
+            alarm_ok = my_evt_alarm_vm_magic_ok();
+
+            if (day_ok && alarm_ok)
+            {
+                sprintf(resp, "RETURN_EMS_FLUSH_OK");
+            }
+            else
+            {
+                sprintf(resp, "RETURN_EMS_FLUSH_FAIL d=%u a=%u", (unsigned)day_ok, (unsigned)alarm_ok);
             }
         }
     }

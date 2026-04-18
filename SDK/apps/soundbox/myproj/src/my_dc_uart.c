@@ -283,6 +283,9 @@ static void dc_update_device_data_cache(void)
     {
         g_dc_dev_data.fault_status |= (1 << 2);
     }
+
+    /* EMS：0x0001 开关节次 + 0x0003 告警上升沿 → RAM/VM（功率累计等后续再接） */
+    my_evt_on_dc_sample(reg_sw, reg_fault);
 }
 
 /*

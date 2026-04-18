@@ -21,7 +21,7 @@ const AdvValidValue_t gDefaultAdvValidValue =
 
 #define DEFAULT_ECDH_G_VALUE    0x83A5         // 默认G值
 
-const  GsmImei_t gDefaultImeiValue = 
+const  GsmImei_t gDefaultImeiValue =
 {
     // 默认IMEI为123456789012345
     .flag = 0,
@@ -84,6 +84,9 @@ void my_param_load_vm_config(void)
         memcpy(data_buff, gConfigParam.gsm_imei.hex, sizeof(gConfigParam.gsm_imei.hex));
         printf("imei not found. Use default:imei value(%s)\n", data_buff);
     }
+
+    /* EMS 事件/告警 outbox */
+    my_evt_store_init();
 }
 
 /************************************************************************
@@ -315,7 +318,7 @@ int my_param_set_Gvalue(char *param)
             }
         }
     }
-    else 
+    else
     {
         return -1;
     }

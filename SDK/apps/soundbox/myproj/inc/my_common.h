@@ -9,6 +9,8 @@
 #include "clock.h"
 #include "sdk_config.h"
 #include "app_config.h"
+#include "audio_config.h"
+#include "my_platform_time.h"
 
 typedef unsigned int    my_task_handle;
 typedef unsigned int    my_queue_t;
@@ -66,6 +68,7 @@ typedef enum
 #include "my_tool.h"
 #include "my_log.h"
 #include "my_vm_param.h"
+#include "my_event_store.h"
 #include "my_led_spi.h"
 #include "my_findmy_protocol.h"
 #include "ble_comu_def.h"
@@ -74,7 +77,6 @@ typedef enum
 #include "my_dc_uart.h"
 #include "my_gpio.h"
 #include "my_cmd_handler.h"
-#include "audio_config.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];
 

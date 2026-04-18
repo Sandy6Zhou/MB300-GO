@@ -61,6 +61,8 @@
 #define     CFG_ADV_VALID_VALUE              37
 #define     CFG_ECDH_G_VALUE                 38
 #define     CFG_IMEI_VALUE                   39
+#define     CFG_EMS_DAY_STATS_BLOB           40 /* 日统计数据块 */
+#define     CFG_EMS_ALARM_FIFO_BLOB          41 /* 告警数据块 */
 
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49
