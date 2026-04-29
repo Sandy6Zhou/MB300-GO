@@ -30,6 +30,18 @@ void my_ble_task(void *p_arg)
                 break;
             }
 
+            case MY_MSG_BLE_REPORT_START:
+            {
+                my_event_report_send_handle();
+                break;
+            }
+
+            case MY_MSG_BLE_REPORT_STOP:
+            {
+                my_event_report_on_disconnect();
+                break;
+            }
+
             default:
                 break;
         }

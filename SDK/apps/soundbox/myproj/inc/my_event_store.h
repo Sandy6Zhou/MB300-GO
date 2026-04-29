@@ -52,6 +52,40 @@ void my_evt_flush_vm(void);
 /** 当前告警 FIFO 条数 */
 int my_evt_alarm_pending_count(void);
 
+/** 连接上报会话：开始/结束（结束时会对 day/alarm 的 RAM 删除统一提交 VM） */
+void my_evt_tx_session_start(void);
+void my_evt_tx_session_stop(void);
+
+/**
+ * 组包下一条 day 扩展上报（FF01，包含 0x09 + 0x800E）：
+ * - 返回 1：已生成一包，等待 ACK
+ * - 返回 0：当前无可发送 day 包
+ */
+int my_evt_prepare_next_day_expansion_packet(uint8 *out_buf, uint16 buf_size, uint16 *out_len);
+
+/**
+ * 处理 day 扩展上报 ACK：
+ * - is_ok=1：删除当前 day 并决定是否继续
+ * - is_ok=0：停止 day 阶段并等待统一提交
+ * 返回 1 表示仍可继续 day 发送，返回 0 表示 day 阶段结束或停止
+ */
+int my_evt_on_day_expansion_ack(uint8 is_ok);
+
+/**
+ * 组包下一条告警标准上报（5C01，可多条）：
+ * - 返回 1：已生成一包，等待 ACK
+ * - 返回 0：当前无可发送告警包
+ */
+int my_evt_prepare_next_alarm_packet(uint8 *out_buf, uint16 buf_size, uint16 *out_len);
+
+/**
+ * 处理告警 ACK：
+ * - is_ok=1：删除本包窗口并决定是否继续
+ * - is_ok=0：停止并等待统一提交
+ * 返回 1 表示可继续发送下一包告警，返回 0 表示告警阶段结束/停止
+ */
+int my_evt_on_alarm_report_ack(uint8 is_ok);
+
 /** VM 日数据块 MAGIC NUM 头校验（通过=1，失败=0） */
 uint8 my_evt_day_vm_magic_ok(void);
 /** VM 告警数据块 MAGIC NUM 头校验（通过=1，失败=0） */

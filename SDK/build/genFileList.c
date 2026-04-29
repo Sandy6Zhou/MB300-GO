@@ -1615,6 +1615,7 @@ c_SRC_FILES += \
     apps/soundbox/myproj/src/my_tool.c \
     apps/soundbox/myproj/src/my_log.c \
     apps/soundbox/myproj/src/my_vm_param.c \
+	apps/soundbox/myproj/src/my_event_report.c \
     apps/soundbox/myproj/src/my_event_store.c \
     apps/soundbox/myproj/src/my_led_spi.c \
     apps/soundbox/myproj/src/ble_comunication.c \

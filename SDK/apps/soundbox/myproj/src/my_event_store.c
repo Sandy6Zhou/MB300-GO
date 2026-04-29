@@ -62,6 +62,32 @@ typedef struct
 
 static my_evt_day_state_t s_day_evt;
 static my_evt_alarm_state_t s_alarm_evt;
+static uint8 s_day_vm_need_commit = 0;   /* day RAM 有删除改动且尚未提交 VM */
+static uint8 s_alarm_vm_need_commit = 0; /* 告警 FIFO RAM 有删除改动且尚未提交 VM */
+
+static void evt_save_day_vm(void);
+static void evt_save_alarm_vm(void);
+
+/*
+ * 连接上报会话上下文：
+ * - day_cursor/day_last_sent：day 记录项扫描指针与最近一次发出的记录项
+ * - day_wait_ack/alarm_wait_ack：day/alarm 等待 ACK
+ * - alarm_last_sent：当前这包 5C01 中实际带了多少条告警，ACK 成功后按这个窗口删除
+ */
+typedef struct
+{
+    uint8 started;  /* 是否已开始会话 */
+
+    uint8 day_cursor;   /* day 记录项扫描指针 */
+    uint8 day_last_sent; /* 最近一次发出的记录项 */
+    uint8 day_wait_ack;  /* day 是否等待 ACK */
+    uint8 day_stopped;   /* day 是否已停止会话 */
+
+    uint16 alarm_last_sent; /* 当前这包 5C01 中实际带了多少条告警，ACK 成功后按这个窗口删除 */
+    uint8 alarm_wait_ack;   /* alarm 等待 ACK */
+} my_evt_tx_ctx_t;
+
+static my_evt_tx_ctx_t s_evt_tx = {0};
 
 /* 置 1 表示下次采样前重置函数内 static 状态（兼容重复 init 场景）。 */
 static uint8 s_sample_state_need_reinit = 1;
@@ -274,6 +300,35 @@ static void evt_alarm_push(uint8 kind, uint32 ts_unix)
     s_alarm_evt.count++;
 }
 
+/** 告警环形队列：返回最多 max_count 条告警记录，不改变队列状态 */
+static int evt_alarm_peek_batch(my_ems_alarm_wire_t *out, uint16 max_count)
+{
+    uint16 i = 0;
+    uint16 actual_count = 0;
+    uint16 idx = 0;
+
+    if (out == NULL || max_count == 0)
+    {
+        return 0;
+    }
+
+    /* 获取当前 FIFO 有效数量。 */
+    actual_count = s_alarm_evt.count;
+    /* 如果有效数量大于最大数量，则截断。 */
+    if (actual_count > max_count)
+    {
+        actual_count = max_count;
+    }
+
+    /* 只拷贝，不删除；真正删除发生在 ACK 成功之后。 */
+    idx = s_alarm_evt.head;
+    for (i = 0; i < actual_count; i++)
+    {
+        out[i] = s_alarm_evt.ring[idx];
+        idx = (uint16)((idx + 1) % MY_EVT_ALARM_CAP);
+    }
+    return actual_count;
+}
 
 // FF01/5C01 明文组包辅助
 #define EVT_BLE_EMS_IOS_SAFE_PKT 180 // iOS 安全包长度
@@ -640,7 +695,10 @@ void my_evt_store_init(void)
     /* 先清运行态，再从 VM 恢复。 */
     memset(&s_day_evt, 0, sizeof(s_day_evt));
     memset(&s_alarm_evt, 0, sizeof(s_alarm_evt));
+    memset(&s_evt_tx, 0, sizeof(s_evt_tx));
     s_alarm_evt.seq_next = 1;
+    s_day_vm_need_commit = 0;
+    s_alarm_vm_need_commit = 0;
     s_sample_state_need_reinit = 1;
 
     evt_load_day_vm();
@@ -775,12 +833,294 @@ void my_evt_flush_vm(void)
 {
     evt_save_day_vm();
     evt_save_alarm_vm();
+    s_day_vm_need_commit = 0;
+    s_alarm_vm_need_commit = 0;
 }
 
 /** 告警环形队列（FIFO）当前有效条数：与 head/tail/count 一致；容量满时策略为丢最旧 */
 int my_evt_alarm_pending_count(void)
 {
     return s_alarm_evt.count;
+}
+
+/** 删除单条 day 记录：仅 RAM 删除，延后到会话收尾时统一写 VM */
+static int evt_day_drop_one(uint8 day_idx)
+{
+    /* 参数检查。 */
+    if (day_idx >= MY_EVT_DAY_SLOT_MAX)
+    {
+        return -1;
+    }
+
+    /* 已删除的记录直接返回。 */
+    if (s_day_evt.records[day_idx].day_unix_utc0 == 0)
+    {
+        return 0;
+    }
+
+    /* 先只从 RAM 删除，延后到会话收尾时统一提交 VM。 */
+    evt_day_record_reset(&s_day_evt.records[day_idx]);
+    s_day_vm_need_commit = 1;
+    return 1;
+}
+
+/** 删除一批告警记录：仅 RAM 删除，延后到会话收尾时统一写 VM */
+static int evt_alarm_drop_batch(uint16 count)
+{
+    uint16 drop = count;
+
+    /* 参数检查。 */
+    if (drop == 0 || s_alarm_evt.count == 0)
+    {
+        return -1;
+    }
+
+    /* 删除数量不能超过当前 FIFO 有效数量。 */
+    if (drop > s_alarm_evt.count)
+    {
+        return -1;
+    }
+
+    /* 只推进 RAM 头指针；VM 留到会话收尾时统一提交。 */
+    s_alarm_evt.head = (uint16)((s_alarm_evt.head + drop) % MY_EVT_ALARM_CAP);
+    s_alarm_evt.count = (uint16)(s_alarm_evt.count - drop);
+    s_alarm_vm_need_commit = 1;
+    return drop;
+}
+
+/** 会话结束/断开/失败收尾时，真正写 flash VM */
+static void evt_commit_vm_if_needed(void)
+{
+    /* 只有会话结束/断开/失败收尾时才真正写 flash，避免每个 ACK 都擦写。 */
+    if (s_day_vm_need_commit)
+    {
+        evt_save_day_vm();
+        s_day_vm_need_commit = 0;
+    }
+
+    if (s_alarm_vm_need_commit)
+    {
+        evt_save_alarm_vm();
+        s_alarm_vm_need_commit = 0;
+    }
+}
+
+/** 连接上报会话：开始/结束（结束时会对 day/alarm 的 RAM 删除统一提交 VM） */
+void my_evt_tx_session_start(void)
+{
+    memset(&s_evt_tx, 0, sizeof(s_evt_tx));
+    s_evt_tx.started = 1;
+}
+
+/** 连接上报会话：结束（结束时会对 day/alarm 的 RAM 删除统一提交 VM） */
+void my_evt_tx_session_stop(void)
+{
+    /* 无论是全发完、ACK 失败还是断连，统一在这里提交已删除的 RAM 改动。 */
+    evt_commit_vm_if_needed();
+    memset(&s_evt_tx, 0, sizeof(s_evt_tx));
+}
+
+/** 组包下一条 day 扩展上报（FF01，包含 0x09 + 0x800E）：
+ * - 返回 1：已生成一包，等待 ACK
+ * - 返回 0：当前无可发送 day 包
+ */
+int my_evt_prepare_next_day_expansion_packet(uint8 *out_buf, uint16 buf_size, uint16 *out_len)
+{
+    uint8 mod09[4] = {0};
+    uint8 mod800e[28] = {0};
+    uint16 off = 1;
+    uint16 payload_len = 0;
+    uint8 idx;
+    my_ems_day_wire_t *day;
+
+    if (out_len != NULL)
+    {
+        *out_len = 0;
+    }
+
+    /* 参数检查。 */
+    if (!s_evt_tx.started || out_buf == NULL || out_len == NULL || buf_size < 2)
+    {
+        return 0;
+    }
+
+    /* 等待 ACK 或已停止时不组包。 */
+    if (s_evt_tx.day_wait_ack || s_evt_tx.day_stopped)
+    {
+        return 0;
+    }
+
+    /* 从当前指针向后扫描，找到第一条有效 day 记录。 */
+    while (s_evt_tx.day_cursor < MY_EVT_DAY_SLOT_MAX)
+    {
+        idx = s_evt_tx.day_cursor;
+        day = &s_day_evt.records[idx];
+        if (day->day_unix_utc0 == 0)
+        {
+            s_evt_tx.day_cursor++;
+            continue;
+        }
+
+        /* FF01 一包只带一条 day：0x09(UTC) + 0x800E(日统计)。 */
+        evt_ble_w32be(mod09, day->day_unix_utc0);
+        if (evt_ble_pack_varint_module(out_buf, buf_size, &off, UTC_TIMESTAMP, mod09, sizeof(mod09)) != 0)
+        {
+            return 0;
+        }
+
+        /* 组 EVENT_DAY_STAT(0x800E) 28B，再作为第二段 TLV 的 payload 追加。 */
+        payload_len = evt_ble_build_day_800e_payload(day, mod800e, sizeof(mod800e));
+        if (payload_len != sizeof(mod800e))
+        {
+            return 0;
+        }
+        /* 组第二段 TLV。 */
+        if (evt_ble_pack_varint_module(out_buf, buf_size, &off, EVENT_DAY_STAT, mod800e, payload_len) != 0)
+        {
+            return 0;
+        }
+
+        /* 组包结束，更新包头长度。 */
+        out_buf[0] = (uint8)(off - 1);
+        *out_len = off;
+        /* 记录当前记录项，并进入等待 ACK 状态。 */
+        s_evt_tx.day_last_sent = idx;
+        s_evt_tx.day_wait_ack = 1;
+        my_log_printf(1, "[EMS] tx day packet idx=%u day=0x%08lx len=%u",
+                      (unsigned)idx, (unsigned long)day->day_unix_utc0, (unsigned)*out_len);
+        return 1;
+    }
+
+    return 0;
+}
+
+/** 处理 day 扩展上报 ACK：
+ * - is_ok=1：删除当前记录项，继续扫描后续 day
+ * - is_ok=0：停止 day 阶段并等待统一提交
+ * 返回 1 表示仍可继续扫描 day，返回 0 表示 day 阶段结束或停止
+ */
+int my_evt_on_day_expansion_ack(uint8 is_ok)
+{
+    int drop_ret;
+
+    /* 检查会话是否已开始，且当前有等待 ACK 的 day 包。 */
+    if (!s_evt_tx.started || !s_evt_tx.day_wait_ack)
+    {
+        return 0;
+    }
+
+    /* 设置 day 等待 ACK 标志为 0，表示当前 day 包已处理。 */
+    s_evt_tx.day_wait_ack = 0;
+    if (!is_ok)
+    {
+        /* day ACK 失败时停止 day 阶段；已删条目会在会话收尾时统一提交 VM。 */
+        s_evt_tx.day_stopped = 1;
+        my_log_printf(1, "[EMS] tx day ack fail");
+        return 0;
+    }
+
+    /* 只有 ACK 成功，才删除刚才发出的那个记录项。 */
+    drop_ret = evt_day_drop_one(s_evt_tx.day_last_sent);
+    my_log_printf(1, "[EMS] tx day ack ok idx=%u drop=%d", (unsigned)s_evt_tx.day_last_sent, drop_ret);
+    s_evt_tx.day_cursor++;
+    return 1;
+}
+
+/** 组包下一条告警标准上报（5C01，可多条）：
+ * - 返回 1：已生成一包，等待 ACK
+ * - 返回 0：当前无可发送告警包
+ */
+int my_evt_prepare_next_alarm_packet(uint8 *out_buf, uint16 buf_size, uint16 *out_len)
+{
+    my_ems_alarm_wire_t alarms[MY_EVT_ALARM_CAP];
+    uint16 total;
+    uint16 i;
+    uint16 off = EVT_STD_ALARM_HDR_SZ;
+    uint16 pay_lim;
+    uint16 sent = 0;
+
+    if (out_len != NULL)
+    {
+        *out_len = 0;
+    }
+    if (!s_evt_tx.started || out_buf == NULL || out_len == NULL || buf_size < EVT_STD_ALARM_HDR_SZ)
+    {
+        return 0;
+    }
+    if (s_evt_tx.alarm_wait_ack)
+    {
+        return 0;
+    }
+
+    out_buf[0] = BLE_STD_REPORT_START;
+    out_buf[1] = 0;
+    out_buf[2] = BLE_COMU_DEV_CODE;
+
+    pay_lim = buf_size;
+    if (pay_lim > (uint16)(EVT_STD_ALARM_HDR_SZ + EVT_STD_ALARM_PL_MAX))
+    {
+        pay_lim = (uint16)(EVT_STD_ALARM_HDR_SZ + EVT_STD_ALARM_PL_MAX);
+    }
+
+    /* 5C01 一包可带多条告警，这里先从 FIFO 头部窥视一个窗口出来组包。 */
+    total = (uint16)evt_alarm_peek_batch(alarms, MY_EVT_ALARM_CAP);
+    for (i = 0; i < total; i++)
+    {
+        if ((uint16)(off + EVT_STD_ALARM_ENTRY_SZ) > pay_lim)
+        {
+            break;
+        }
+        off += evt_ble_w32be(&out_buf[off], alarms[i].ts_unix);
+        off += evt_ble_w16be(&out_buf[off], (uint16)alarms[i].kind);
+        sent++;
+    }
+
+    if (sent == 0)
+    {
+        return 0;
+    }
+
+    out_buf[1] = (uint8)(off - 2);
+    *out_len = off;
+    /* 记录当前包带了多少条，后续 ACK 成功时按这个窗口从 FIFO 头部删除。 */
+    s_evt_tx.alarm_last_sent = sent;
+    s_evt_tx.alarm_wait_ack = 1;
+    my_log_printf(1, "[EMS] tx alarm packet n=%u pending=%u len=%u",
+                  (unsigned)sent, (unsigned)s_alarm_evt.count, (unsigned)*out_len);
+    return 1;
+}
+
+/** 处理告警 ACK：
+ * - is_ok=1：删除本包窗口并决定是否继续
+ * - is_ok=0：停止并等待统一提交
+ * 返回 1 表示可继续发送下一包告警，返回 0 表示告警阶段结束/停止
+ */
+int my_evt_on_alarm_report_ack(uint8 is_ok)
+{
+    int drop_ret;
+
+    /* 检查会话是否已开始，且当前有等待 ACK 的告警包 */
+    if (!s_evt_tx.started || !s_evt_tx.alarm_wait_ack)
+    {
+        return 0;
+    }
+
+    /* 设置告警等待 ACK 标志为 0，表示当前告警包已处理 */
+    s_evt_tx.alarm_wait_ack = 0;
+    if (!is_ok)
+    {
+        /* alarm ACK 失败时停止继续发送；已成功删除的窗口留到会话收尾时统一 commit。 */
+        my_log_printf(1, "[EMS] tx alarm ack fail");
+        s_evt_tx.alarm_last_sent = 0;
+        return 0;
+    }
+
+    /* 只有 ACK 成功，才真正从 FIFO 头部删除本包对应窗口。 */
+    drop_ret = evt_alarm_drop_batch(s_evt_tx.alarm_last_sent);
+    my_log_printf(1, "[EMS] tx alarm ack ok drop=%d left=%u",
+                  drop_ret, (unsigned)s_alarm_evt.count);
+    s_evt_tx.alarm_last_sent = 0;
+    return (s_alarm_evt.count > 0) ? 1 : 0;
 }
 
 uint8 my_evt_day_vm_magic_ok(void)

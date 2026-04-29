@@ -46,8 +46,9 @@ typedef enum
 typedef enum
 {
     MY_TIMER_TEST = 0,
-    MY_TIMER_DC_POLL,       /* DC轮询定时器：100ms，仅蓝牙APP连接时运行 */
-    MY_TIMER_DC_CTRL_ACK,   /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
+    MY_TIMER_DC_POLL,            /* DC轮询定时器：100ms，仅蓝牙APP连接时运行 */
+    MY_TIMER_DC_CTRL_ACK,        /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
+    MY_TIMER_BLE_CONNECT_REPORT, /* 上报延迟定时器：蓝牙本地存储数据上报延时500ms */
     MY_TIMER_MAX_ID,
 } MY_E_TIMER;
 
@@ -57,6 +58,8 @@ typedef enum
     MY_MSG_TEST,
     MY_MSG_UART_RECV,
     MY_MSG_BLE_RX,
+    MY_MSG_BLE_REPORT_START, /* EMS上报开始：由延时定时器投递到BLE线程 */
+    MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
     MY_MSG_DC_POLL_TICK,   /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
     MY_MSG_DC_POLL_START,  /* 蓝牙APP连接：启动 DC 轮询定时器 */
     MY_MSG_DC_POLL_STOP,   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
@@ -76,6 +79,7 @@ typedef enum
 #include "my_ble.h"
 #include "my_dc_uart.h"
 #include "my_gpio.h"
+#include "my_event_report.h"
 #include "my_cmd_handler.h"
 
 extern char *g_my_task_info[MAX_MY_MOD_TYPE];

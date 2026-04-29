@@ -22,7 +22,7 @@
 #define DEV_CUST_UUID       0xFEE5  // 自定义UUID
 #define FLAG_TYPE_VALUE     0x06    // google的flag值
 #define CON_ADV_OBJ_MAX_NUM 2       // 一路google，一路ios
-#define ADV_INTERVAL        3200    // 3200*0.625ms=2000ms
+#define ADV_INTERVAL        800     // 800*0.625ms=500ms
 #define BLE_NOTIFY_SEND_BUF_MAX_SIZE    1024
 
 typedef enum {
@@ -369,11 +369,15 @@ void ble_connect_api(void)
     start_adv(&no_con_adv_obj_hdl[GOOGLE_ADV_TYPE], 1);
     os_time_dly(10); 
     start_adv(&no_con_adv_obj_hdl[APPLE_ADV_TYPE], 1);
+    /* 主动上报不在连接事件里立刻发送，而是延时调度，避免刚连上时首包过早。 */
+    my_event_report_schedule();
 }
 
 void ble_disconnect_api(void)
 {
     my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
+    /* 断开时切到 BLE 线程统一收尾，把本轮的 RAM 清理提交到 VM。 */
+    my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_REPORT_STOP);
     printf("stop no_connect adv obj, start connect adv obj.");
     // 断开ble连接时，设置发送蓝牙数据的标志为false，防止断开后还继续发送
     ble_data_send_enable[GOOGLE_ADV_TYPE] = false;

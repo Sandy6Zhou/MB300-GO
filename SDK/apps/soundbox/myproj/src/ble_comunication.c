@@ -399,6 +399,52 @@ void ble_comu_response_or_expansion_cmd(uint16 type, uint8 *str_data, uint8 len)
     ble_comu_send_packet(type, out_data, send_len);
 }
 
+static void ble_handle_std_alarm_ack(const uint8 *data, uint16 len)
+{
+    uint8 is_ok = 0; //ACK结果
+
+    /* 至少要有 0x8A + len + dev_code + status 这 4 个字节。 */
+    if (data == NULL || len < 4)
+    {
+        return;
+    }
+    /* 不是标准告警 ACK 起始字节时，直接忽略。 */
+    if (data[0] != BLE_STD_REPORT_START)
+    {
+        return;
+    }
+
+    /* 5C01 ACK：status==0 表示 APP 已确认收到这一包标准告警。 */
+    is_ok = (data[3] == 0x00) ? 1 : 0;
+    my_log_printf(1, "[EMS] std alarm ack status=%u", (unsigned)data[3]);
+    /* ACK 结果继续交给 EMS 历史上报阶段机，决定是否删 FIFO 并发送下一包。 */
+    my_event_report_on_std_alarm_ack(is_ok);
+}
+
+static void ble_handle_expansion_ack(const uint8 *data, uint16 len)
+{
+    uint8 is_ok = 0; //ACK结果
+
+    /* FF01 ACK 至少要有 1 字节业务载荷，供上层判断确认结果。 */
+    if (data == NULL || len == 0)
+    {
+        return;
+    }
+
+    /* FF01 应答：业务上约定 payload[0]==0 代表 APP 已确认收到这一包扩展模块。 */
+    if (data[0] == 0x00)
+    {
+        is_ok = 1;
+        my_log_printf(1, "[EMS] expansion ack ok");
+    }
+    else
+    {
+        my_log_printf(1, "[EMS] expansion ack unexpected first=0x%x", data[0]);
+    }
+    /* ACK 结果继续交给 EMS 历史上报阶段机，决定是否推进到下一条 day/alarm。 */
+    my_event_report_on_expansion_ack(is_ok);
+}
+
 /************************************************************************
 **@brief: 解析并处理对应的AT指令函数并发送应答数据
 **@param[in] data:  接收到的数据
@@ -489,7 +535,15 @@ void ble_comu_app_handle(uint32 type, const uint8 *data, uint16 len)
 
                 case BLE_DATA_TYPE_EXPANSION_MODULE:    //扩展模块的应答,无需处理
                 {
-                    my_log_printf(1, "rev expansion response");
+                    /* 连接后的 day 历史走 FF01，这里负责把 APP ACK 转给 day 阶段机。 */
+                    ble_handle_expansion_ack(dec_buf, len);
+                }
+                break;
+
+                case BLE_DATA_TYPE_STD_ALARM_REPORT:
+                {
+                    /* 告警历史走 5C01，这里负责把 APP ACK 转给 alarm 阶段机。 */
+                    ble_handle_std_alarm_ack(dec_buf, len);
                 }
                 break;
 
