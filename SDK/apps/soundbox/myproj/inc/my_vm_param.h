@@ -17,6 +17,7 @@
 
 #define GSM_IMEI_LENGTH                     15
 #define DEV_NAME_USE_IMEI_POS               11 // IMEI后4位
+#define DEV_SN_LENGTH                       15
 
 typedef struct /* 存储的LICENSE GG信息 */
 {
@@ -42,6 +43,12 @@ typedef struct /* 存储的IMEI信息 */
     uint8 hex[GSM_IMEI_LENGTH];
 }GsmImei_t;
 
+typedef struct /* 存储的SN信息 */
+{
+    uint8 flag;
+    uint8 hex[DEV_SN_LENGTH];
+}DevSn_t;
+
 typedef struct
 {
     lic_gg_struct               lic_gg;
@@ -49,6 +56,7 @@ typedef struct
     AdvValidValue_t             adv_valid_value;
     uint16                      ECDH_GValue;
     GsmImei_t                   gsm_imei;
+    DevSn_t                     dev_sn;
 } ConfigParamStruct;
 
 extern ConfigParamStruct    gConfigParam;
@@ -63,4 +71,6 @@ int my_param_set_Gvalue(char *param);
 const uint16 my_param_get_Gvalue(void);
 int my_param_set_imei(char *param, uint8 len);
 const GsmImei_t *my_param_get_imei(void);
+int my_param_set_sn(char *param, uint8 len);
+const DevSn_t *my_param_get_sn(void);
 #endif

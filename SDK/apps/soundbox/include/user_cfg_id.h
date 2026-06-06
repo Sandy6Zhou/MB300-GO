@@ -64,6 +64,9 @@
 #define     CFG_EMS_DAY_STATS_BLOB           40 /* 日统计数据块 */
 #define     CFG_EMS_ALARM_FIFO_BLOB          41 /* 告警数据块 */
 
+#define     VM_SN_ADDR                       46 //设备SN(15位)
+#define     VM_MAC_ADDR                      47 //蓝牙MAC地址
+
 #define     CFG_RCSP_ADV_EQ_DATA_SETTING     48
 #define     CFG_RCSP_ADV_EQ_MODE_SETTING     49
 #define     CFG_RCSP_ADV_HIGH_LOW_VOL        50

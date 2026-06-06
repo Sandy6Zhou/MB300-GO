@@ -392,10 +392,10 @@ void cfg_file_parse(u8 idx)
 #endif
 #endif
         do {
-            ret = syscfg_read(CFG_BT_MAC_ADDR, mac_buf, 6);
+            ret = syscfg_read(VM_MAC_ADDR, mac_buf, 6);
             if ((ret != 6) || !memcmp(mac_buf, mac_buf_tmp, 6) || !memcmp(mac_buf, mac_buf_tmp2, 6)) {
                 get_random_number(mac_buf, 6);
-                syscfg_write(CFG_BT_MAC_ADDR, mac_buf, 6);
+                syscfg_write(VM_MAC_ADDR, mac_buf, 6);
             }
         } while (0);
 
@@ -457,6 +457,29 @@ int bt_modify_name(u8 *new_name)
         return 1;
     }
     return 0;
+}
+
+int bt_modify_mac(u8 *new_mac)
+{
+    int ret = 0;
+    u8 ble_mac[6];
+
+    if (new_mac == NULL) {
+        return 0;
+    }
+
+    ret = syscfg_write(VM_MAC_ADDR, new_mac, 6);
+    if (ret != 6) {
+        log_error("mdy_mac fail, syscfg_write ret=%d\n", ret);
+        return 0;
+    }
+
+    bt_update_mac_addr(new_mac);
+    lmp_hci_write_local_address(new_mac);
+    bt_make_ble_address(ble_mac, new_mac);
+    le_controller_set_mac(ble_mac);
+    log_info("mdy_mac sucess\n");
+    return 1;
 }
 
 

@@ -58,7 +58,7 @@ uint8 string_check_is_hex_str(const char* str);
 
 uint8 hexstr_to_hex(uint8 *dest, uint8 dest_size, const char *src);
 
-void hex2hexstr(uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len);
+void hex2hexstr(const uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len);
 
 uint8 string_check_is_number(uint8 flag, const char* str);
 

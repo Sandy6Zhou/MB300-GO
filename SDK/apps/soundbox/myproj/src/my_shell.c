@@ -22,10 +22,15 @@
 // 产测指令
 const char FACTORY_CMD_HEADER[] = "AT^GT_CM=";
 char FACTORY_CMD_RETURN[] = "RETURN_";
+static uint8 g_factory_test_mode = 0; // 1=测试模式，DC deinit时保留串口
+
+uint8 my_factory_test_mode_get(void)
+{
+    return g_factory_test_mode;
+}
 
 // 替换蓝牙名称中IMEI后4位
 static void my_sync_bt_name_with_imei_last4(const char *imei);
-extern int bt_modify_name(u8 *new_name);
 
 static int sh_test_led_impl(int argc, char *argv[]);
 static int sh_test_gpio_impl(int argc, char *argv[]);
@@ -55,222 +60,488 @@ CMD_STRUC AT_CMD_INNER[] = {
     {0, NULL,        NULL,                      NULL}
 };
 
-//AT^GT_CM=
+typedef void (*factory_cmd_handler_t)(char *resp, int resp_len, char **pParam, int nParam);
+
+typedef struct
+{
+    const char *cmd;
+    factory_cmd_handler_t handler;
+} factory_cmd_entry_t;
+
+static void factory_cmd_ff(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const lic_ff_struct *lic_ff;
+    uint8 data_buff[64] = {0};
+
+    if (nParam < 2)
+    {
+        lic_ff = my_param_get_ff();
+        if (lic_ff->flag == FLAG_VALID)
+        {
+            hex2hexstr(lic_ff->hex, LICENSE_FF_STR_LEN / 2, data_buff, sizeof(data_buff));
+            snprintf(resp, resp_len, "RETURN_FF:%s", data_buff);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_FF_FAIL");
+        }
+    }
+    else
+    {
+        my_param_set_ff(pParam[1], strlen(pParam[1]));
+        snprintf(resp, resp_len, "RETURN_FF_SET_OK");
+    }
+}
+
+static void factory_cmd_gg(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const lic_gg_struct *lic_gg;
+    uint8 data_buff[64] = {0};
+
+    if (nParam < 2)
+    {
+        lic_gg = my_param_get_gg();
+        if (lic_gg->flag == FLAG_VALID)
+        {
+            hex2hexstr(lic_gg->hex, LICENSE_GG_STR_LEN / 2, data_buff, sizeof(data_buff));
+            snprintf(resp, resp_len, "RETURN_GG:%s", data_buff);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_GG_FAIL");
+        }
+    }
+    else
+    {
+        my_param_set_gg(pParam[1], strlen(pParam[1]));
+        snprintf(resp, resp_len, "RETURN_GG_SET_OK");
+    }
+}
+
+static void factory_cmd_jgtag(char *resp, int resp_len, char **pParam, int nParam)
+{
+    int ret;
+
+    if (nParam == 2)
+    {
+        ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
+        if (ret == 0)
+        {
+            snprintf(resp, resp_len, "RETURN_JGTAG_%s_OK", pParam[1]);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_JGTAG_%s_FAIL", pParam[1]);
+        }
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_JGTAG_SET_FAIL");
+    }
+}
+
+static void factory_cmd_jatag(char *resp, int resp_len, char **pParam, int nParam)
+{
+    int ret;
+
+    if (nParam == 2)
+    {
+        ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
+        if (ret == 0)
+        {
+            snprintf(resp, resp_len, "RETURN_JATAG_%s_OK", pParam[1]);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_JATAG_%s_FAIL", pParam[1]);
+        }
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_JATAG_SET_FAIL");
+    }
+}
+
+static void factory_cmd_modifygv(char *resp, int resp_len, char **pParam, int nParam)
+{
+    uint16 ecdh_gvalue;
+    int ret;
+
+    if (nParam < 2)
+    {
+        ecdh_gvalue = my_param_get_Gvalue();
+        snprintf(resp, resp_len, "RETURN_GV:%d (%04X)", ecdh_gvalue, ecdh_gvalue);
+    }
+    else
+    {
+        ret = my_param_set_Gvalue(pParam[1]);
+        if (ret == 0)
+        {
+            snprintf(resp, resp_len, "RETURN_MODIFYGV_SET_OK");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_MODIFYGV_SET_FAIL");
+        }
+    }
+}
+
+static void factory_cmd_imei(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const GsmImei_t *gsmImei;
+    uint8 data_buff[64] = {0};
+    int ret;
+
+    if (nParam < 2)
+    {
+        gsmImei = my_param_get_imei();
+        if (gsmImei->flag == FLAG_VALID)
+        {
+            memcpy(data_buff, gsmImei->hex, sizeof(gsmImei->hex));
+            snprintf(resp, resp_len, "RETURN_IMEI:%s", data_buff);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_IMEI_FAIL");
+        }
+    }
+    else
+    {
+        ret = my_param_set_imei(pParam[1], strlen(pParam[1]));
+        if (ret == 0)
+        {
+            my_sync_bt_name_with_imei_last4(pParam[1]);
+            snprintf(resp, resp_len, "RETURN_IMEI_SET_OK");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_IMEI_SET_FAIL");
+        }
+    }
+}
+
+static void factory_cmd_sn(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const DevSn_t *dev_sn;
+    uint8 data_buff[64] = {0};
+    int ret;
+
+    if (nParam < 2)
+    {
+        dev_sn = my_param_get_sn();
+        if (dev_sn->flag == FLAG_VALID)
+        {
+            memcpy(data_buff, dev_sn->hex, sizeof(dev_sn->hex));
+            data_buff[DEV_SN_LENGTH] = '\0';
+            snprintf(resp, resp_len, "RETURN_SN:%s", data_buff);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_SN_FAIL");
+        }
+    }
+    else
+    {
+        ret = my_param_set_sn(pParam[1], strlen(pParam[1]));
+        if (ret == 0)
+        {
+            snprintf(resp, resp_len, "RETURN_SN_SET_OK");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_SN_SET_FAIL");
+        }
+    }
+}
+
+static void factory_cmd_send_status(char *resp, int resp_len, char **pParam, int nParam)
+{
+    if (nParam < 2)
+    {
+        my_send_all_status_handle();
+        snprintf(resp, resp_len, "RETURN_SEND_STATUS_OK");
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_SEND_STATUS_FAIL");
+    }
+}
+
+static void factory_cmd_volume(char *resp, int resp_len, char **pParam, int nParam)
+{
+    uint8 audio_state;
+    int16 max_vol;
+    int vol;
+
+    if (nParam < 2)
+    {
+        audio_state = app_audio_get_state();
+        vol = app_audio_get_volume(audio_state);
+        max_vol = app_audio_get_max_volume();
+        snprintf(resp, resp_len, "RETURN_VOLUME:%d (max:%d)", (int)vol, (int)max_vol);
+    }
+    else
+    {
+        vol = atoi(pParam[1]);
+        max_vol = app_audio_get_max_volume();
+        if (vol < 0 || vol > (int)max_vol)
+        {
+            snprintf(resp, resp_len, "RETURN_VOLUME_SET_FAIL");
+        }
+        else
+        {
+            audio_state = app_audio_get_state();
+            app_audio_set_volume(audio_state, (int16)vol, 0);
+            snprintf(resp, resp_len, "RETURN_VOLUME_SET_OK");
+        }
+    }
+}
+
+static void factory_cmd_ems(char *resp, int resp_len, char **pParam, int nParam)
+{
+    uint8 day_ok;
+    uint8 alarm_ok;
+
+    if (nParam < 2)
+    {
+        day_ok = my_evt_day_vm_magic_ok();
+        alarm_ok = my_evt_alarm_vm_magic_ok();
+        snprintf(resp, resp_len, "RETURN_EMS fifo=%u vm_d=%u vm_a=%u",
+                 (unsigned)my_evt_alarm_pending_count(), (unsigned)day_ok, (unsigned)alarm_ok);
+    }
+    else if (CMD_MATCHED2(pParam[1], "FLUSH"))
+    {
+        my_evt_flush_vm();
+        day_ok = my_evt_day_vm_magic_ok();
+        alarm_ok = my_evt_alarm_vm_magic_ok();
+        if (day_ok && alarm_ok)
+        {
+            snprintf(resp, resp_len, "RETURN_EMS_FLUSH_OK");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_EMS_FLUSH_FAIL d=%u a=%u", (unsigned)day_ok, (unsigned)alarm_ok);
+        }
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_EMS_FAIL");
+    }
+}
+
+static void factory_cmd_version(char *resp, int resp_len, char **pParam, int nParam)
+{
+    if (nParam < 2)
+    {
+        snprintf(resp, resp_len, "RETURN_VERSION:%s", sdk_version_info_get());
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_VERSION_SET_FAIL");
+    }
+}
+
+static void factory_cmd_led(char *resp, int resp_len, char **pParam, int nParam)
+{
+    if (nParam < 2)
+    {
+        my_led_mode_start(3, LED_MAX_PIXELS);
+        snprintf(resp, resp_len, "RETURN_LED_OK");
+    }
+    else if (CMD_MATCHED2(pParam[1], "STOP"))
+    {
+        my_led_mode_stop();
+        snprintf(resp, resp_len, "RETURN_LED_STOP_OK");
+    }
+    else
+    {
+        int pixels = atoi(pParam[1]);
+        if (pixels <= 0)
+        {
+            snprintf(resp, resp_len, "RETURN_LED_SET_FAIL");
+        }
+        else
+        {
+            my_led_mode_start(3, (uint8)pixels);
+            snprintf(resp, resp_len, "RETURN_LED_OK");
+        }
+    }
+}
+
+static void factory_cmd_spk(char *resp, int resp_len, char **pParam, int nParam)
+{
+    // AT^GT_CM=SPK      -> 播放按键提示音
+    // AT^GT_CM=SPK,STOP -> 停止提示音
+    if (nParam >= 2 && CMD_MATCHED2(pParam[1], "STOP"))
+    {
+        tone_player_stop();
+        snprintf(resp, resp_len, "RETURN_SPK_STOP_OK");
+        return;
+    }
+
+    if (play_tone_file(get_tone_files()->overload) == 0)
+    {
+        snprintf(resp, resp_len, "RETURN_SPK_OK");
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_SPK_FAIL");
+    }
+}
+
+static void factory_cmd_test(char *resp, int resp_len, char **pParam, int nParam)
+{
+    // AT^GT_CM=TEST      -> 进入测试模式并执行deinit（仅停轮询，保留串口）
+    // AT^GT_CM=TEST,EXIT -> 退出测试模式
+    if (nParam < 2)
+    {
+        g_factory_test_mode = 1;
+        my_dc_uart_deinit(); // 进入测试模式后，停止DC串口轮询，保留串口
+        snprintf(resp, resp_len, "RETURN_TEST_OK");
+    }
+    else if (nParam == 2 && CMD_MATCHED2(pParam[1], "EXIT"))
+    {
+        g_factory_test_mode = 0; // 退出测试模式
+        snprintf(resp, resp_len, "RETURN_TEST_EXIT_OK");
+    }
+    else
+    {
+        snprintf(resp, resp_len, "RETURN_TEST_FAIL");
+    }
+}
+
+static void factory_cmd_reset(char *resp, int resp_len, char **pParam, int nParam)
+{
+    // AT^GT_CM=RESET -> 软复位
+    if (nParam >= 2)
+    {
+        snprintf(resp, resp_len, "RETURN_RESET_FAIL");
+        return;
+    }
+
+    snprintf(resp, resp_len, "RETURN_RESET_OK");
+    cpu_reset();
+}
+
+static void factory_cmd_dctest(char *resp, int resp_len, char **pParam, int nParam)
+{
+    // AT^GT_CM=DCTEST -> 触发DC串口控制请求流程
+    if (nParam >= 2)
+    {
+        snprintf(resp, resp_len, "RETURN_DCTEST_FAIL");
+        return;
+    }
+
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_CTRL_REQ);
+    // snprintf(resp, resp_len, "RETURN_DCTEST_OK"); //在DC通过日志打印
+}
+
+static void factory_cmd_mac(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const uint8 *mac;
+    uint8 new_mac[6];
+    uint8 mac_air_order[7];
+    int ret;
+    uint8 hex_len;
+
+    // AT^GT_CM=MAC
+    if (nParam < 2)
+    {
+        mac = bt_get_mac_addr();
+        // 统一按手机/扫描工具显示顺序输出（高字节在前）
+        snprintf(resp, resp_len, "RETURN_MAC:%02X%02X%02X%02X%02X%02X",
+                 mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+        return;
+    }
+
+    // AT^GT_CM=MAC,001122334455
+    if (pParam[1] == NULL || strlen(pParam[1]) != 12)
+    {
+        my_log_printf(1, "MAC set fail: invalid len, in=%s", pParam[1] ? pParam[1] : "NULL");
+        snprintf(resp, resp_len, "RETURN_MAC_SET_FAIL");
+        return;
+    }
+
+    // 输入按手机显示顺序解析，再反转为内部存储顺序
+    hex_len = hexstr_to_hex(mac_air_order, sizeof(mac_air_order), pParam[1]);
+    if (hex_len != 6)
+    {
+        my_log_printf(1, "MAC set fail: hex parse err, in=%s hex_len=%d", pParam[1], hex_len);
+        snprintf(resp, resp_len, "RETURN_MAC_SET_FAIL");
+        return;
+    }
+    new_mac[0] = mac_air_order[5];
+    new_mac[1] = mac_air_order[4];
+    new_mac[2] = mac_air_order[3];
+    new_mac[3] = mac_air_order[2];
+    new_mac[4] = mac_air_order[1];
+    new_mac[5] = mac_air_order[0];
+
+    ret = bt_modify_mac(new_mac);
+    if (ret == 0)
+    {
+        my_log_printf(1, "MAC set fail: bt_modify_mac ret=%d", ret);
+        snprintf(resp, resp_len, "RETURN_MAC_SET_FAIL");
+        return;
+    }
+
+    my_log_printf(1, "MAC set ok: in=%s vm=[%02X %02X %02X %02X %02X %02X]",
+                  pParam[1], new_mac[0], new_mac[1], new_mac[2], new_mac[3], new_mac[4], new_mac[5]);
+    snprintf(resp, resp_len, "RETURN_MAC_SET_OK");
+}
+
+static const factory_cmd_entry_t g_factory_cmd_table[] = {
+    {"FF",          factory_cmd_ff         },
+    {"GG",          factory_cmd_gg         },
+    {"JGTAG",       factory_cmd_jgtag      },
+    {"JATAG",       factory_cmd_jatag      },
+    {"MODIFYGV",    factory_cmd_modifygv   },
+    {"IMEI",        factory_cmd_imei       },
+    {"SN",          factory_cmd_sn         },
+    {"SEND_STATUS", factory_cmd_send_status},
+    {"VOLUME",      factory_cmd_volume     },
+    {"EMS",         factory_cmd_ems        },
+    {"VERSION",     factory_cmd_version    },
+    {"LED",         factory_cmd_led        },
+    {"SPK",         factory_cmd_spk        },
+    {"MAC",         factory_cmd_mac        },
+    {"TEST",        factory_cmd_test       },
+    {"RESET",       factory_cmd_reset      },
+    {"DCTEST",      factory_cmd_dctest     },
+    {NULL,          NULL                   },
+};
+
+// AT^GT_CM=
 char *my_handle_at_factory_cmd(char **pParam, int nParam)
 {
     static char resp[256];
-    char *p = resp;
-    const lic_ff_struct *lic_ff;
-    const lic_gg_struct *lic_gg;
-    uint16 ECDH_GValue;
-    uint8 data_buff[64] = {0};
-    const GsmImei_t *gsmImei;
-    int ret;
-    uint8 audio_state; // 当前音频状态 (APP_AUDIO_STATE_xxx)
-    int16 max_vol;     // 最大音量
-    int vol;           // 音量值，查询/设置复用
-    uint8 day_ok;      // EMS 日数据块 MAGIC NUM 校验结果
-    uint8 alarm_ok;    // EMS 告警数据块 MAGIC NUM 校验结果
+    int i;
+    int cmd_idx = 0;
 
     memset(resp, 0, sizeof(resp));
 
-    if (CMD_MATCHED2(pParam[0], "FF"))
+    if (nParam <= 0 || pParam[0] == NULL || pParam[0][0] == '\0')
     {
-        // AT^GT_CM=FF
-        if (nParam < 2)
-        {
-            lic_ff = my_param_get_ff();
-            if (lic_ff->flag == FLAG_VALID)
-            {
-                hex2hexstr(lic_ff->hex, LICENSE_FF_STR_LEN / 2, data_buff, sizeof(data_buff));
-                sprintf(resp, "RETURN_FF:%s", data_buff);
-            }
-            else
-            {
-                sprintf(resp, "RETURN_FF");
-            }
-        }
-        // AT^GT_CM=FF,xxxx
-        else
-        {
-            my_param_set_ff(pParam[1], strlen(pParam[1]));
-            sprintf(resp, "RETURN_FF_SET_OK");
-        }
+        snprintf(resp, sizeof(resp), "RETURN_INVALID_CMD");
+        return resp;
     }
-    else if (CMD_MATCHED2(pParam[0], "GG"))
-    {
-        // AT^GT_CM=GG
-        if (nParam < 2)
-        {
-            lic_gg = my_param_get_gg();
-            if (lic_gg->flag == FLAG_VALID)
-            {
-                hex2hexstr(lic_gg->hex, LICENSE_GG_STR_LEN / 2, data_buff, sizeof(data_buff));
-                sprintf(resp, "RETURN_GG:%s", data_buff);
-            }
-            else
-            {
-                sprintf(resp, "RETURN_GG");
-            }
-        }
-        // AT^GT_CM=GG,xxxx
-        else
-        {
-            my_param_set_gg(pParam[1], strlen(pParam[1]));
-            sprintf(resp, "RETURN_GG_SET_OK");
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "JGTAG"))
-    {
-        // AT^GT_CM=JGTAG,ON/OFF
-        if (nParam == 2)
-        {
-            ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
-            if (ret == 0) {
-                sprintf(resp, "RETURN_JGTAG_%s_OK", pParam[1]);
-            }else {
-                sprintf(resp, "RETURN_JGTAG_%s_FAIL", pParam[1]);
-            }
-        }
-        else
-        {
-            sprintf(resp, "RETURN_JGTAG_SET_FAIL");
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "JATAG"))
-    {
-        // AT^GT_CM=JATAG,ON/OFF
-        if (nParam == 2)
-        {
-            ret = my_param_set_jgtag_or_jatag(pParam[0], pParam[1]);
-            if (ret == 0) {
-                sprintf(resp, "RETURN_JATAG_%s_OK", pParam[1]);
-            }else {
-                sprintf(resp, "RETURN_JATAG_%s_FAIL", pParam[1]);
-            }
-        }
-        else
-        {
-            sprintf(resp, "RETURN_JATAG_SET_FAIL");
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "MODIFYGV"))
-    {
-        // AT^GT_CM=MODIFYGV
-        if (nParam < 2)
-        {
-            ECDH_GValue = my_param_get_Gvalue();
-            sprintf(resp, "RETURN_GV:%d (%04X)", ECDH_GValue, ECDH_GValue);
-        }
-        // AT^GT_CM=MODIFYGV,xxxx
-        else
-        {
-            ret = my_param_set_Gvalue(pParam[1]);
-            if (ret == 0){
-                sprintf(resp, "RETURN_MODIFYGV_SET_OK");
-            } else {
-                sprintf(resp, "RETURN_MODIFYGV_SET_FAIL");
-            }
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "IMEI"))
-    {
-        // AT^GT_CM=IMEI
-        if (nParam < 2)
-        {
-            gsmImei = my_param_get_imei();
-            if (gsmImei->flag == FLAG_VALID)
-            {
-                memcpy(data_buff, gsmImei->hex, sizeof(gsmImei->hex));
-                sprintf(resp, "RETURN_IMEI:%s", data_buff);
-            }
-            else
-            {
-                sprintf(resp, "RETURN_IMEI");
-            }
-        }
-        // AT^GT_CM=IMEI,xxxx
-        else
-        {
-            ret = my_param_set_imei(pParam[1], strlen(pParam[1]));
-            if (ret == 0){
-                my_sync_bt_name_with_imei_last4(pParam[1]);
-                sprintf(resp, "RETURN_IMEI_SET_OK");
-            } else {
-                sprintf(resp, "RETURN_IMEI_SET_FAIL");
-            }
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "SEND_STATUS")) //测试用
-    {
-        // AT^GT_CM=SEND_STATUS
-        if (nParam < 2)
-        {
-            // TODO 后续定时更新数据的话，调用这个接口
-            my_send_all_status_handle();
-            sprintf(resp, "RETURN_SEND_STATUS_OK");
-        }
-        else
-        {
-            sprintf(resp, "RETURN_SEND_STATUS_FAIL");
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "VOLUME"))
-    {
-        // AT^GT_CM=VOLUME 查询
-        if (nParam < 2)
-        {
-            audio_state = app_audio_get_state();
-            vol = app_audio_get_volume(audio_state);
-            max_vol = app_audio_get_max_volume();
-            sprintf(resp, "RETURN_VOLUME:%d (max:%d)", (int)vol, (int)max_vol);
-        }
-        // AT^GT_CM=VOLUME,volume 设置
-        else
-        {
-            vol = atoi(pParam[1]);
-            max_vol = app_audio_get_max_volume();
 
-            if (vol < 0 || vol > (int)max_vol)
-            {
-                sprintf(resp, "RETURN_VOLUME_SET_FAIL");
-            }
-            else
-            {
-                audio_state = app_audio_get_state();
-                app_audio_set_volume(audio_state, (int16)vol, 0);
-                sprintf(resp, "RETURN_VOLUME_SET_OK");
-            }
-        }
-    }
-    else if (CMD_MATCHED2(pParam[0], "EMS"))
+    // 兼容 AT^GT_CM=PCBA,XXX... 形式：跳过PCBA前缀再分发命令
+    if (nParam >= 2 && CMD_MATCHED2(pParam[0], "PCBA"))
     {
-        // AT^GT_CM=EMS
-        if (nParam < 2)
-        {
-            day_ok = my_evt_day_vm_magic_ok();
-            alarm_ok = my_evt_alarm_vm_magic_ok();
-            sprintf(resp, "RETURN_EMS fifo=%u vm_d=%u vm_a=%u", (unsigned)my_evt_alarm_pending_count(),
-                    (unsigned)day_ok, (unsigned)alarm_ok);
-        }
-        // AT^GT_CM=EMS,FLUSH
-        else if (CMD_MATCHED2(pParam[1], "FLUSH"))
-        {
-            my_evt_flush_vm();
-            day_ok = my_evt_day_vm_magic_ok();
-            alarm_ok = my_evt_alarm_vm_magic_ok();
+        cmd_idx = 1;
+    }
 
-            if (day_ok && alarm_ok)
-            {
-                sprintf(resp, "RETURN_EMS_FLUSH_OK");
-            }
-            else
-            {
-                sprintf(resp, "RETURN_EMS_FLUSH_FAIL d=%u a=%u", (unsigned)day_ok, (unsigned)alarm_ok);
-            }
+    for (i = 0; g_factory_cmd_table[i].cmd != NULL; i++)
+    {
+        if (CMD_MATCHED2(pParam[cmd_idx], g_factory_cmd_table[i].cmd))
+        {
+            g_factory_cmd_table[i].handler(resp, sizeof(resp), &pParam[cmd_idx], nParam - cmd_idx);
+            return resp;
         }
     }
 
+    snprintf(resp, sizeof(resp), "RETURN_UNSUPPORTED_CMD");
     return resp;
 }
 

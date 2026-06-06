@@ -26,7 +26,13 @@ typedef struct {
     cmdproc proc;
 }CMD_STRUC;
 
+extern const uint8 *bt_get_mac_addr(void);
+extern void bt_update_mac_addr(uint8 *addr);
+extern int bt_modify_mac(u8 *new_mac);
+
 int sh_at_test(int argc, char *argv[]);
+
+uint8 my_factory_test_mode_get(void);
 
 void my_parse_cmd_line(char *cmdline, char flag, int *argc, char **argv);
 

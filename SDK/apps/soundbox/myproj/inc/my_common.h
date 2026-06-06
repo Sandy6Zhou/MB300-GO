@@ -11,6 +11,10 @@
 #include "app_config.h"
 #include "audio_config.h"
 #include "my_platform_time.h"
+#include "app_version.h"
+#include "app_tone.h"
+#include "asm/efuse.h"
+#include "boot.h"
 
 typedef unsigned int    my_task_handle;
 typedef unsigned int    my_queue_t;

@@ -28,6 +28,12 @@ const  GsmImei_t gDefaultImeiValue =
     .hex = {'1','2','3','4','5','6','7','8','9','0','1','2','3','4','5'}
 };
 
+const DevSn_t gDefaultSnValue =
+{
+    .flag = 0,
+    .hex = {'0','0','0','0','0','0','0','0','0','0','0','0','0','0','0'}
+};
+
 // 加载vm固件存储参数,这接口在shell线程初始化前被调用,所以里面的打印均不能采用自定义打印
 void my_param_load_vm_config(void)
 {
@@ -83,6 +89,17 @@ void my_param_load_vm_config(void)
         memcpy(&gConfigParam.gsm_imei, &gDefaultImeiValue, length);
         memcpy(data_buff, gConfigParam.gsm_imei.hex, sizeof(gConfigParam.gsm_imei.hex));
         printf("imei not found. Use default:imei value(%s)\n", data_buff);
+    }
+
+    //--------Load SN Value ---------------------
+    length = sizeof(DevSn_t);
+    ret = syscfg_read(VM_SN_ADDR, &gConfigParam.dev_sn, length);
+    if (ret != length)
+    {
+        memcpy(&gConfigParam.dev_sn, &gDefaultSnValue, length);
+        memcpy(data_buff, gConfigParam.dev_sn.hex, sizeof(gConfigParam.dev_sn.hex));
+        data_buff[DEV_SN_LENGTH] = '\0';
+        printf("sn not found. Use default:sn value(%s)\n", data_buff);
     }
 
     /* EMS 事件/告警 outbox */
@@ -368,4 +385,43 @@ int my_param_set_imei(char *param, uint8 len)
 const GsmImei_t *my_param_get_imei(void)
 {
     return &gConfigParam.gsm_imei;
+}
+
+int my_param_set_sn(char *param, uint8 len)
+{
+    int ret;
+    int dev_sn_struct_len = sizeof(DevSn_t);
+
+    if (len != DEV_SN_LENGTH)
+    {
+        my_log_printf(1, "my_param_set_sn len error!");
+        return -1;
+    }
+
+    if (string_check_is_hex_str((const char *)param) != DEV_SN_LENGTH)
+    {
+        my_log_printf(1, "invalid sn param");
+        return -1;
+    }
+
+    gConfigParam.dev_sn.flag = FLAG_VALID;
+    memcpy(gConfigParam.dev_sn.hex, param, len);
+
+    ret = syscfg_write(VM_SN_ADDR, &gConfigParam.dev_sn, sizeof(DevSn_t));
+    if (ret != dev_sn_struct_len)
+    {
+        my_log_printf(1, "vm set sn Error!!!");
+        return -1;
+    }
+    else
+    {
+        my_log_printf(1, "vm set sn OK!!!");
+    }
+
+    return 0;
+}
+
+const DevSn_t *my_param_get_sn(void)
+{
+    return &gConfigParam.dev_sn;
 }

@@ -241,7 +241,7 @@ uint8 hex2ascii(uint8 digit)
 **@param[in] str:       十六进制字符串
 **@param[in] str_len:   十六进制字符串长度
 *************************************************************************/
-void hex2hexstr(uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len)
+void hex2hexstr(const uint8 *hex, uint16 hex_len, uint8 *str, uint16 str_len)
 {
     uint16 i = 0,j=0;
     uint8 *buf = str;

@@ -960,6 +960,12 @@ void my_dc_uart_deinit(void)
 {
     dc_poll_stop();
 
+    if (my_factory_test_mode_get())
+    {
+        my_log_printf(1, "dc deinit in factory test mode: keep uart alive");
+        return;
+    }
+
     if (g_dc_tx_dma_buf != NULL)
     {
         dma_free(g_dc_tx_dma_buf);
@@ -1291,6 +1297,13 @@ void my_dc_uart_task(void *p_arg)
                 len = my_dc_uart_read_data(rx_buff, MY_DC_UART_RX_TMP_BUF_LEN);
                 if (len > 0)
                 {
+                    if (my_factory_test_mode_get())
+                    {
+                        /* 产测短接回环：打印接收到的回环数据 */
+                        my_log_printf(0, "%.*s", len, (char *)rx_buff);
+                        break;
+                    }
+
                     my_dc_proto_feed(rx_buff, (uint32)len);
                 }
                 break;
@@ -1310,6 +1323,14 @@ void my_dc_uart_task(void *p_arg)
 
             case MY_MSG_DC_CTRL_REQ:
             {
+                if (my_factory_test_mode_get())
+                {
+                    /* 产测短接：发固定串，RX 在 MY_MSG_UART_RECV 里打印回环数据 */
+                    uint8 test_tx[] = "RETURN_DCTEST_OK";
+                    (void)my_dc_uart_send(test_tx, (uint32)(sizeof(test_tx) - 1));
+                    break;
+                }
+
                 // 无在途请求时，才可发新请求
                 if (!g_dc_req.active)
                 {
