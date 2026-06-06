@@ -18,8 +18,8 @@
 // ------------板级配置.json------------
 #define TCFG_DEBUG_UART_ENABLE 1 // 调试串口
 #if TCFG_DEBUG_UART_ENABLE
-#define TCFG_DEBUG_UART_TX_PIN                    IO_PORTA_01      // 输出IO
-#define TCFG_DEBUG_UART_RX_PIN                    IO_PORTA_03      // 输入IO
+#define TCFG_DEBUG_UART_TX_PIN IO_PORTA_01 // 输出IO
+#define TCFG_DEBUG_UART_RX_PIN IO_PORTA_03 // 输入IO
 #define TCFG_DEBUG_UART_BAUDRATE 115200 // 波特率
 #define TCFG_EXCEPTION_LOG_ENABLE 1 // 打印异常信息
 #define TCFG_EXCEPTION_RESET_ENABLE 1 // 异常自动复位
@@ -34,7 +34,7 @@
 
 #define CONFIG_SPI_DATA_WIDTH 2 // flash通信
 #define CONFIG_SPI_MODE 0 // flash模式
-#define CONFIG_FLASH_SIZE                         2097152          // flash容量
+#define CONFIG_FLASH_SIZE 2097152 // flash容量
 #define TCFG_VM_SIZE 32 // VM大小（K）
 
 #define TCFG_NORFLASH_DEV_ENABLE 0 // 外置flash配置
@@ -45,7 +45,7 @@
 #define TCFG_FLASH_DEV_SPI_CS_PORT IO_PORTA_07 // CS片选IO
 #endif // TCFG_NORFLASH_DEV_ENABLE
 
-#define TCFG_PWMLED_ENABLE                        0                // LED配置
+#define TCFG_PWMLED_ENABLE 0 // LED配置
 #if TCFG_PWMLED_ENABLE
 #define TCFG_LED_LAYOUT ONE_IO_TWO_LED // 连接方式
 #define TCFG_LED_RED_ENABLE 1 // 红灯(Red)
@@ -65,7 +65,7 @@
 #define TCFG_PSRAM_PORT_SEL 0 // IO引脚组
 #endif // TCFG_PSRAM_DEV_ENABLE
 
-#define TCFG_SD0_ENABLE                           0                // SD配置(与PG0/PG1/PG2项目GPIO复用冲突，关闭)
+#define TCFG_SD0_ENABLE 0 // SD配置(与PG0/PG1/PG2项目GPIO复用冲突，关闭)
 #if TCFG_SD0_ENABLE
 #define TCFG_SD0_DAT_MODE 1 // 线数设置
 #define TCFG_SD0_DET_MODE SD_CMD_DECT // 检测方式
@@ -84,15 +84,15 @@
 #endif // TCFG_SD0_ENABLE
 
 #define FUSB_MODE 1 // USB工作模式
-#define TCFG_USB_HOST_ENABLE                      0                // USB主机总开关
-#define USB_H_MALLOC_ENABLE                       0                // 主机使用malloc
+#define TCFG_USB_HOST_ENABLE 0 // USB主机总开关
+#define USB_H_MALLOC_ENABLE 0 // 主机使用malloc
 #define TCFG_USB_HOST_MOUNT_RESET 40 // usb reset时间
 #define TCFG_USB_HOST_MOUNT_TIMEOUT 50 // 握手超时时间
 #define TCFG_USB_HOST_MOUNT_RETRY 3 // 枚举失败重试次数
-#define TCFG_UDISK_ENABLE                         0                // U盘使能
-#define USB_MALLOC_ENABLE                         0                // 从机使用malloc
-#define TCFG_USB_SLAVE_MSD_ENABLE                 0                // 读卡器使能
-#define TCFG_USB_SLAVE_HID_ENABLE                 0                // HID使能
+#define TCFG_UDISK_ENABLE 0 // U盘使能
+#define USB_MALLOC_ENABLE 0 // 从机使用malloc
+#define TCFG_USB_SLAVE_MSD_ENABLE 0 // 读卡器使能
+#define TCFG_USB_SLAVE_HID_ENABLE 0 // HID使能
 #define MSD_BLOCK_NUM 1 // MSD缓存块数
 #define USB_AUDIO_VERSION USB_AUDIO_VERSION_1_0 // UAC协议版本
 #define TCFG_USB_APPLE_DOCK_EN 0 // 苹果IAP使能
@@ -157,11 +157,11 @@
 
 // ------------功能配置.json------------
 #define TCFG_APP_BT_EN 1 // 蓝牙模式
-#define TCFG_APP_MUSIC_EN                         0                // 音乐模式
-#define TCFG_APP_LINEIN_EN                        0                // LINEIN模式
+#define TCFG_APP_MUSIC_EN 0 // 音乐模式
+#define TCFG_APP_LINEIN_EN 0 // LINEIN模式
 #define TCFG_APP_FM_EN 0 // FM模式
-#define TCFG_APP_PC_EN                            0                // PC模式
-#define TCFG_APP_RTC_EN                           1                // RTC模式
+#define TCFG_APP_PC_EN 0 // PC模式
+#define TCFG_APP_RTC_EN 1 // RTC模式
 #define TCFG_APP_IIS_EN 0 // IIS模式
 #define TCFG_APP_RECORD_EN 0 // 录音模式
 #define TCFG_APP_SURROUND_SOUND_EN 0 // 环绕声接收模式
@@ -356,7 +356,7 @@
 
 #define TCFG_THIRD_PARTY_PROTOCOLS_ENABLE 1 // 第三方协议配置
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
-#define TCFG_THIRD_PARTY_PROTOCOLS_SEL            (CUSTOM_DEMO_EN | RCSP_MODE_EN) // 第三方协议选择
+#define TCFG_THIRD_PARTY_PROTOCOLS_SEL (CUSTOM_DEMO_EN | RCSP_MODE_EN) // 第三方协议选择
 #endif // TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
 
 #define CONFIG_FINDMY_UARP_ENABLE 0 // Findmy UARP 升级
@@ -450,16 +450,16 @@
 // ------------升级配置.json------------
 
 // ------------音频配置.json------------
-#define TCFG_AUDIO_DAC_CONNECT_MODE DAC_OUTPUT_LR // 声道配置
-#define TCFG_AUDIO_DAC_MODE DAC_MODE_H2_SINGLE // 输出方式
+#define TCFG_AUDIO_DAC_CONNECT_MODE DAC_OUTPUT_MONO_LR_DIFF // 声道配置
+#define TCFG_AUDIO_DAC_MODE DAC_MODE_H2_DIFF // 输出方式
 #define TCFG_AUDIO_DAC_LIGHT_CLOSE_ENABLE 0X0 // 轻量关闭
 #define TCFG_AUDIO_VCM_CAP_EN 0x1 // VCM电容
 #define TCFG_AUDIO_DAC_POWER_ON_MODE 0X0 // DAC开启模式
 #define TCFG_AUDIO_DAC_BUFFER_TIME_MS 100 // 缓冲长度（ms）
-#define TCFG_AUDIO_DAC_PA_ISEL0 4 // PA_ISEL0
-#define TCFG_AUDIO_DAC_PA_ISEL1 3 // PA_ISEL1
+#define TCFG_AUDIO_DAC_PA_ISEL0 7 // PA_ISEL0
+#define TCFG_AUDIO_DAC_PA_ISEL1 7 // PA_ISEL1
 #define TCFG_AUDIO_DAC_IO_ENABLE 0 // DAC IO
-#define TCFG_AUDIO_DAC_POWER_BOOST 1 // 音量增强模式
+#define TCFG_AUDIO_DAC_POWER_BOOST 0 // 音量增强模式
 #define TCFG_AUDIO_L_CHANNEL_GAIN 0x03 // L Channel
 #define TCFG_AUDIO_R_CHANNEL_GAIN 0x03 // R Channel
 #define TCFG_AUDIO_DIGITAL_GAIN 0 // Digital Gain
