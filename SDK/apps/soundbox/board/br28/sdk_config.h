@@ -491,7 +491,7 @@
 #define TCFG_ADC2_POWER_IO 49889 // IO供电选择
 #define TCFG_ADC3_ENABLE 1 // 使能
 #define TCFG_ADC3_MODE 0 // 模式
-#define TCFG_ADC3_AIN_SEL 1 // 输入端口
+#define TCFG_ADC3_AIN_SEL                         0                // 输入端口
 #define TCFG_ADC3_BIAS_SEL 8 // 供电端口
 #define TCFG_ADC3_BIAS_RSEL 4 // MIC BIAS上拉电阻挡位
 #define TCFG_ADC3_DCC_LEVEL 14 // DCC 档位

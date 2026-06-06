@@ -343,10 +343,40 @@ static void factory_cmd_version(char *resp, int resp_len, char **pParam, int nPa
 
 static void factory_cmd_led(char *resp, int resp_len, char **pParam, int nParam)
 {
+    int ret = 0;
+
     if (nParam < 2)
     {
+        // 此处注释用于说明，启动前应先供电，但厂测验证断电效果，故不上电
+        // my_gpio_set_level(IO_PORTG_06, 1); 
         my_led_mode_start(3, LED_MAX_PIXELS);
         snprintf(resp, resp_len, "RETURN_LED_OK");
+    }
+    else if (CMD_MATCHED2(pParam[1], "ON"))
+    {
+        ret = my_gpio_set_level(IO_PORTG_06, 1);
+        if (ret < 0)
+        {
+            snprintf(resp, resp_len, "RETURN_LED_ON_FAIL");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_LED_ON_OK");
+        }
+    }
+    else if (CMD_MATCHED2(pParam[1], "OFF"))
+    {
+        // 先停止灯带数据输出，再关闭供电，避免断电前仍有数据驱动
+        my_led_mode_stop();
+        ret = my_gpio_set_level(IO_PORTG_06, 0);
+        if (ret < 0)
+        {
+            snprintf(resp, resp_len, "RETURN_LED_OFF_FAIL");
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_LED_OFF_OK");
+        }
     }
     else if (CMD_MATCHED2(pParam[1], "STOP"))
     {
@@ -362,6 +392,7 @@ static void factory_cmd_led(char *resp, int resp_len, char **pParam, int nParam)
         }
         else
         {
+            my_gpio_set_level(IO_PORTG_06, 1); // 兼容旧参数：开灯前先上电
             my_led_mode_start(3, (uint8)pixels);
             snprintf(resp, resp_len, "RETURN_LED_OK");
         }
@@ -490,6 +521,27 @@ static void factory_cmd_mac(char *resp, int resp_len, char **pParam, int nParam)
     snprintf(resp, resp_len, "RETURN_MAC_SET_OK");
 }
 
+static void factory_cmd_btname(char *resp, int resp_len, char **pParam, int nParam)
+{
+    const char *name = bt_get_local_name();
+
+    // AT^GT_CM=BTNAME -> 查询当前蓝牙广播名称
+    if (nParam < 2)
+    {
+        if (name && name[0] != '\0')
+        {
+            snprintf(resp, resp_len, "RETURN_BTNAME:%s", name);
+        }
+        else
+        {
+            snprintf(resp, resp_len, "RETURN_BTNAME_FAIL");
+        }
+        return;
+    }
+
+    snprintf(resp, resp_len, "RETURN_BTNAME_SET_FAIL");
+}
+
 static const factory_cmd_entry_t g_factory_cmd_table[] = {
     {"FF",          factory_cmd_ff         },
     {"GG",          factory_cmd_gg         },
@@ -505,6 +557,7 @@ static const factory_cmd_entry_t g_factory_cmd_table[] = {
     {"LED",         factory_cmd_led        },
     {"SPK",         factory_cmd_spk        },
     {"MAC",         factory_cmd_mac        },
+    {"BTNAME",      factory_cmd_btname     },
     {"TEST",        factory_cmd_test       },
     {"RESET",       factory_cmd_reset      },
     {"DCTEST",      factory_cmd_dctest     },
