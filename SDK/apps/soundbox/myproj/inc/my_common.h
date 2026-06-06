@@ -46,7 +46,7 @@ typedef enum
 typedef enum
 {
     MY_TIMER_TEST = 0,
-    MY_TIMER_DC_POLL,            /* DC轮询定时器：100ms，仅蓝牙APP连接时运行 */
+    MY_TIMER_DC_POLL,            /* DC轮询定时器：100ms，init后常驻运行 */
     MY_TIMER_DC_CTRL_ACK,        /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
     MY_TIMER_BLE_CONNECT_REPORT, /* 上报延迟定时器：蓝牙本地存储数据上报延时500ms */
     MY_TIMER_MAX_ID,
@@ -61,8 +61,8 @@ typedef enum
     MY_MSG_BLE_REPORT_START, /* EMS上报开始：由延时定时器投递到BLE线程 */
     MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
     MY_MSG_DC_POLL_TICK,   /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
-    MY_MSG_DC_POLL_START,  /* 蓝牙APP连接：启动 DC 轮询定时器 */
-    MY_MSG_DC_POLL_STOP,   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
+    MY_MSG_DC_POLL_START,  /* BLE连接：置0x0001 Bit5（蓝牙图标） */
+    MY_MSG_DC_POLL_STOP,   /* BLE断开：清0x0001 Bit5（蓝牙图标） */
     MY_MSG_DC_CTRL_REQ,    /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
 } MY_MAIN_TASK_MSG;
 

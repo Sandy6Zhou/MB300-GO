@@ -269,10 +269,12 @@ static int mb300_ota_mode_handler(at_cmd_struc *msg)
     if (!strcmp(msg->parm[1], "ON"))
     {
         ota_en = 1;
+        my_dc_uart_deinit(); // 切换广播后，停止查询数据
     }
     else if (!strcmp(msg->parm[1], "OFF"))
     {
         ota_en = 0;
+        my_dc_uart_init(); // 切换广播后，重新查询数据
     }
     else
     {

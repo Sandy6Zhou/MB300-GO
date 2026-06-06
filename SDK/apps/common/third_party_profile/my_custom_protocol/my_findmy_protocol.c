@@ -357,7 +357,7 @@ static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable)
 
 void ble_connect_api(void)
 {
-    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);  /* 蓝牙APP连接：启动 DC 轮询定时器 */
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);  /* BLE连接：DC侧蓝牙图标位置1 */
     printf("stop connect adv obj, start no_connect adv obj.");
     // 关闭两个可连接广播对象
     os_time_dly(10); 
@@ -375,7 +375,7 @@ void ble_connect_api(void)
 
 void ble_disconnect_api(void)
 {
-    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* 蓝牙APP断开：完全停止 DC 轮询定时器 */
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* BLE断开：DC侧蓝牙图标位清0 */
     /* 断开时切到 BLE 线程统一收尾，把本轮的 RAM 清理提交到 VM。 */
     my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_REPORT_STOP);
     printf("stop no_connect adv obj, start connect adv obj.");

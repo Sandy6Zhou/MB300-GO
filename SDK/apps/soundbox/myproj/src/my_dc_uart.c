@@ -29,8 +29,10 @@
  *    | 03 | 读寄存器 | 查询/主动上报整表 |
  *    | 05 | 设置寄存器 0x0001 | 写入完整开关寄存器值 |
  *
- * 3. 寄存器点表：
- *    | 0x0001 | 开关量(读写) Bit0-7 控制 Bit8 推送开关 | 0x0003 故障状态(只读) |
+ * 3. 寄存器 0x0001（读写，05 写完整字）摘要：
+ *    Bit0 开机 | Bit1 逆变 | Bit2 USB | Bit3 DC5521 | Bit4 LED | Bit5 蓝牙图标
+ *    Bit6 逆变休眠 | Bit7 整机休眠 | Bit8 运输模式 | Bit9 解除蓝牙双模连接 | Bit10 频率 50/60Hz
+ *    （告警等只读位见 0x0002/0x0003，与 0x0001 开关位分离）
  *    | 0x0004 | 充电功率 0.1W | 0x0007 电池SOC 0.1% | 0x0012 DC5521功率 |
  *    | 0x0013 | LED功率 | 0x000E 逆变器功率 | 0x000F USB总功率 |
  *
@@ -46,14 +48,20 @@
 /* ========== 时序参数（协议 3.1：从机最大回复时间 500ms） ========== */
 #define DC_MODBUS_RESP_TIMEOUT_MS    500  /* 从机最大回复时间：超时则本次请求失败，置失败 */
 #define DC_OFFLINE_CONSECUTIVE_COUNT 3    /* 连续多少次超时判离线 */
-#define DC_SCHED_TICK_MS             100  /* 轮询定时器周期；仅蓝牙APP连接时运行 */
+#define DC_SCHED_TICK_MS             100  /* DC 调度 tick：init 后定时器常驻 */
 #define DC_SESSION_POLL_INTERVAL_MS  1000 /* 轮询间隔 */
 
 /*
  * 业务关注的寄存器地址（寄存器点表）
  * 实际值=寄存器值/10（系数 0.1），单位见协议
  */
-#define DC_REG_SWITCH_FLAGS    0x0001 /* 开关量寄存器；05 写入完整 0x0001 寄存器值 */
+#define DC_REG_SWITCH_FLAGS        0x0001 /* 开关量寄存器；05 写入完整 0x0001 寄存器值 */
+#define DC_REG_SWITCH_BIT_AC       1      /* 逆变器开关 */
+#define DC_REG_SWITCH_BIT_USB      2      /* USB 开关 */
+#define DC_REG_SWITCH_BIT_DC5521   3      /* DC5521 开关 */
+#define DC_REG_SWITCH_BIT_LED      4      /* LED 开关 */
+#define DC_REG_SWITCH_BIT_BLE_ICON 5      /* V1.2 2.2：蓝牙图标开关位 */
+
 #define DC_REG_FAULT_STATUS    0x0003 /* 故障状态(只读) Bit4 逆变过载 Bit8 逆变过温 Bit9 电池过温 */
 #define DC_REG_CHARGE_POWER    0x0004 /* 充电功率 0.1W */
 #define DC_REG_BAT_SOC         0x0007 /* 电池SOC 0.1% */
@@ -122,7 +130,7 @@ static uint8 *g_dc_tx_dma_buf = NULL; /* init 时分配，deinit 时释放 */
 /* ========== 轮询与调度状态 ========== */
 static uint32 g_dc_tick_ms = 0;               /* 软件 tick，仅定时器运行时累加 */
 static uint32 g_dc_last_poll_dispatch_ms = 0; /* 上次发起轮询的时刻，dc_poll_stop 时重置 */
-static uint8 g_dc_timer_running = 0;          /* 1=蓝牙APP连接定时器运行，0=断开完全停止 */
+static uint8 g_dc_timer_running = 0;          /* 1=DC 调度定时器运行（init 后常开） */
 
 #define DC_LOG_FRAME_EN   0 /* 协议层提交：开启帧打印便于 review */
 #define DC_LOG_VERBOSE_EN 0 /* 开启解析/上报日志 */
@@ -244,22 +252,22 @@ static void dc_update_device_data_cache(void)
      * Bit1=逆变→bit0、Bit3=DC5521→bit1、Bit2=USB→bit2、Bit4=LED→bit3
      */
     g_dc_dev_data.sw_status = 0;
-    if (reg_sw & (1 << 1))
+    if (reg_sw & (1 << DC_REG_SWITCH_BIT_AC))
     {
         g_dc_dev_data.sw_status |= (1 << 0); /* 逆变器 */
     }
 
-    if (reg_sw & (1 << 3))
+    if (reg_sw & (1 << DC_REG_SWITCH_BIT_DC5521))
     {
         g_dc_dev_data.sw_status |= (1 << 1); /* DC5521 */
     }
 
-    if (reg_sw & (1 << 2))
+    if (reg_sw & (1 << DC_REG_SWITCH_BIT_USB))
     {
         g_dc_dev_data.sw_status |= (1 << 2); /* USB */
     }
 
-    if (reg_sw & (1 << 4))
+    if (reg_sw & (1 << DC_REG_SWITCH_BIT_LED))
     {
         g_dc_dev_data.sw_status |= (1 << 3); /* LED */
     }
@@ -391,13 +399,13 @@ static uint8 dc_sw_to_reg_bit(my_dc_sw_id_t sw_id)
     switch (sw_id)
     {
         case MY_DC_SW_AC:
-            return 1; /* 逆变器 */
+            return DC_REG_SWITCH_BIT_AC;
         case MY_DC_SW_DC:
-            return 3; /* DC5521 */
+            return DC_REG_SWITCH_BIT_DC5521;
         case MY_DC_SW_USB:
-            return 2; /* USB */
+            return DC_REG_SWITCH_BIT_USB;
         case MY_DC_SW_LED:
-            return 4; /* LED */
+            return DC_REG_SWITCH_BIT_LED;
         default:
             return 0xFF;
     }
@@ -475,7 +483,7 @@ static int dc_try_handle_03_report(const uint8 *frame, uint16 frame_len)
  * ============================================================================
  */
 
-/* 启动 DC 轮询定时器（蓝牙APP连接时由 MY_MSG_DC_POLL_START 触发） */
+/* 启动 DC 轮询定时器（my_dc_uart_task init 成功后调用，常驻运行） */
 static void dc_poll_start(void)
 {
     if (g_dc_timer_running)
@@ -488,7 +496,7 @@ static void dc_poll_start(void)
     my_log_printf(1, "dc poll start");
 }
 
-/* 完全停止 DC 轮询定时器（蓝牙APP断开时由 MY_MSG_DC_POLL_STOP 触发） */
+/* 停止 DC 轮询定时器（仅 deinit 等资源释放场景） */
 static void dc_poll_stop(void)
 {
     if (!g_dc_timer_running)
@@ -506,7 +514,7 @@ static void dc_poll_stop(void)
 
 /*
  * 发送 Modbus 请求（运行层）：构造帧、串口发送、填充 g_dc_req
- * 调用者：dc_try_send_ctrl_req, dc_try_send_poll_req
+ * 调用者：dc_try_send_ctrl_req, dc_send_ble_icon_once, dc_try_send_poll_req
  * 返回 0：链路忙或发送失败；返回 1：已发送，等待应答
  * 05 写 0x0001 完整寄存器值：start_addr=0x0001，value=目标寄存器值
  */
@@ -789,7 +797,8 @@ static int dc_try_send_ctrl_req(void)
         return 0; // 无待发控制请求
     }
 
-    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_REG, DC_REG_SWITCH_FLAGS, 0, g_dc_ctrl_req.target_reg_value))
+    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_REG, DC_REG_SWITCH_FLAGS, 0,
+                         g_dc_ctrl_req.target_reg_value))
     {
         return 0; // 发送失败（如 g_dc_req 已有在途请求）
     }
@@ -804,6 +813,48 @@ static int dc_try_send_ctrl_req(void)
 static int dc_try_send_poll_req(void)
 {
     return dc_send_request(DC_MODBUS_FUNC_READ_REG, DC_03_POLL_START, DC_03_POLL_QTY, 0) ? 1 : 0;
+}
+
+/* 返回 1：已发起蓝牙图标位写请求；0：未发送（忙/基线未就绪/无需变化） */
+static int dc_send_ble_icon_once(uint8 on)
+{
+    uint16 cur = 0;
+    uint16 target = 0;
+
+    if (g_dc_req.active)
+    {
+        return 0;
+    }
+
+    /* 基线未就绪，不发送 */
+    if (!g_dc_switch_reg_ready)
+    {
+        return 0;
+    }
+
+    /* 获取当前蓝牙图标位 */
+    cur = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+    if (on)
+    {
+        target = (uint16)(cur | (uint16)(1u << DC_REG_SWITCH_BIT_BLE_ICON));
+    }
+    else
+    {
+        target = (uint16)(cur & (uint16)(~(1u << DC_REG_SWITCH_BIT_BLE_ICON)));
+    }
+
+    /* 目标值与当前值相同，不发送 */
+    if (target == cur)
+    {
+        return 0;
+    }
+
+    /* 发送请求 */
+    if (!dc_send_request(DC_MODBUS_FUNC_WRITE_REG, DC_REG_SWITCH_FLAGS, 0, target))
+    {
+        return 0;
+    }
+    return 1;
 }
 
 /*
@@ -896,11 +947,19 @@ void my_dc_uart_init(void)
         }
     }
 
+    dc_poll_start(); // 初始化后，立即启动轮询
+
     DC_LOG_VERBOSE("dc uart init ok. port=%d", MY_DC_UART_PORT);
 }
 
+/**
+ * 目前只有进入OTA模式，才会调用此函数，减少资源占用，提高OTA成功率
+ * DC板通讯超时时间5min，避免OTA升级过程中无通讯导致复位
+ */
 void my_dc_uart_deinit(void)
 {
+    dc_poll_stop();
+
     if (g_dc_tx_dma_buf != NULL)
     {
         dma_free(g_dc_tx_dma_buf);
@@ -1069,7 +1128,7 @@ static void dc_ctrl_ack_timer_cb(void *param)
     }
 }
 
-/* 提交开关控制：写入 g_dc_ctrl_req，发 MY_MSG_DC_CTRL_REQ；仅蓝牙APP连接时定时器运行可发送 */
+/* 提交开关控制：写入 g_dc_ctrl_req，发 MY_MSG_DC_CTRL_REQ；由常驻 tick 线程调度发送 */
 int my_dc_ctrl_switch(my_dc_sw_id_t sw_id, uint8 onoff)
 {
     uint8 reg_bit = 0;
@@ -1238,11 +1297,11 @@ void my_dc_uart_task(void *p_arg)
             }
 
             case MY_MSG_DC_POLL_START:
-                dc_poll_start();
+                dc_send_ble_icon_once(1);
                 break;
 
             case MY_MSG_DC_POLL_STOP:
-                dc_poll_stop();
+                dc_send_ble_icon_once(0);
                 break;
 
             case MY_MSG_DC_POLL_TICK:
