@@ -18,7 +18,101 @@
 #include "bt_event_func.h"
 #include "app_tone.h"
 #include "a2dp_player.h"
+#include "system/timer.h"
 
+/* 控制板端上行音量同步发送节奏，避免高频连发。 */
+static u16 s_vol_sync_timeout_id = 0; /* 冷却定时器 ID */
+static u8 s_vol_sync_pending = 0; /* 标记是否存在待发音量 */
+
+/********************************************************************
+**函数名称:  vol_sync_do_send
+**入口参数:  无
+**出口参数:  无
+**函数功能:  发送绝对音量同步命令至手机端
+**返回值:    无
+*********************************************************************/
+static void vol_sync_do_send(void)
+{
+    /* 记录最近一次已发送 opid，避免重复发送相同绝对音量值。 */
+    static u8 s_vol_sync_queued_opid = 0xFF;
+    u8 data[6] = {0};
+    u8 play_status = 0;
+
+    if (vol_sync_is_remote_guard_active())
+    {
+        /* 手机刚回报过音量时，短窗口内不反向回传，防止同步回环。 */
+        // printf("[VOLSYNC][SEND_SKIP_GUARD] opid=%d", app_var.opid_play_vol_sync);
+        return;
+    }
+
+    // 避免重复发送相同 opid
+    if (s_vol_sync_queued_opid == app_var.opid_play_vol_sync)
+    {
+        return;
+    }
+
+    /* 非 guard 窗口且目标 opid 有变化时才发送。
+     * 使用绝对音量命令，减少相对步进导致的放大与回环风险。 */
+    play_status = a2dp_player_get_btaddr(data);
+    if (play_status)
+    {
+        // printf("[VOLSYNC][SEND_NOW] opid=%d addr=1 pending=%d", app_var.opid_play_vol_sync, s_vol_sync_pending);
+        bt_cmd_prepare_for_addr(data, USER_CTRL_AVCTP_OPID_SEND_VOL, 0, NULL);
+    }
+    else
+    {
+        // printf("[VOLSYNC][SEND_NOW] opid=%d addr=0 pending=%d", app_var.opid_play_vol_sync, s_vol_sync_pending);
+        bt_cmd_prepare(USER_CTRL_AVCTP_OPID_SEND_VOL, 0, NULL);
+    }
+    s_vol_sync_queued_opid = app_var.opid_play_vol_sync;
+}
+
+/********************************************************************
+**函数名称:  vol_sync_cooldown_cb
+**入口参数:  priv    ---        未使用
+**出口参数:  无
+**函数功能:  冷却定时器回调，若有待发命令则发送并重启冷却
+**返回值:    无
+*********************************************************************/
+static void vol_sync_cooldown_cb(void *priv)
+{
+    (void)priv;
+    s_vol_sync_timeout_id = 0;
+
+    /* 窗口结束时如果有待发音量，只发送一次并重启窗口，
+     * 形成 last-write-wins 的稳定输出。 */
+    if (s_vol_sync_pending)
+    {
+        s_vol_sync_pending = 0;
+        vol_sync_do_send();
+        s_vol_sync_timeout_id = sys_timeout_add(NULL, vol_sync_cooldown_cb, 500);
+    }
+}
+
+/********************************************************************
+**函数名称:  vol_sync_trigger_send
+**入口参数:  无
+**出口参数:  无
+**函数功能:  触发音量同步发送，500ms内重复调用仅重置定时器，确保最后一次发送
+**返回值:    无
+*********************************************************************/
+static void vol_sync_trigger_send(void)
+{
+    if (s_vol_sync_timeout_id != 0)
+    {
+        /* 冷却窗口内只标记有更新，并重启定时器；
+         * 真正发送由 cooldown 回调统一执行。 */
+        s_vol_sync_pending = 1;
+        sys_timeout_del(s_vol_sync_timeout_id);
+        s_vol_sync_timeout_id = sys_timeout_add(NULL, vol_sync_cooldown_cb, 500);
+    }
+    else
+    {
+        /* 首次触发立即尝试发送，并启动冷却窗口。 */
+        vol_sync_do_send();
+        s_vol_sync_timeout_id = sys_timeout_add(NULL, vol_sync_cooldown_cb, 500);
+    }
+}
 
 /*************************************************************************************************/
 /*!
@@ -36,12 +130,6 @@ static void volume_up(void)
     u8 test_box_vol_up = 0x41;
     s8 cur_vol = 0;
     u8 call_status = bt_get_call_status();
-
-#if TCFG_BT_VOL_SYNC_ENABLE
-    u8 data[6];
-    u8 play_status = a2dp_player_get_btaddr(data);
-#endif
-
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
             volume_up_down_direct(1);
@@ -78,12 +166,14 @@ static void volume_up(void)
         }
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
-            opid_play_vol_sync_fun(&app_var.music_volume, 1);
-            if (play_status) {
-                bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
-            } else {
-                bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
+            // 手机端音量已是最大值时，不再发送同步加音量命令，避免死循环
+            if (app_var.opid_play_vol_sync >= 127)
+            {
+                printf("[VOLSYNC][UP_BOUNDARY_SKIP] opid=%d", app_var.opid_play_vol_sync);
+                return;
             }
+            opid_play_vol_sync_fun(&app_var.music_volume, 1);
+            vol_sync_trigger_send();
         }
 #endif/* TCFG_BT_VOL_SYNC_ENABLE */
         return;
@@ -109,11 +199,7 @@ static void volume_up(void)
         }
     } else {
 #if TCFG_BT_VOL_SYNC_ENABLE
-        if (play_status) {
-            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL); //使用HID调音量
-        } else {
-            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_INC, 0, NULL);
-        }
+        vol_sync_trigger_send();
 #endif
     }
 }
@@ -132,11 +218,6 @@ static void volume_up(void)
 static void volume_down(void)
 {
     u8 test_box_vol_down = 0x42;
-
-#if TCFG_BT_VOL_SYNC_ENABLE
-    u8 data[6];
-    u8 play_status = a2dp_player_get_btaddr(data);
-#endif
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -166,12 +247,14 @@ static void volume_down(void)
         }
 #if TCFG_BT_VOL_SYNC_ENABLE
         if (bt_get_call_status() == BT_CALL_HANGUP) {
-            opid_play_vol_sync_fun(&app_var.music_volume, 0);
-            if (play_status) {
-                bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
-            } else {
-                bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
+            // 手机端音量已是最小值时，不再发送同步减音量命令，避免死循环
+            if (app_var.opid_play_vol_sync <= 0)
+            {
+                printf("[VOLSYNC][DOWN_BOUNDARY_SKIP] opid=%d", app_var.opid_play_vol_sync);
+                return;
             }
+            opid_play_vol_sync_fun(&app_var.music_volume, 0);
+            vol_sync_trigger_send();
         }
 #endif
         return;
@@ -201,11 +284,7 @@ static void volume_down(void)
         if (app_audio_get_volume(APP_AUDIO_CURRENT_STATE) == 0) {
             app_audio_volume_down(0);
         }
-        if (play_status) {
-            bt_cmd_prepare_for_addr(data, USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
-        } else {
-            bt_cmd_prepare(USER_CTRL_CMD_SYNC_VOL_DEC, 0, NULL);
-        }
+        vol_sync_trigger_send();
 #endif
     }
 }

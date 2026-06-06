@@ -12,11 +12,83 @@
 #include "app_tone.h"
 #include "volume_node.h"
 #include "bt_tws.h"
+#include "generic/jiffies.h"
+#include "system/timer.h"
 
 u8 vol_sys_tab[17] =  {0, 2, 3, 4, 6, 8, 10, 11, 12, 14, 16, 18, 19, 20, 22, 23, 25};
 const u8 vol_sync_tab[17] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 127};
 
 static s16 max_vol = 100;
+/* 手机下发音量后开启短暂 guard 窗口，
+ * 窗口内抑制板端反向回传，避免 phone->box->phone 回环。 */
+static u32 s_remote_guard_until_ms = 0;
+/* 手机连续滑动时不断重启定时器，窗口结束只应用最后一次值。 */
+static u16 s_remote_apply_tid = 0;
+/* 合并窗口内缓存的最后手机音量。 */
+static u8 s_remote_pending_phone_vol = 0xFF;
+
+static void remote_apply_pending_cb(void *priv)
+{
+    u8 phone_vol = s_remote_pending_phone_vol;
+    s16 music_volume = 0;
+
+    (void)priv;
+    s_remote_apply_tid = 0;
+    if (phone_vol > 127)
+    {
+        /* 非法值直接丢弃，避免异常设备上报污染本地状态。 */
+        return;
+    }
+
+    /* 播放提示音/来电铃声/通话编解码忙时，不立即改 DAC，避免与高优先级音频路径抢占。 */
+    if (tone_player_runing() || ring_player_runing() || bt_get_esco_coder_busy_flag())
+    {
+        // log_i("[VOLSYNC][REMOTE_FLUSH_SKIP_BUSY] phone=%d\n", phone_vol);
+        app_var.music_volume = ((phone_vol + 1) * max_vol) / 127;
+        return;
+    }
+
+    music_volume = ((phone_vol + 1) * max_vol) / 127;
+    phone_volume_change(&music_volume);
+
+    /* 去重：映射后的本地档位未变化则不重复设置，降低无效处理开销。 */
+    if (music_volume == app_var.music_volume)
+    {
+        return;
+    }
+
+    app_var.opid_play_vol_sync = vol_sync_tab[(phone_vol + 1) / 8];
+    // printf("[VOLSYNC][REMOTE_FLUSH_APPLY] phone=%d opid=%d dac=%d", phone_vol, app_var.opid_play_vol_sync, music_volume);
+    app_audio_set_volume(APP_AUDIO_STATE_MUSIC, music_volume, 1);
+    app_audio_set_volume_def_state(0);
+}
+
+static void remote_apply_schedule(u8 phone_vol)
+{
+    /* 每次新输入覆盖 pending，保证停止位置最终生效。 */
+    s_remote_pending_phone_vol = phone_vol;
+    if (s_remote_apply_tid)
+    {
+        sys_timeout_del(s_remote_apply_tid);
+    }
+
+    /* 120ms 合并窗口：窗口结束后统一落地一次。 */
+    s_remote_apply_tid = sys_timeout_add(NULL, remote_apply_pending_cb, 120);
+}
+
+void vol_sync_mark_remote_update(void)
+{
+    /* 收到手机下行音量后刷新 guard 窗口。 */
+    s_remote_guard_until_ms = jiffies_msec() + 400;
+}
+
+u8 vol_sync_is_remote_guard_active(void)
+{
+    u32 now = jiffies_msec();
+    /* 当前时间仍早于 guard 截止时间则返回 active，
+     * 发送侧据此临时抑制反向回传，避免形成同步回环。 */
+    return (now < s_remote_guard_until_ms) ? 1 : 0;
+}
 
 void vol_sys_tab_init(void)
 {
@@ -78,10 +150,6 @@ void vol_sys_tab_init(void)
 //注册给库的回调函数，用户手机设置设备音量
 void set_music_device_volume(int volume)
 {
-    u32 rets;//, reti;
-    __asm__ volatile("%0 = rets":"=r"(rets));
-    r_printf("set_music_device_volume=%d 0x%x\n", volume, rets);
-
 #if TCFG_BT_VOL_SYNC_ENABLE
     s16 music_volume;
 
@@ -97,29 +165,11 @@ void set_music_device_volume(int volume)
 #endif
         return;
     }
-    if (tone_player_runing() || ring_player_runing() || bt_get_esco_coder_busy_flag()) {
-        log_i("It's not smart to sync a2dp vol now\n");
-        //app_var.music_volume = vol_sys_tab[(volume + 1) / 8];
-        app_var.music_volume = ((volume + 1) * max_vol) / 127;
-        return;
-    }
 
-#if 1
-    /*
-     *0~16,总共17级
-     *这里将手机的0~127的音量值换成实际的dac音量等级
-     */
-    music_volume = ((volume + 1) * max_vol) / 127;
-    phone_volume_change(&music_volume);
-#else
-    music_volume = vol_sys_tab[(volume + 1) / 8];
-#endif
-    y_printf("phone_vol:%d,dac_vol:%d", volume, music_volume);
-    app_var.opid_play_vol_sync = vol_sync_tab[(volume + 1) / 8];
-
-    app_audio_set_volume(APP_AUDIO_STATE_MUSIC, music_volume, 1);
-
-    app_audio_set_volume_def_state(0);
+    /* 输入层只负责打标+排队，实际落地在 flush 回调里执行。
+     * 这样可把快速滑动期间的大量中间值合并成末值。 */
+    vol_sync_mark_remote_update();
+    remote_apply_schedule((u8)volume);
 #endif
 }
 

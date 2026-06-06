@@ -296,7 +296,7 @@
 #define TCFG_BT_SUPPORT_LHDC 0 // LHDC_V3/V4
 #define TCFG_BT_SUPPORT_LHDC_V5 0 // LHDC_V5
 #define TCFG_BT_SUPPORT_LDAC 0 // LDAC
-#define TCFG_BT_SUPPORT_HFP 1 // HFP
+#define TCFG_BT_SUPPORT_HFP                       0                // HFP
 #define TCFG_BT_SUPPORT_AVCTP 1 // AVRCP
 #define TCFG_BT_SUPPORT_A2DP 1 // A2DP
 #define TCFG_BT_SUPPORT_HID 1 // HID

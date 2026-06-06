@@ -22,6 +22,8 @@
 #include "wireless_trans.h"
 #include "esco_player.h"
 #include "app_le_auracast.h"
+#include "generic/jiffies.h"
+
 
 int bt_app_msg_handler(int *msg)
 {
@@ -97,10 +99,37 @@ int bt_app_msg_handler(int *msg)
         break;
     case APP_MSG_VOL_UP:
         puts("app msg vol up\n");
+        {
+            static u32 s_last_vol_up_ms = 0;
+            u32 now = jiffies_msec();
+            u32 delta = now - s_last_vol_up_ms;
+            /* 快速连发的加音量消息 25ms 节流 */
+            if (delta < 25)
+            {
+                break;
+            }
+            s_last_vol_up_ms = now;
+        }
+        // 当前音量已达最大值时，不再进入加音量流程，避免触发同步死循环
+        if (app_audio_get_volume(APP_AUDIO_STATE_MUSIC) >= app_audio_get_max_volume())
+        {
+            break;
+        }
         bt_key_vol_up();
         break;
     case APP_MSG_VOL_DOWN:
         puts("app msg vol down\n");
+        {
+            static u32 s_last_vol_down_ms = 0;
+            u32 now = jiffies_msec();
+            u32 delta = now - s_last_vol_down_ms;
+            /* 快速连发的减音量消息 25ms 节流 */
+            if (delta < 25)
+            {
+                break;
+            }
+            s_last_vol_down_ms = now;
+        }
         bt_key_vol_down();
         break;
     case APP_MSG_CALL_ANSWER:
