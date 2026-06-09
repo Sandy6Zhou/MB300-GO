@@ -28,7 +28,10 @@ int my_findmy_ble_ios_send(u8 *data, u32 len);
 int custom_demo_spp_send(u8 *data, u32 len);
 void set_adv_valid_status(int index, int status);
 void ble_server_send_notification(u8 *data, u16 tx_len);
+void ble_server_on_can_send_now(void); /* BLE 线程：flush 积压并尝试 schedule EMS */
 bool check_connect_id_enable(void);
+void ble_defer_ems_schedule_after_cid_auth(void); // CID成功发5505后调用，5505发完再schedule EMS
+void ble_cancel_defer_ems_schedule(void);
 
 #endif
 

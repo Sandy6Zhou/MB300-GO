@@ -234,7 +234,7 @@ static uint32 ble_comu_generate_pkey(void)
 **@param[in] data:  发送的数据
 **@param[in] len:   发送的数据长度
 *************************************************************************/
-static void ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
+static int ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
 {
     uint8 tx_ble_buf[BLE_RESP_LENGTH_MAX];
     uint8 encrypt_out[BLE_RESP_LENGTH_MAX];
@@ -243,7 +243,7 @@ static void ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
     if((len > BLE_RESP_LENGTH_MAX) || (len % BLE_CMD_DATA_LEN_UNIT))
     {
         my_log_printf(1, "ble packet len(%d) error!", len);
-        return;
+        return -1;
     }
 
     // 封装包头、包类型
@@ -269,12 +269,13 @@ static void ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
         if (ret != 0) 
         {
             my_log_printf(1, "aes_ecb_encrypt! ret=%d", ret);
-            return;
+            return -1;
         }
     }
 
     memcpy(&tx_ble_buf[4], encrypt_out, len);
     BLE_DataTransOverBle(tx_ble_buf, len + 4);
+    return 0;
 }
 
 static void ble_comu_key_data_handle(const uint8 *data, uint16 len)
@@ -332,7 +333,7 @@ static void ble_comu_key_data_handle(const uint8 *data, uint16 len)
     put_buf((u8 *)aes_base_key, 16);
 }
 
-void ble_comu_response_cmd(uint8 cmd, uint8 param)
+static int ble_comu_response_cmd(uint8 cmd, uint8 param)
 {
     uint8 out_data[BLE_CMD_DATA_LEN_UNIT] = {0};
     uint8 i;
@@ -348,13 +349,19 @@ void ble_comu_response_cmd(uint8 cmd, uint8 param)
         out_data[i] = rand32() & 0xff;
     }
 
-    ble_comu_send_packet(BLE_DATA_TYPE_CMD, out_data, BLE_CMD_DATA_LEN_UNIT);
+    return ble_comu_send_packet(BLE_DATA_TYPE_CMD, out_data, BLE_CMD_DATA_LEN_UNIT);
 }
 
 static void ble_comu_cid_data_handle(const uint8 *data, uint16 len)
 {
 #if 1 // 产品杨工要求，蓝牙连接不进行IMEI鉴权
-    ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS);
+    (void)data;
+    (void)len;
+    if (ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS) == 0) 
+    {
+        // 5505成功才defer EMS
+        ble_defer_ems_schedule_after_cid_auth();
+    }
 #else
     const GsmImei_t *gsmImei = my_param_get_imei();
 
@@ -362,7 +369,10 @@ static void ble_comu_cid_data_handle(const uint8 *data, uint16 len)
     {
         if (memcmp(data, gsmImei->hex, GSM_IMEI_LENGTH) == 0)
         {
-            ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS);
+            if (ble_comu_response_cmd(BLE_RSP_CMD_CID, BLE_RSP_PARAM_SUCCESS) == 0)
+            {
+                ble_defer_ems_schedule_after_cid_auth();
+            }
         }
         else
         {

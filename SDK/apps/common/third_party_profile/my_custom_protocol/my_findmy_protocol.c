@@ -44,11 +44,16 @@ static u8 battery_capacity = 100;   // 预留电量
 
 static uint8_t connect_id = 0xff;
 static uint16_t ble_server_rx_index = 0;
+static uint8_t uart_ble_server_buf[BLE_NOTIFY_SEND_BUF_MAX_SIZE];
+static u8 s_defer_ems_after_cid = 0; // 5505发完且发送空闲后再schedule EMS
 
 static bool ble_server_send_done = true;
 static bool ble_data_send_enable[2] = {0};
 
 static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable);
+static int ble_server_att_send_buffered(u16 len);
+static void ble_server_flush_pending_tx(void);
+static void ble_server_try_schedule_deferred_ems(void);
 /*************************************************
                   BLE 相关内容
 *************************************************/
@@ -369,8 +374,6 @@ void ble_connect_api(void)
     start_adv(&no_con_adv_obj_hdl[GOOGLE_ADV_TYPE], 1);
     os_time_dly(10); 
     start_adv(&no_con_adv_obj_hdl[APPLE_ADV_TYPE], 1);
-    /* 主动上报不在连接事件里立刻发送，而是延时调度，避免刚连上时首包过早。 */
-    my_event_report_schedule();
 }
 
 void ble_disconnect_api(void)
@@ -382,6 +385,9 @@ void ble_disconnect_api(void)
     // 断开ble连接时，设置发送蓝牙数据的标志为false，防止断开后还继续发送
     ble_data_send_enable[GOOGLE_ADV_TYPE] = false;
     ble_data_send_enable[APPLE_ADV_TYPE] = false;
+    ble_server_send_done = true;
+    ble_server_rx_index = 0;
+    s_defer_ems_after_cid = 0; // 断开清defer
     // 关闭两个不可连接的广播对象
     start_adv(&no_con_adv_obj_hdl[GOOGLE_ADV_TYPE], 0);
     os_time_dly(10); 
@@ -407,6 +413,7 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
                 case ATT_EVENT_CAN_SEND_NOW:
                     printf("ATT_EVENT_CAN_SEND_NOW");
                     ble_server_send_done = true;
+                    my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_CAN_SEND_NOW);
                     break;
 
                 case HCI_EVENT_LE_META:
@@ -430,6 +437,7 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
 
                 case HCI_EVENT_DISCONNECTION_COMPLETE:
                     connect_id = 0xff;
+                    s_defer_ems_after_cid = 0;
                     printf("HCI_EVENT_DISCONNECTION_COMPLETE: %0x", packet[5]);
                     // 发消息给消息队列去处理具体的事件
                     app_send_message(APP_MSG_BLE_DISCONNECTED, 0);
@@ -452,6 +460,101 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
     return;
 }
 
+/**
+ * @brief  从发送缓冲取数据经Notify发出
+ * @return 0成功，非0失败
+ */
+static int ble_server_att_send_buffered(u16 len)
+{
+    if (ble_data_send_enable[GOOGLE_ADV_TYPE] == true)
+    {
+        return my_findmy_ble_google_send(uart_ble_server_buf, len);
+    }
+
+    if (ble_data_send_enable[APPLE_ADV_TYPE] == true)
+    {
+        return my_findmy_ble_ios_send(uart_ble_server_buf, len);
+    }
+
+    my_log_printf(1, "ble_data_send_enable not enable!");
+    return -1;
+}
+
+/**
+ * @brief  CAN_SEND_NOW时发送缓冲中的积压数据
+ */
+static void ble_server_flush_pending_tx(void)
+{
+    uint16_t tx_len;
+    int ret;
+
+    if (!ble_server_send_done || connect_id == 0xff || ble_server_rx_index == 0)
+    {
+        return; // 上一包未发完、已断开或缓冲空
+    }
+
+    // 按MTU取本包长度
+    tx_len = ble_server_rx_index > MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN)
+                 ? MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN)
+                 : ble_server_rx_index;
+
+    ret = ble_server_att_send_buffered(tx_len);
+    if (ret != 0)
+    {
+        my_log_printf(1, "[BLE] notify send fail, keep buf len=%u", (unsigned)ble_server_rx_index); // 失败不挪buf
+        return;
+    }
+
+    ble_server_send_done = false; // 等下次CAN_SEND_NOW
+    ble_server_rx_index -= tx_len;
+    my_log_printf(1, "ble_server_rx_index:%d", ble_server_rx_index);
+    memmove(&uart_ble_server_buf[0], &uart_ble_server_buf[tx_len], ble_server_rx_index); // 前移剩余数据
+}
+
+/**
+ * @brief  5505发完且发送空闲时启动EMS上报
+ */
+static void ble_server_try_schedule_deferred_ems(void)
+{
+    if (!s_defer_ems_after_cid)
+    {
+        return;
+    }
+
+    if (connect_id == 0xff || ble_server_rx_index != 0 || !ble_server_send_done)
+    {
+        return; // 还有待发或上一包未发完
+    }
+
+    s_defer_ems_after_cid = 0;
+    my_log_printf(1, "[EMS] 5505 tx done, schedule connect reports");
+    my_event_report_schedule();
+}
+
+void ble_server_on_can_send_now(void)
+{
+    ble_server_flush_pending_tx();
+    ble_server_try_schedule_deferred_ems(); // flush后若5505已发完则拉EMS
+}
+
+/**
+ * @brief  CID鉴权成功发5505后置defer，待5505发完再schedule EMS
+ */
+void ble_defer_ems_schedule_after_cid_auth(void)
+{
+    s_defer_ems_after_cid = 1;
+    my_log_printf(1, "[EMS] defer schedule until 5505 tx done");
+    ble_server_try_schedule_deferred_ems(); // 5505可能已发完，补试
+}
+
+/**
+ * @brief  取消defer的EMS调度
+ */
+void ble_cancel_defer_ems_schedule(void)
+{
+    s_defer_ems_after_cid = 0;
+}
+
 /************************************************************************
 **@brief: 蓝牙服务发送notify数据
 **@param[in] data:      发送的数据
@@ -459,12 +562,12 @@ static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t c
 *************************************************************************/
 void ble_server_send_notification(u8 *data, u16 tx_len)
 {
-    static uint8_t uart_ble_server_buf[BLE_NOTIFY_SEND_BUF_MAX_SIZE];
-    uint16_t _tx_len;
+    uint16_t tx_len_send;
+    int ret;
 
     if(connect_id == 0xff)
     {
-        printf("ble send none in disconnect!");
+        my_log_printf(1, "ble send none in disconnect!");
         return;
     }
 
@@ -476,33 +579,30 @@ void ble_server_send_notification(u8 *data, u16 tx_len)
             memcpy(&uart_ble_server_buf[ble_server_rx_index], data, tx_len);
             ble_server_rx_index += tx_len;
         }
-        printf("ble_data_put_buf:%d, %d", ble_server_rx_index, tx_len);
+        my_log_printf(1, "ble_data_put_buf:%d, %d", ble_server_rx_index, tx_len);
     }
     else if(connect_id != 0xff && tx_len <= BLE_NOTIFY_SEND_BUF_MAX_SIZE)
     {
-        ble_server_send_done = false;
         if(tx_len > 0 && (ble_server_rx_index+tx_len) <= BLE_NOTIFY_SEND_BUF_MAX_SIZE)
         {
             memcpy(&uart_ble_server_buf[ble_server_rx_index], data, tx_len);
             ble_server_rx_index += tx_len;
         }
 
-        _tx_len = ble_server_rx_index > MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN) ? MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN) : ble_server_rx_index;
+        tx_len_send = ble_server_rx_index > MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN)
+                    ? MIN(BLE_SERVER_MAX_DATA_LEN, BLE_SVC_TX_MAX_LEN) : ble_server_rx_index;
 
-        if (ble_data_send_enable[GOOGLE_ADV_TYPE] == true) {
-            my_findmy_ble_google_send(uart_ble_server_buf, _tx_len);
-        } else if (ble_data_send_enable[APPLE_ADV_TYPE] == true) {
-            my_findmy_ble_ios_send(uart_ble_server_buf, _tx_len);
-        } else {
-            printf("ble_data_send_enable not enable!");
-            ble_server_send_done = true;
-            return ;
+        ret = ble_server_att_send_buffered(tx_len_send);
+        if (ret != 0)
+        {
+            my_log_printf(1, "[BLE] notify send fail, keep buf len=%u", (unsigned)ble_server_rx_index); // 失败不挪buf
+            return;
         }
 
-        ble_server_rx_index -= _tx_len;
-        printf("ble_server_rx_index:%d", ble_server_rx_index);
-
-        memcpy(&uart_ble_server_buf[0], &uart_ble_server_buf[_tx_len], ble_server_rx_index);
+        ble_server_send_done = false;
+        ble_server_rx_index -= tx_len_send;
+        my_log_printf(1, "ble_server_rx_index:%d", ble_server_rx_index);
+        memmove(&uart_ble_server_buf[0], &uart_ble_server_buf[tx_len_send], ble_server_rx_index);
     }
 }
 
@@ -581,15 +681,15 @@ int my_findmy_ble_google_send(u8 *data, u32 len)
     int i;
 
     if (data == NULL || len == 0) {
-        printf("invalid google params!!!");
+        my_log_printf(1, "invalid google params!!!");
         return -1;
     }
 
-    printf("my_findmy_ble_google_send len = %d", len);
+    my_log_printf(1, "my_findmy_ble_google_send len = %d", len);
     put_buf(data, len);
     ret = app_ble_att_send_data(con_adv_obj_hdl[GOOGLE_ADV_TYPE].handle, ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE, data, len, ATT_OP_AUTO_READ_CCC);
     if (ret) {
-        printf("send fail\n");
+        my_log_printf(1, "send fail\n");
     }
     return ret;
 }
@@ -633,15 +733,15 @@ int my_findmy_ble_ios_send(u8 *data, u32 len)
     int i;
 
     if (data == NULL || len == 0) {
-        printf("invalid ios params!!!");
+        my_log_printf(1, "invalid ios params!!!");
         return -1;
     }
 
-    printf("my_findmy_ble_ios_send len = %d", len);
+    my_log_printf(1, "my_findmy_ble_ios_send len = %d", len);
     put_buf(data, len);
     ret = app_ble_att_send_data(con_adv_obj_hdl[APPLE_ADV_TYPE].handle, ATT_CHARACTERISTIC_ae02_01_VALUE_HANDLE, data, len, ATT_OP_AUTO_READ_CCC);
     if (ret) {
-        printf("send fail\n");
+        my_log_printf(1, "send fail\n");
     }
     return ret;
 }

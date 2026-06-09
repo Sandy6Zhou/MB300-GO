@@ -30,6 +30,12 @@ void my_ble_task(void *p_arg)
                 break;
             }
 
+            case MY_MSG_BLE_CAN_SEND_NOW:
+            {
+                ble_server_on_can_send_now();
+                break;
+            }
+
             case MY_MSG_BLE_REPORT_START:
             {
                 my_event_report_send_handle();

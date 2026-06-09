@@ -62,6 +62,7 @@ typedef enum
     MY_MSG_TEST,
     MY_MSG_UART_RECV,
     MY_MSG_BLE_RX,
+    MY_MSG_BLE_CAN_SEND_NOW, /* ATT CAN_SEND_NOW：在 BLE 线程 flush 发送缓冲 */
     MY_MSG_BLE_REPORT_START, /* EMS上报开始：由延时定时器投递到BLE线程 */
     MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
     MY_MSG_DC_POLL_TICK,   /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */

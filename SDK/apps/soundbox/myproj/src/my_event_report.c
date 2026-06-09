@@ -15,7 +15,7 @@ typedef enum
     MY_EVENT_REPORT_STAGE_DONE,    // 上报结束
 } my_event_report_stage_t;
 
-#define BLE_CONNECT_REPORT_DELAY_MS 500        // 连接后延时启动
+#define BLE_CONNECT_REPORT_DELAY_MS 2000       // 5505发完后延时再发日统计FF01
 static uint8 s_ble_connect_report_started = 0; // 本轮连接上报已启动
 static my_event_report_stage_t s_event_report_stage = MY_EVENT_REPORT_STAGE_DONE;
 
@@ -80,9 +80,8 @@ static void ble_connect_report_delay_cb(void *priv)
 
 void my_event_report_schedule(void)
 {
-    /* 启动延时定时器。 */
     my_start_timer(MY_TIMER_BLE_CONNECT_REPORT, BLE_CONNECT_REPORT_DELAY_MS, false, ble_connect_report_delay_cb);
-    my_log_printf(1, "[EMS] connect reports scheduled");
+    my_log_printf(1, "[EMS] connect reports scheduled after cid auth");
 }
 
 void my_event_report_send_handle(void)
