@@ -179,6 +179,42 @@ static int mb300_get_status_handler(at_cmd_struc* msg)
     return BLE_DATA_TYPE_EXPANSION_MODULE;
 }
 
+/* MB300_SW_LED 模式字符串 -> Modbus Bit4~6 模式值 */
+static int mb300_led_mode_from_str(const char *mode_str, uint8 *out_mode)
+{
+    if (mode_str == NULL || out_mode == NULL)
+    {
+        return -1;
+    }
+
+    if (!strcmp(mode_str, "000"))
+    {
+        *out_mode = 0;
+    }
+    else if (!strcmp(mode_str, "001"))
+    {
+        *out_mode = 1;
+    }
+    else if (!strcmp(mode_str, "010"))
+    {
+        *out_mode = 2;
+    }
+    else if (!strcmp(mode_str, "011"))
+    {
+        *out_mode = 3;
+    }
+    else if (!strcmp(mode_str, "100"))
+    {
+        *out_mode = 4;
+    }
+    else
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
 /************************************************************************
 **@brief: 处理MB300设备开关控制指令(AC/DC/USB/LED)
 **@param[in] msg: AT指令结构体指针，包含指令参数和响应缓冲区信息
@@ -215,18 +251,29 @@ static int mb300_sw_cmd_handler(at_cmd_struc* msg)
             return BLE_DATA_TYPE_AT_CMD;
         }
 
-        if (!strcmp(msg->parm[1], "ON"))
+        if (sw_id == MY_DC_SW_LED)
         {
-            sw_on = 1;
-        }
-        else if (!strcmp(msg->parm[1], "OFF"))
-        {
-            sw_on = 0;
+            if (mb300_led_mode_from_str(msg->parm[1], &sw_on) != 0)
+            {
+                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
+                return BLE_DATA_TYPE_AT_CMD;
+            }
         }
         else
         {
-            msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
-            return BLE_DATA_TYPE_AT_CMD;
+            if (!strcmp(msg->parm[1], "ON"))
+            {
+                sw_on = 1;
+            }
+            else if (!strcmp(msg->parm[1], "OFF"))
+            {
+                sw_on = 0;
+            }
+            else
+            {
+                msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_FAIL", msg->parm[0], msg->parm[1]);
+                return BLE_DATA_TYPE_AT_CMD;
+            }
         }
 
         if (my_dc_ctrl_switch_with_ack(sw_id, sw_on, msg->parm[0], msg->parm[1]) != 0)

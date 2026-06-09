@@ -18,7 +18,8 @@
 
 #define MY_DC_UART_RX_TMP_BUF_LEN    512
 
-/* 开关ID：与 MB300_SW_xx 指令一一对应，用于 my_dc_ctrl_switch(sw_id, onoff) */
+/* 开关ID：与 MB300_SW_xx 指令一一对应，用于 my_dc_ctrl_switch(sw_id, onoff)
+ * LED 时 onoff 传模式值 0~4（000/001/010/011/100） */
 typedef enum {
     MY_DC_SW_AC = 0,
     MY_DC_SW_DC,
@@ -46,7 +47,7 @@ typedef struct{
     uint16 dc_power;              // DC功率(单位0.1W)
     uint16 usb_power;             // USB功率(单位0.1W)
     uint16 led_power;             // LED功率(单位0.1W)
-    uint8 sw_status;              // 开关状态(bit0:AC,bit1:DC,bit2:USB,bit3:LED---O:关,1:开)
+    uint8 sw_status;              // FF01 0x800C: bit0 AC bit1 DC bit2 USB bit3 LED闪 bit4~5 LED亮度 bit6~7保留
     uint8 fault_status;           // 故障状态(bit0:逆变器过载,bit1:逆变器过温,bit2:电池过温)
 }device_data;
 

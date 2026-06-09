@@ -18,7 +18,7 @@
 
 /*
  * ============================================================================
- * 【协议文档】Voltana Go 3 EMS Modbus V1.2
+ * 【协议文档】Voltana Go 3 EMS Modbus V1.4
  * ============================================================================
  *
  * 1. 通讯参数：
@@ -30,13 +30,20 @@
  *    | 05 | 设置寄存器 0x0001 | 写入完整开关寄存器值 |
  *
  * 3. 寄存器 0x0001（读写，05 写完整字）摘要：
- *    Bit0 开机 | Bit1 逆变 | Bit2 USB | Bit3 DC5521 | Bit4 LED | Bit5 蓝牙图标
- *    Bit6 逆变休眠 | Bit7 整机休眠 | Bit8 运输模式 | Bit9 解除蓝牙双模连接 | Bit10 频率 50/60Hz
+ *    Bit0 开机 | Bit1 逆变 | Bit2 USB | Bit3 DC5521
+ *    Bit4~6 LED模式(000关/001=20%/010=50%/011=100%/100闪亮)
+ *    Bit7 蓝牙图标 | Bit8 逆变休眠 | Bit9 整机休眠 | Bit10 运输模式
+ *    Bit11 解除蓝牙连接 | Bit12 频率 50/60Hz
  *    （告警等只读位见 0x0002/0x0003，与 0x0001 开关位分离）
  *    | 0x0004 | 充电功率 0.1W | 0x0007 电池SOC 0.1% | 0x0012 DC5521功率 |
  *    | 0x0013 | LED功率 | 0x000E 逆变器功率 | 0x000F USB总功率 |
+ *    | 0x001A | 反充电压 | 0x001B | 逆变器频率 |
+ *    | 0x001C~0x001E | SC8815A 电流/电压 |
  *
- * 4. CRC16：初值 0xFFFF，多项式 0xA001，最后高低字节交换
+ * 4. FF01 SW_STATUS(0x800C)：bit0 AC bit1 DC bit2 USB
+ *    bit3 LED闪 bit4~5 LED亮度(00关/01=20%/10=50%/11=100%) bit6~7 保留
+ *
+ * 5. CRC16：初值 0xFFFF，多项式 0xA001，最后高低字节交换
  * ============================================================================
  */
 
@@ -55,23 +62,41 @@
  * 业务关注的寄存器地址（寄存器点表）
  * 实际值=寄存器值/10（系数 0.1），单位见协议
  */
-#define DC_REG_SWITCH_FLAGS        0x0001 /* 开关量寄存器；05 写入完整 0x0001 寄存器值 */
-#define DC_REG_SWITCH_BIT_AC       1      /* 逆变器开关 */
-#define DC_REG_SWITCH_BIT_USB      2      /* USB 开关 */
-#define DC_REG_SWITCH_BIT_DC5521   3      /* DC5521 开关 */
-#define DC_REG_SWITCH_BIT_LED      4      /* LED 开关 */
-#define DC_REG_SWITCH_BIT_BLE_ICON 5      /* V1.2 2.2：蓝牙图标开关位 */
+#define DC_REG_SWITCH_FLAGS          0x0001 /* 开关量寄存器；05 写入完整 0x0001 寄存器值 */
+#define DC_REG_SWITCH_BIT_AC         1      /* 逆变器开关 */
+#define DC_REG_SWITCH_BIT_USB        2      /* USB 开关 */
+#define DC_REG_SWITCH_BIT_DC5521     3      /* DC5521 开关 */
+#define DC_REG_SWITCH_BIT_LED_MODE   4      /* LED 模式起始位 Bit4~6 */
+#define DC_REG_SWITCH_LED_MODE_MASK  0x0070 /* LED 模式掩码 Bit4~6 */
+#define DC_REG_SWITCH_BIT_BLE_ICON   7      /* V1.4：蓝牙图标开关位 */
+#define DC_REG_SWITCH_BIT_INV_SLEEP  8      /* 逆变器休眠（暂未实现控制） */
+#define DC_REG_SWITCH_BIT_SYS_SLEEP  9      /* 整机休眠（暂未实现控制） */
+#define DC_REG_SWITCH_BIT_TRANSPORT  10     /* 运输模式（暂未实现控制） */
+#define DC_REG_SWITCH_BIT_BLE_UNBIND 11     /* 解除蓝牙连接（暂未实现控制） */
+#define DC_REG_SWITCH_BIT_FREQ       12     /* 频率选择（暂未实现控制） */
 
-#define DC_REG_FAULT_STATUS    0x0003 /* 故障状态(只读) Bit4 逆变过载 Bit8 逆变过温 Bit9 电池过温 */
-#define DC_REG_CHARGE_POWER    0x0004 /* 充电功率 0.1W */
-#define DC_REG_BAT_SOC         0x0007 /* 电池SOC 0.1% */
-#define DC_REG_REMAIN_TIME     0x0009 /* 剩余可用时间 0.1H */
-#define DC_REG_BAT_TEMP        0x000B /* 电池温度 0.1℃ */
-#define DC_REG_TOTAL_POWER     0x000D /* 输出总功率 0.1W */
-#define DC_REG_AC_POWER        0x000E /* 逆变器功率 0.1W */
-#define DC_REG_USB_TOTAL_POWER 0x000F /* USB总功率 0.1W */
-#define DC_REG_DC5521_POWER    0x0012 /* DC5521输出功率 0.1W */
-#define DC_REG_LED_POWER       0x0013 /* LED输出功率 0.1W */
+#define DC_LED_MODE_OFF    0 /* 000 关闭 */
+#define DC_LED_MODE_20PCT  1 /* 001 20% */
+#define DC_LED_MODE_50PCT  2 /* 010 50% */
+#define DC_LED_MODE_100PCT 3 /* 011 100% */
+#define DC_LED_MODE_FLASH  4 /* 100 闪亮 */
+#define DC_LED_MODE_MAX    DC_LED_MODE_FLASH
+
+#define DC_REG_FAULT_STATUS     0x0003 /* 故障状态(只读) Bit4 逆变过载 Bit8 逆变过温 Bit9 电池过温 */
+#define DC_REG_CHARGE_POWER     0x0004 /* 充电功率 0.1W */
+#define DC_REG_BAT_SOC          0x0007 /* 电池SOC 0.1% */
+#define DC_REG_REMAIN_TIME      0x0009 /* 剩余可用时间 0.1H */
+#define DC_REG_BAT_TEMP         0x000B /* 电池温度 0.1℃ */
+#define DC_REG_TOTAL_POWER      0x000D /* 输出总功率 0.1W */
+#define DC_REG_AC_POWER         0x000E /* 逆变器功率 0.1W */
+#define DC_REG_USB_TOTAL_POWER  0x000F /* USB总功率 0.1W */
+#define DC_REG_DC5521_POWER     0x0012 /* DC5521输出功率 0.1W */
+#define DC_REG_LED_POWER        0x0013 /* LED输出功率 0.1W */
+#define DC_REG_REV_CHG_VOLT     0x001A /* 反充电压 0.1V */
+#define DC_REG_INV_FREQ         0x001B /* 逆变器频率 0.1Hz */
+#define DC_REG_SC8815A_IN_CUR   0x001C /* SC8815A输入电流 0.1A */
+#define DC_REG_SC8815A_BAT_VOLT 0x001D /* SC8815A电池电压 0.1V */
+#define DC_REG_SC8815A_OUT_CUR  0x001E /* SC8815A输出电流 0.1A */
 
 /*
  * Voltana Go 3 协议 3.1 查询：01 03 00 00 00 28，读 0x0000 起连续 40 个保持寄存器至 0x0027
@@ -104,7 +129,7 @@ typedef struct
 {
     uint8 valid;             /* 是否有效 */
     my_dc_sw_id_t sw_id;     /* 开关ID */
-    uint8 onoff;             /* 目标开关状态 */
+    uint8 onoff;             /* 目标开关状态；LED 时为模式值 0~4 */
     uint16 target_reg_value; /* 目标 0x0001 完整寄存器值 */
     uint8 waiting_confirm;   /* 控制事务待 03 回读确认 */
 } dc_ctrl_req_t;
@@ -226,13 +251,34 @@ static uint16 dc_get_reg_value(uint16 addr, uint16 def)
     return g_dc_reg_cache[addr];
 }
 
+/* Modbus 0x0001 Bit4~6 LED 模式 -> FF01 SW_STATUS(0x800C) bit3~5 */
+static uint8 dc_modbus_led_to_ff01_sw(uint8 mode)
+{
+    switch (mode)
+    {
+        case DC_LED_MODE_OFF:
+            return 0; /* 000: 不闪+关 */
+        case DC_LED_MODE_20PCT:
+            return 0x02; /* 010: 不闪+20% */
+        case DC_LED_MODE_50PCT:
+            return 0x04; /* 100: 不闪+50% */
+        case DC_LED_MODE_100PCT:
+            return 0x06; /* 110: 不闪+100% */
+        case DC_LED_MODE_FLASH:
+            return 0x01; /* 001: 闪 */
+        default:
+            return 0;
+    }
+}
+
 /*
  * 从寄存器镜像更新 device_data（协议 2.1 系数 0.1）
  * 寄存器->业务：SOC/10->%，remain*6->min(0.1H*60)，温度/功率 0.1 单位
- * 开关状态：0x0001 Bit1=逆变 Bit2=USB Bit3=DC Bit4=LED -> sw_status bit0~3
+ * 开关状态：0x0001 Bit1/3/2 -> sw_status bit0~2；Bit4~6 LED -> sw_status bit3~5
  */
 static void dc_update_device_data_cache(void)
 {
+    uint8 led_mode = 0;
     /* 读取寄存器并做单位换算 */
     uint16 reg_soc = dc_get_reg_value(DC_REG_BAT_SOC, 0);
     uint16 reg_remain = dc_get_reg_value(DC_REG_REMAIN_TIME, 0);
@@ -248,9 +294,11 @@ static void dc_update_device_data_cache(void)
     g_dc_dev_data.usb_power = dc_get_reg_value(DC_REG_USB_TOTAL_POWER, 0);
     g_dc_dev_data.led_power = dc_get_reg_value(DC_REG_LED_POWER, 0);
 
-    /* 协议2.2 0x0001寄存器映射到业务sw_status
-     * Bit1=逆变→bit0、Bit3=DC5521→bit1、Bit2=USB→bit2、Bit4=LED→bit3
+    /* 协议 V1.4 0x0001 映射到 FF01 SW_STATUS(0x800C)
+     * Bit1=逆变→bit0、Bit3=DC5521→bit1、Bit2=USB→bit2、Bit4~6 LED→bit3~5
      */
+    led_mode = (reg_sw & DC_REG_SWITCH_LED_MODE_MASK) >> DC_REG_SWITCH_BIT_LED_MODE;
+
     g_dc_dev_data.sw_status = 0;
     if (reg_sw & (1 << DC_REG_SWITCH_BIT_AC))
     {
@@ -267,10 +315,7 @@ static void dc_update_device_data_cache(void)
         g_dc_dev_data.sw_status |= (1 << 2); /* USB */
     }
 
-    if (reg_sw & (1 << DC_REG_SWITCH_BIT_LED))
-    {
-        g_dc_dev_data.sw_status |= (1 << 3); /* LED */
-    }
+    g_dc_dev_data.sw_status |= dc_modbus_led_to_ff01_sw(led_mode) << 3;
 
     /* 故障状态：0x0003 Bit4=逆变器过载 Bit8=逆变器过温 Bit9=电池过温 */
     uint16 reg_fault = dc_get_reg_value(DC_REG_FAULT_STATUS, 0);
@@ -404,8 +449,6 @@ static uint8 dc_sw_to_reg_bit(my_dc_sw_id_t sw_id)
             return DC_REG_SWITCH_BIT_DC5521;
         case MY_DC_SW_USB:
             return DC_REG_SWITCH_BIT_USB;
-        case MY_DC_SW_LED:
-            return DC_REG_SWITCH_BIT_LED;
         default:
             return 0xFF;
     }
@@ -1021,7 +1064,7 @@ int my_dc_get_data(device_data *out)
     out->dc_power = 20;            /* 2.0W */
     out->usb_power = 10;           /* 1.0W */
     out->led_power = 5;            /* 0.5W */
-    out->sw_status = 0x0F;         /* 全部开关打开 */
+    out->sw_status = 0x37;         /* AC+DC+USB开 + LED 100%(bit3~5=110) */
     out->fault_status = 0x07;      /* bit0~bit2 全置1：逆变器过载/逆变器过温/电池过温 */
     return 0;
 #else
@@ -1162,30 +1205,45 @@ int my_dc_ctrl_switch(my_dc_sw_id_t sw_id, uint8 onoff)
         return -1;
     }
 
-    /* 获取开关对应的寄存器位 */
-    reg_bit = dc_sw_to_reg_bit(sw_id);
-    if (reg_bit == 0xFF)
-    {
-        g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
-        g_dc_last_ctrl_err = 0;
-        return -1;
-    }
-
     /* 读取当前 0x0001 寄存器值，并在此基础上计算目标值。 */
     target_reg = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
-    if (onoff)
+
+    if (sw_id == MY_DC_SW_LED)
     {
-        target_reg |= (uint16)(1u << reg_bit);
+        /* LED：onoff 复用为模式值 0~4，写入 Bit4~6 */
+        if (onoff > DC_LED_MODE_MAX)
+        {
+            g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
+            g_dc_last_ctrl_err = 0;
+            return -1;
+        }
+        target_reg &= ~DC_REG_SWITCH_LED_MODE_MASK;
+        target_reg |= (onoff << DC_REG_SWITCH_BIT_LED_MODE);
     }
     else
     {
-        target_reg &= (uint16)(~(1u << reg_bit));
+        reg_bit = dc_sw_to_reg_bit(sw_id);
+        if (reg_bit == 0xFF)
+        {
+            g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
+            g_dc_last_ctrl_err = 0;
+            return -1;
+        }
+
+        if (onoff)
+        {
+            target_reg |= (uint16)(1u << reg_bit);
+        }
+        else
+        {
+            target_reg &= (uint16)(~(1u << reg_bit));
+        }
     }
 
     /* 设置控制请求 */
     g_dc_ctrl_req.valid = 1;
     g_dc_ctrl_req.sw_id = sw_id;
-    g_dc_ctrl_req.onoff = onoff ? 1 : 0;
+    g_dc_ctrl_req.onoff = onoff;
     g_dc_ctrl_req.target_reg_value = target_reg;
     /* 新请求入队时清确认状态 */
     g_dc_ctrl_req.waiting_confirm = 0;
