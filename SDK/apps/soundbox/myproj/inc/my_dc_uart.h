@@ -73,6 +73,9 @@ int my_dc_get_last_ctrl_result(uint8 *result, uint8 *err_code);
 /* 查询当前DC链路在线状态。 */
 int my_dc_is_online(void);
 
+/* 进入运输模式：写 0x0001 Bit10；返回0表示已受理。 */
+int my_dc_enter_transport_mode(void);
+
 void my_dc_uart_task(void *p_arg);
 
 #endif

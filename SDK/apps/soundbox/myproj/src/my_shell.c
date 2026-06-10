@@ -467,6 +467,24 @@ static void factory_cmd_dctest(char *resp, int resp_len, char **pParam, int nPar
     // snprintf(resp, resp_len, "RETURN_DCTEST_OK"); //在DC通过日志打印
 }
 
+static void factory_cmd_transport(char *resp, int resp_len, char **pParam, int nParam)
+{
+    // AT^GT_CM=TRANSPORT -> 写 0x0001 Bit10 进入运输模式
+    if (nParam >= 2)
+    {
+        snprintf(resp, resp_len, "RETURN_TRANSPORT_FAIL");
+        return;
+    }
+
+    if (my_dc_enter_transport_mode() != 0)
+    {
+        snprintf(resp, resp_len, "RETURN_TRANSPORT_FAIL");
+        return;
+    }
+
+    snprintf(resp, resp_len, "RETURN_TRANSPORT_OK");
+}
+
 static void factory_cmd_mac(char *resp, int resp_len, char **pParam, int nParam)
 {
     const uint8 *mac;
@@ -561,6 +579,7 @@ static const factory_cmd_entry_t g_factory_cmd_table[] = {
     {"TEST",        factory_cmd_test       },
     {"RESET",       factory_cmd_reset      },
     {"DCTEST",      factory_cmd_dctest     },
+    {"TRANSPORT",   factory_cmd_transport  },
     {NULL,          NULL                   },
 };
 

@@ -63,6 +63,7 @@
  * Êµ¼ÊÖµ=¼Ä´æÆ÷Öµ/10£¨ÏµÊı 0.1£©£¬µ¥Î»¼ûĞ­Òé
  */
 #define DC_REG_SWITCH_FLAGS          0x0001 /* ¿ª¹ØÁ¿¼Ä´æÆ÷£»05 Ğ´ÈëÍêÕû 0x0001 ¼Ä´æÆ÷Öµ */
+#define DC_REG_SWITCH_BIT_POWER      0      /* ¿ª»ú¿ª¹Ø Bit0 */
 #define DC_REG_SWITCH_BIT_AC         1      /* Äæ±äÆ÷¿ª¹Ø */
 #define DC_REG_SWITCH_BIT_USB        2      /* USB ¿ª¹Ø */
 #define DC_REG_SWITCH_BIT_DC5521     3      /* DC5521 ¿ª¹Ø */
@@ -71,7 +72,7 @@
 #define DC_REG_SWITCH_BIT_BLE_ICON   7      /* V1.4£ºÀ¶ÑÀÍ¼±ê¿ª¹ØÎ» */
 #define DC_REG_SWITCH_BIT_INV_SLEEP  8      /* Äæ±äÆ÷ĞİÃß£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
 #define DC_REG_SWITCH_BIT_SYS_SLEEP  9      /* Õû»úĞİÃß£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
-#define DC_REG_SWITCH_BIT_TRANSPORT  10     /* ÔËÊäÄ£Ê½£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
+#define DC_REG_SWITCH_BIT_TRANSPORT  10     /* ÔËÊäÄ£Ê½ */
 #define DC_REG_SWITCH_BIT_BLE_UNBIND 11     /* ½â³ıÀ¶ÑÀÁ¬½Ó£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
 #define DC_REG_SWITCH_BIT_FREQ       12     /* ÆµÂÊÑ¡Ôñ£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
 
@@ -138,6 +139,7 @@ typedef struct
 static uint16 g_dc_reg_cache[DC_REG_CACHE_SIZE] = {0}; /* Modbus ¼Ä´æÆ÷¾µÏñ */
 static device_data g_dc_dev_data = {0};                /* ÒµÎñÊı¾İ¿ìÕÕ */
 static uint8 g_dc_switch_reg_ready = 0;                /* ÒÑÄÃµ½¿ÉĞÅµÄ 0x0001 ¼Ä´æÆ÷»ùÏß£¬¿É¾İ´Ë¼ÆËã 01 05 Ä¿±êÖµ */
+static uint8 s_prev_dc_pwr_on = 0xFF;                    /* ÒµÎñ¿ª»úÌ¬±ßÑØ»ùÏß£¬0xFF=Ê×²ÉÑù²»´¥·¢À¶ÑÀ */
 
 /* ========== Á´Â·½¡¿µ×´Ì¬ ========== */
 static uint8 g_dc_online = 0;                             /* Á´Â·½¡¿µ£ºDC_OFFLINE_CONSECUTIVE_COUNT ´Î³¬Ê±ÖÃ 0 */
@@ -159,6 +161,9 @@ static uint8 g_dc_timer_running = 0;          /* 1=DC µ÷¶È¶¨Ê±Æ÷ÔËĞĞ£¨init ºó³£¿
 
 #define DC_LOG_FRAME_EN   0 /* Ğ­Òé²ãÌá½»£º¿ªÆôÖ¡´òÓ¡±ãÓÚ review */
 #define DC_LOG_VERBOSE_EN 0 /* ¿ªÆô½âÎö/ÉÏ±¨ÈÕÖ¾ */
+
+/* DC ¹Ø»ú¼ì²â£º0=Í¨Ñ¶ÀëÏß  1=0x0001 Bit0£»ÇĞ»»Ê±Ö»¸Ä´ËºêÓë²éÑ¯º¯Êı */
+#define DC_PWR_DETECT_BY_BIT0  0
 
 #define MY_DC_MOCK_EN 0 // Ä£ÄâÊı¾İ£¬²»ÒÀÀµÕæÊµ DC °å
 
@@ -188,6 +193,10 @@ static void dc_log_frame(const char *tag, const uint8 *buf, uint16 len)
 
 static void dc_poll_timer_cb(void *param);
 static void dc_confirm_ctrl_by_switch_flags(uint16 reg_switch_flags);
+static void dc_mark_online(void);
+static void dc_mark_offline(void);
+static uint8 dc_pwr_query_power_on(void);
+static void dc_pwr_sync_state(void);
 
 /*
  * ============================================================================
@@ -254,14 +263,15 @@ static uint16 dc_get_reg_value(uint16 addr, uint16 def)
 /* Modbus 0x0001 Bit4~6 LED Ä£Ê½ -> FF01 SW_STATUS(0x800C) bit3~5 */
 static uint8 dc_modbus_led_to_ff01_sw(uint8 mode)
 {
+    // ÉÏ±¨±£³ÖĞ¡¶ËÍêÕû¸ñÊ½
     switch (mode)
     {
         case DC_LED_MODE_OFF:
             return 0; /* 000: ²»ÉÁ+¹Ø */
         case DC_LED_MODE_20PCT:
-            return 0x02; /* 010: ²»ÉÁ+20% */
+            return 0x04; /* 100: ²»ÉÁ+20% */
         case DC_LED_MODE_50PCT:
-            return 0x04; /* 100: ²»ÉÁ+50% */
+            return 0x02; /* 010: ²»ÉÁ+50% */
         case DC_LED_MODE_100PCT:
             return 0x06; /* 110: ²»ÉÁ+100% */
         case DC_LED_MODE_FLASH:
@@ -338,6 +348,10 @@ static void dc_update_device_data_cache(void)
 
     /* È·ÈÏ¿ØÖÆ½á¹û */
     dc_confirm_ctrl_by_switch_flags(reg_sw);
+
+#if DC_PWR_DETECT_BY_BIT0
+    dc_pwr_sync_state();
+#endif
 }
 
 /*
@@ -514,8 +528,7 @@ static int dc_try_handle_03_report(const uint8 *frame, uint16 frame_len)
     }
 
     dc_update_read_reg_cache(frame, DC_03_POLL_START);
-    g_dc_online = 1;
-    g_dc_timeout_count = 0;
+    dc_mark_online();
     DC_LOG_VERBOSE("dc 03 report parsed. start=0x%x byte_cnt=%d", DC_03_POLL_START, frame[2]);
     return 1;
 }
@@ -525,6 +538,67 @@ static int dc_try_handle_03_report(const uint8 *frame, uint16 frame_len)
  * ¡¾ÔËĞĞ²ã¡¿ÈÎÎñ/¶¨Ê±Æ÷/µ÷¶ÈÂß¼­
  * ============================================================================
  */
+
+/* 1=DC¿ª»úÌ¬(À¶ÑÀ¿É»Ö¸´)  0=DC¹Ø»úÌ¬(À¶ÑÀÓ¦ÒÖÖÆ) */
+static uint8 dc_pwr_query_power_on(void)
+{
+#if DC_PWR_DETECT_BY_BIT0
+    return (dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0) & (1u << DC_REG_SWITCH_BIT_POWER)) ? 1 : 0;
+#else
+    return g_dc_online;
+#endif
+}
+
+static void dc_pwr_sync_state(void)
+{
+    uint8 power_on = dc_pwr_query_power_on();
+
+    if (s_prev_dc_pwr_on != 0xFF && power_on != s_prev_dc_pwr_on)
+    {
+        /* ÒµÎñ¿ª»úÌ¬±ä»¯£º´ò±ßÑØÈÕÖ¾²¢Í¨Öª BLE Ä£¿é */
+        my_log_printf(1, "[DC_PWR] dc_pwr edge %u->%u msg=%s",
+                      (unsigned)s_prev_dc_pwr_on, (unsigned)power_on,
+                      power_on ? "POWER_ON" : "POWER_OFF");
+        my_send_msg(MOD_MAIN, MOD_BLE,
+                    power_on ? MY_MSG_BLE_DC_POWER_ON : MY_MSG_BLE_DC_POWER_OFF);
+    }
+    else if (s_prev_dc_pwr_on == 0xFF)
+    {
+        /* ÉÏµçºóµÚÒ»´Î²ÉÑù£º½¨Á¢»ùÏß£¬²»Í¶µİ¿ª¹ØÏûÏ¢ */
+        my_log_printf(1, "[DC_PWR] pwr init=%u", (unsigned)power_on);
+    }
+
+    s_prev_dc_pwr_on = power_on;
+}
+
+/* DC Í¨Ñ¶»Ö¸´ÔÚÏß£ºÇå³¬Ê±¼ÆÊı£»COMM Ä£Ê½ÏÂÍ¬²½ÒµÎñ¿ª»úÌ¬ */
+static void dc_mark_online(void)
+{
+    g_dc_timeout_count = 0;
+    if (!g_dc_online)
+    {
+        g_dc_online = 1;
+    }
+
+#if !DC_PWR_DETECT_BY_BIT0
+    dc_pwr_sync_state();
+#endif
+}
+
+/* DC Í¨Ñ¶ÀëÏß£ºÖÃÁ´Â·ÀëÏß£»COMM Ä£Ê½ÏÂÍ¬²½ÒµÎñ¹Ø»úÌ¬ */
+static void dc_mark_offline(void)
+{
+    if (!g_dc_online)
+    {
+        return;
+    }
+
+    g_dc_online = 0;
+
+#if !DC_PWR_DETECT_BY_BIT0
+    dc_pwr_sync_state();
+#endif
+}
 
 /* Æô¶¯ DC ÂÖÑ¯¶¨Ê±Æ÷£¨my_dc_uart_task init ³É¹¦ºóµ÷ÓÃ£¬³£×¤ÔËĞĞ£© */
 static void dc_poll_start(void)
@@ -623,10 +697,9 @@ static void dc_handle_req_result_ok(void)
         g_dc_last_ctrl_err = 0;
     }
 
-    g_dc_online = 1;        // ÖÃÔÚÏß
-    g_dc_timeout_count = 0; // ÖØÖÃ³¬Ê±¼ÆÊı
-    g_dc_req.active = 0;    // ÇåÔÚÍ¾ÇëÇó±êÖ¾
-    g_dc_req.wait_ms = 0;   // ÖØÖÃµÈ´ıÊ±¼ä
+    dc_mark_online();
+    g_dc_req.active = 0;  // ÇåÔÚÍ¾ÇëÇó±êÖ¾
+    g_dc_req.wait_ms = 0; // ÖØÖÃµÈ´ıÊ±¼ä
 }
 
 /* ÇëÇóÊ§°Ü£¨Ğ­Òé 3.2.3.2 Òì³£Ó¦´ğ£©£ºerr_code 1=ÎŞĞ§±¨ÎÄ 2=µØÖ· 3=ÊıÖµ 6=Ã¦ */
@@ -786,9 +859,10 @@ static int dc_need_poll_now(void)
  * ÔÚÍ¾ÇëÇó³¬Ê±¼ì²é£¨Ã¿ tick µ÷ÓÃ£©£º
  * - Ğ­Òé£º´Ó»ú»Ø¸´Ò»¶¨ÔÚ 500ms ÄÚ£¬·ñÔò±¾´ÎÇëÇóÊÓÎªÊ§°Ü
  * - ÎŞÔÚÍ¾ÇëÇó£ºÖ±½Ó·µ»Ø
- * - ÓĞÔÚÍ¾ÇëÇó£ºÀÛ¼Ó wait_ms£¬³¬ DC_MODBUS_RESP_TIMEOUT_MS ÔòÖÃÊ§°Ü£¬
- *   g_dc_timeout_count++£¬>= DC_OFFLINE_CONSECUTIVE_COUNT Ê± g_dc_online=0£»
- *   ÈôÎªĞ´¼Ä´æÆ÷Ôò g_dc_last_ctrl_result=TIMEOUT
+ * - ÓĞÔÚÍ¾ÇëÇó£ºÀÛ¼Ó wait_ms£¬³¬ DC_MODBUS_RESP_TIMEOUT_MS ÔòÖÃÊ§°Ü£»
+ *   ½öÔÚÏß½×¶ÎÀÛ¼Ó g_dc_timeout_count£¨·â¶¥ DC_OFFLINE_CONSECUTIVE_COUNT£©£¬
+ *   ´ïãĞÖµÖÃ g_dc_online=0£»ÒÑÀëÏßºó²»ÔÙ¼ÆÊı/´òÈÕÖ¾
+ * - ÈôÎªĞ´¼Ä´æÆ÷Ôò g_dc_last_ctrl_result=TIMEOUT
  */
 static void dc_req_timeout_check(void)
 {
@@ -806,15 +880,21 @@ static void dc_req_timeout_check(void)
     /* ÒÑ³¬Ê±£ºÖÃÊ§°Ü£¬ÇåÔÚÍ¾ÇëÇó */
     g_dc_req.active = 0;
     g_dc_req.wait_ms = 0;
-    if (g_dc_timeout_count < 0xFF)
-    {
-        g_dc_timeout_count++;
-    }
 
-    // Á¬Ğø³¬Ê±´ïãĞÖµ£¬ÖÃÀëÏß
-    if (g_dc_timeout_count >= DC_OFFLINE_CONSECUTIVE_COUNT)
+    if (g_dc_online)
     {
-        g_dc_online = 0;
+        if (g_dc_timeout_count < DC_OFFLINE_CONSECUTIVE_COUNT)
+        {
+            g_dc_timeout_count++;
+        }
+
+        my_log_printf(1, "[DC] req timeout cnt=%u/%u func=0x%x",
+                      g_dc_timeout_count, DC_OFFLINE_CONSECUTIVE_COUNT, g_dc_req.func);
+
+        if (g_dc_timeout_count >= DC_OFFLINE_CONSECUTIVE_COUNT)
+        {
+            dc_mark_offline();
+        }
     }
 
     // Ğ´ 0x0001 ³¬Ê±£¬µÈ´ıÏÂÒ»´Î³£¹æ 03 ÂÖÑ¯È·ÈÏÕæÊµ×´Ì¬
@@ -1248,6 +1328,43 @@ int my_dc_ctrl_switch(my_dc_sw_id_t sw_id, uint8 onoff)
     /* ĞÂÇëÇóÈë¶ÓÊ±ÇåÈ·ÈÏ×´Ì¬ */
     g_dc_ctrl_req.waiting_confirm = 0;
     /* ÉèÖÃ¿ØÖÆ½á¹û */
+    g_dc_last_ctrl_result = MY_DC_CTRL_RET_PENDING;
+    g_dc_last_ctrl_err = 0;
+
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_CTRL_REQ);
+    return 0;
+}
+
+/* ½øÈëÔËÊäÄ£Ê½£ºModbus 05 Ğ´ 0x0001 Bit10 */
+int my_dc_enter_transport_mode(void)
+{
+    uint16 target_reg = 0;
+
+    // ÓĞÔÚÍ¾ÇëÇóÊ±£¬Ö±½Ó·µ»ØÊ§°Ü
+    if (g_dc_ctrl_req.waiting_confirm)
+    {
+        return -1;
+    }
+
+    // ¿ª¹ØÁ¿¼Ä´æÆ÷ÎŞĞ§Ê±£¬Ö±½Ó·µ»ØÊ§°Ü
+    /* Ö»ÓĞÄÃµ½¿ÉĞÅµÄ 0x0001 »ùÏßºó£¬²ÅÄÜ¼ÆËã 01 05 µÄÍêÕû¼Ä´æÆ÷Ä¿±êÖµ¡£ */
+    if (!g_dc_switch_reg_ready)
+    {
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
+        g_dc_last_ctrl_err = 0;
+        return -1;
+    }
+
+    // ¶ÁÈ¡µ±Ç° 0x0001 ¼Ä´æÆ÷Öµ£¬²¢ÔÚ´Ë»ù´¡ÉÏ¼ÆËãÄ¿±êÖµ¡£
+    target_reg = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+    target_reg |= (uint16)(1u << DC_REG_SWITCH_BIT_TRANSPORT);
+
+    // ÉèÖÃ¿ØÖÆÇëÇó
+    g_dc_ctrl_req.valid = 1;
+    g_dc_ctrl_req.sw_id = MY_DC_SW_AC; // Õ¼Î»£¬Êµ¼ÊÏÂ·¢ target_reg_value£»Îğ×ß with_ack ÖØÊÔ
+    g_dc_ctrl_req.onoff = 1;
+    g_dc_ctrl_req.target_reg_value = target_reg;
+    g_dc_ctrl_req.waiting_confirm = 0;
     g_dc_last_ctrl_result = MY_DC_CTRL_RET_PENDING;
     g_dc_last_ctrl_err = 0;
 

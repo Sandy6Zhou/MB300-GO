@@ -65,10 +65,12 @@ typedef enum
     MY_MSG_BLE_CAN_SEND_NOW, /* ATT CAN_SEND_NOW：在 BLE 线程 flush 发送缓冲 */
     MY_MSG_BLE_REPORT_START, /* EMS上报开始：由延时定时器投递到BLE线程 */
     MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
-    MY_MSG_DC_POLL_TICK,   /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
-    MY_MSG_DC_POLL_START,  /* BLE连接：置0x0001 Bit5（蓝牙图标） */
-    MY_MSG_DC_POLL_STOP,   /* BLE断开：清0x0001 Bit5（蓝牙图标） */
-    MY_MSG_DC_CTRL_REQ,    /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
+    MY_MSG_BLE_DC_POWER_OFF, /* DC 通讯离线：关闭蓝牙广播并断链 */
+    MY_MSG_BLE_DC_POWER_ON,  /* DC 通讯恢复：恢复蓝牙广播与可连接 */
+    MY_MSG_DC_POLL_TICK,     /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
+    MY_MSG_DC_POLL_START,    /* BLE连接：置0x0001 Bit7（蓝牙图标） */
+    MY_MSG_DC_POLL_STOP,     /* BLE断开：清0x0001 Bit7（蓝牙图标） */
+    MY_MSG_DC_CTRL_REQ,      /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
 } MY_MAIN_TASK_MSG;
 
 #include "my_uart.h"

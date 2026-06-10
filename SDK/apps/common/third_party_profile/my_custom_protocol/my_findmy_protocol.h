@@ -32,6 +32,9 @@ void ble_server_on_can_send_now(void); /* BLE 线程：flush 积压并尝试 schedule EM
 bool check_connect_id_enable(void);
 void ble_defer_ems_schedule_after_cid_auth(void); // CID成功发5505后调用，5505发完再schedule EMS
 void ble_cancel_defer_ems_schedule(void);
+void ble_dc_power_off_handle(void);
+void ble_dc_power_on_restore(void);
+u8 ble_dc_is_power_suppressed(void);
 
 #endif
 

@@ -14,6 +14,9 @@
 #include "app_main.h"
 #include "btstack/avctp_user.h"
 #include "multi_protocol_main.h"
+#include "classic/hci_lmp.h"
+#include "bt_event_func.h"
+#include "dual_conn.h"
 #include "my_common.h"
 #include "my_findmy_protocol.h"
 
@@ -48,6 +51,84 @@ static uint8_t uart_ble_server_buf[BLE_NOTIFY_SEND_BUF_MAX_SIZE];
 static u8 s_defer_ems_after_cid = 0; // 5505发完且发送空闲后再schedule EMS
 
 static bool ble_server_send_done = true;
+
+/*
+ * ============================================================================
+ * 【DC 关机抑制】DC 通讯离线时禁止蓝牙可被连接/重连
+ * - my_dc_uart 检测离线后投递 MY_MSG_BLE_DC_POWER_OFF → ble_dc_power_off_handle
+ * - DC 恢复在线后投递 MY_MSG_BLE_DC_POWER_ON  → ble_dc_power_on_restore
+ * - dual_conn 通过 ble_dc_is_power_suppressed() 阻止抑制期内重开 scan/conn
+ * ============================================================================
+ */
+static u8 g_ble_dc_power_suppressed = 0; /* 1=DC关机抑制中，connect/disconnect 回调与 dual_conn 均受控 */
+
+/************************************************************************
+**@brief: 查询 DC 关机抑制标志（供 dual_conn 等模块守卫用）
+**@return: 1=抑制中（不可连接/不可被回调反向开广播）  0=正常
+*************************************************************************/
+u8 ble_dc_is_power_suppressed(void)
+{
+    return g_ble_dc_power_suppressed;
+}
+
+void my_findmy_ble_disconnect(void);
+
+/*
+ * 经典 BT 关机侧处理：断链 + 关扫描/连接（仅发 HCI 命令，非阻塞）
+ * 注意：不调用 btstack_exit_edr，保持协议栈运行以便 DC 恢复后 ble_dc_classic_restore
+ */
+static void ble_dc_classic_shutdown(void)
+{
+#if TCFG_APP_BT_EN
+    extern u8 hci_standard_connect_check(void);
+
+    /* 1. 关闭 dual_conn 自动 page/scan 调度，避免断链后又自动重连 */
+#if TCFG_USER_TWS_ENABLE
+    tws_dual_conn_close();
+#else
+    dual_conn_close();
+#endif
+
+    /* 2. 已建链：发 POWER_OFF 断开经典 BT（A2DP/AVRCP 等） */
+    if (bt_get_curr_channel_state() != 0)
+    {
+        bt_cmd_prepare(USER_CTRL_POWER_OFF, 0, NULL);
+    }
+    /* 3. 未建链但在 page/inquiry：取消进行中的连接请求 */
+    else if (hci_standard_connect_check())
+    {
+        bt_cmd_prepare(USER_CTRL_PAGE_CANCEL, 0, NULL);
+        bt_cmd_prepare(USER_CTRL_CONNECTION_CANCEL, 0, NULL);
+    }
+
+    /* 4. 关闭可被手机发现与连接 */
+    bt_cmd_prepare(USER_CTRL_WRITE_SCAN_DISABLE, 0, NULL);
+    bt_cmd_prepare(USER_CTRL_WRITE_CONN_DISABLE, 0, NULL);
+#else
+    lmp_hci_write_scan_enable(0);
+#endif
+}
+
+/* DC 恢复在线：重开 inquiry + page scan，恢复可被连接 */
+static void ble_dc_classic_restore(void)
+{
+#if TCFG_APP_BT_EN
+    bt_discovery_and_connectable_using_loca_mac_addr(1, 1);
+#else
+    lmp_hci_write_scan_enable((1 << 1) | 1);
+#endif
+}
+
+/* 若 SPP 已连接则主动断开（与 BLE GATT 断链并行，避免 APP 仍走串口透传） */
+static void ble_dc_spp_disconnect(void)
+{
+    if ((custom_demo_spp_hdl != NULL) &&
+        (app_spp_get_hdl_remote_addr(custom_demo_spp_hdl) != NULL))
+    {
+        app_spp_disconnect(custom_demo_spp_hdl);
+    }
+}
+
 static bool ble_data_send_enable[2] = {0};
 
 static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable);
@@ -360,8 +441,44 @@ static void start_adv(ADV_HDL_S *adv_obj_hdl, u8 enable)
     }
 }
 
+void ble_dc_power_off_handle(void)
+{
+    my_log_printf(1, "[DC_PWR] ble_dc_power_off_handle enter");
+    g_ble_dc_power_suppressed = 1; // 先置抑制，防断链回调反向开广播
+
+    bt_ble_adv_enable(0);       // 关 BLE 广播
+    my_findmy_ble_disconnect(); // 断 BLE GATT
+    ble_dc_spp_disconnect();    // 断 SPP（若有）
+    ble_dc_classic_shutdown();  // 断经典 BT + 关 scan/conn
+
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP); // 清 DC 蓝牙图标 Bit7
+    my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_REPORT_STOP);  // 停 EMS 连接态上报
+    ble_cancel_defer_ems_schedule();                         // 取消延后 EMS 调度
+    ble_data_send_enable[GOOGLE_ADV_TYPE] = false;           // 清发送许可
+    ble_data_send_enable[APPLE_ADV_TYPE] = false;
+    ble_server_send_done = true; // 复位 GATT 发送状态
+    ble_server_rx_index = 0;
+    s_defer_ems_after_cid = 0;
+    my_log_printf(1, "[DC_PWR] ble_dc_power_off_handle done");
+}
+
+void ble_dc_power_on_restore(void)
+{
+    my_log_printf(1, "[DC_PWR] ble_dc_power_on_restore enter");
+    g_ble_dc_power_suppressed = 0; // 解除抑制，允许 connect/disconnect 与 dual_conn
+    ble_dc_classic_restore();      // 重开经典 BT scan/page
+    bt_ble_adv_enable(1);          // 重开 BLE 广播
+    my_log_printf(1, "[DC_PWR] ble_dc_power_on_restore done");
+}
+
 void ble_connect_api(void)
 {
+    if (g_ble_dc_power_suppressed)
+    {
+        my_log_printf(1, "[DC_PWR] ignore ble_connect_api, suppressed=%u", (unsigned)g_ble_dc_power_suppressed);
+        return;
+    }
+
     my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);  /* BLE连接：DC侧蓝牙图标位置1 */
     printf("stop connect adv obj, start no_connect adv obj.");
     // 关闭两个可连接广播对象
@@ -378,6 +495,12 @@ void ble_connect_api(void)
 
 void ble_disconnect_api(void)
 {
+    if (g_ble_dc_power_suppressed)
+    {
+        my_log_printf(1, "[DC_PWR] ignore ble_disconnect_api, suppressed=%u", (unsigned)g_ble_dc_power_suppressed);
+        return;
+    }
+
     my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* BLE断开：DC侧蓝牙图标位清0 */
     /* 断开时切到 BLE 线程统一收尾，把本轮的 RAM 清理提交到 VM。 */
     my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_REPORT_STOP);

@@ -48,6 +48,18 @@ void my_ble_task(void *p_arg)
                 break;
             }
 
+            case MY_MSG_BLE_DC_POWER_OFF:
+            {
+                ble_dc_power_off_handle();
+                break;
+            }
+
+            case MY_MSG_BLE_DC_POWER_ON:
+            {
+                ble_dc_power_on_restore();
+                break;
+            }
+
             default:
                 break;
         }

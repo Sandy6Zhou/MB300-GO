@@ -15,6 +15,10 @@
 #include "le_connected.h"
 #include "app_le_auracast.h"
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) // JIMI_CUSTOM
+extern u8 ble_dc_is_power_suppressed(void);
+#endif
+
 #if (TCFG_APP_BT_EN && TCFG_USER_TWS_ENABLE == 0)
 
 #define MAX_PAGE_DEVICE_NUM 2
@@ -72,6 +76,15 @@ static void auto_close_page_scan(void *p)
 
 static void write_scan_conn_enable(bool scan_enable, bool conn_enable)
 {
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) // JIMI_CUSTOM
+    if (ble_dc_is_power_suppressed() && (scan_enable || conn_enable))
+    {
+        bt_cmd_prepare(USER_CTRL_WRITE_SCAN_DISABLE, 0, NULL);
+        bt_cmd_prepare(USER_CTRL_WRITE_CONN_DISABLE, 0, NULL);
+        return;
+    }
+#endif
+
     if (g_dual_conn.page_scan_auto_disable) {
         if (!scan_enable && conn_enable) {
             return;
