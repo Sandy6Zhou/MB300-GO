@@ -60,6 +60,12 @@ void my_ble_task(void *p_arg)
                 break;
             }
 
+            case MY_MSG_BLE_DC_UNBIND:
+            {
+                ble_dc_unbind_handle();
+                break;
+            }
+
             default:
                 break;
         }

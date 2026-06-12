@@ -34,6 +34,7 @@ void ble_defer_ems_schedule_after_cid_auth(void); // CID成功发5505后调用，5505发
 void ble_cancel_defer_ems_schedule(void);
 void ble_dc_power_off_handle(void);
 void ble_dc_power_on_restore(void);
+void ble_dc_unbind_handle(void);
 u8 ble_dc_is_power_suppressed(void);
 
 #endif

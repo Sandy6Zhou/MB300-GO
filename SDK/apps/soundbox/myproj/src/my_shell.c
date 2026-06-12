@@ -469,6 +469,30 @@ static void factory_cmd_dctest(char *resp, int resp_len, char **pParam, int nPar
 
 static void factory_cmd_transport(char *resp, int resp_len, char **pParam, int nParam)
 {
+    int hours = 0;
+
+    // AT^GT_CM=TRANSPORT,DELAY -> 查询自动运输延迟小时数
+    if (nParam >= 2 && CMD_MATCHED2(pParam[1], "DELAY"))
+    {
+        if (nParam < 3)
+        {
+            snprintf(resp, resp_len, "RETURN_TRANSPORT_DELAY_%u",
+                     my_param_get_transport_delay_hours());
+            return;
+        }
+
+        // AT^GT_CM=TRANSPORT,DELAY,0 -> 关闭自动运输
+        hours = atoi(pParam[2]);
+        if (!my_param_set_transport_delay_hours((uint16)hours))
+        {
+            snprintf(resp, resp_len, "RETURN_TRANSPORT_DELAY_FAIL");
+            return;
+        }
+
+        snprintf(resp, resp_len, "RETURN_TRANSPORT_DELAY_OK");
+        return;
+    }
+
     // AT^GT_CM=TRANSPORT -> 写 0x0001 Bit10 进入运输模式
     if (nParam >= 2)
     {

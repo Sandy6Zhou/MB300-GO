@@ -73,7 +73,7 @@
 #define DC_REG_SWITCH_BIT_INV_SLEEP  8      /* 逆变器休眠（暂未实现控制） */
 #define DC_REG_SWITCH_BIT_SYS_SLEEP  9      /* 整机休眠（暂未实现控制） */
 #define DC_REG_SWITCH_BIT_TRANSPORT  10     /* 运输模式 */
-#define DC_REG_SWITCH_BIT_BLE_UNBIND 11     /* 解除蓝牙连接（暂未实现控制） */
+#define DC_REG_SWITCH_BIT_BLE_UNBIND 11     /* 解除蓝牙连接：DC置1后清除BT配对 */
 #define DC_REG_SWITCH_BIT_FREQ       12     /* 频率选择（暂未实现控制） */
 
 #define DC_LED_MODE_OFF    0 /* 000 关闭 */
@@ -140,6 +140,7 @@ static uint16 g_dc_reg_cache[DC_REG_CACHE_SIZE] = {0}; /* Modbus 寄存器镜像 */
 static device_data g_dc_dev_data = {0};                /* 业务数据快照 */
 static uint8 g_dc_switch_reg_ready = 0;                /* 已拿到可信的 0x0001 寄存器基线，可据此计算 01 05 目标值 */
 static uint8 s_prev_dc_pwr_on = 0xFF;                    /* 业务开机态边沿基线，0xFF=首采样不触发蓝牙 */
+static uint8 s_prev_ble_unbind = 0xFF;                   /* Bit11边沿基线，0xFF=首采样不触发解绑 */
 
 /* ========== 链路健康状态 ========== */
 static uint8 g_dc_online = 0;                             /* 链路健康：DC_OFFLINE_CONSECUTIVE_COUNT 次超时置 0 */
@@ -158,6 +159,7 @@ static uint8 *g_dc_tx_dma_buf = NULL; /* init 时分配，deinit 时释放 */
 static uint32 g_dc_tick_ms = 0;               /* 软件 tick，仅定时器运行时累加 */
 static uint32 g_dc_last_poll_dispatch_ms = 0; /* 上次发起轮询的时刻，dc_poll_stop 时重置 */
 static uint8 g_dc_timer_running = 0;          /* 1=DC 调度定时器运行（init 后常开） */
+static uint8 g_dc_transport_timer_armed = 0;  /* 1=关机延迟运输定时器已启动，正在等待到期 */
 
 #define DC_LOG_FRAME_EN   0 /* 协议层提交：开启帧打印便于 review */
 #define DC_LOG_VERBOSE_EN 0 /* 开启解析/上报日志 */
@@ -192,11 +194,16 @@ static void dc_log_frame(const char *tag, const uint8 *buf, uint16 len)
 }
 
 static void dc_poll_timer_cb(void *param);
+static void dc_transport_timer_cb(void *param);
 static void dc_confirm_ctrl_by_switch_flags(uint16 reg_switch_flags);
 static void dc_mark_online(void);
 static void dc_mark_offline(void);
 static uint8 dc_pwr_query_power_on(void);
 static void dc_pwr_sync_state(void);
+static void dc_ble_unbind_sync_state(uint16 reg_switch_flags);
+static uint32 dc_transport_delay_ms(void);
+static void dc_transport_timer_arm(void);
+static void dc_transport_timer_disarm(void);
 
 /*
  * ============================================================================
@@ -348,6 +355,8 @@ static void dc_update_device_data_cache(void)
 
     /* 确认控制结果 */
     dc_confirm_ctrl_by_switch_flags(reg_sw);
+
+    dc_ble_unbind_sync_state(reg_sw);
 
 #if DC_PWR_DETECT_BY_BIT0
     dc_pwr_sync_state();
@@ -539,6 +548,77 @@ static int dc_try_handle_03_report(const uint8 *frame, uint16 frame_len)
  * ============================================================================
  */
 
+/* 读取 VM 运输延迟小时数并换算为毫秒；0 表示禁用 */
+static uint32 dc_transport_delay_ms(void)
+{
+    uint16 hours = my_param_get_transport_delay_hours();
+
+    if (hours == 0)
+    {
+        return 0;
+    }
+
+    return (uint32)hours * 3600U * 1000U;
+}
+
+/* 停止并清除关机延迟运输定时器（取消等待） */
+static void dc_transport_timer_disarm(void)
+{
+    if (!g_dc_transport_timer_armed)
+    {
+        return;
+    }
+
+    my_stop_timer(MY_TIMER_DC_TRANSPORT);
+    g_dc_transport_timer_armed = 0;
+}
+
+static void dc_transport_timer_arm(void)
+{
+    uint32 delay_ms = 0;
+    uint16 hours = my_param_get_transport_delay_hours();
+
+    /* 产测模式不启动自动运输 */
+    if (my_factory_test_mode_get())
+    {
+        return;
+    }
+
+    /* VM 配置为 0：自动运输已关闭 */
+    if (hours == 0)
+    {
+        return;
+    }
+
+    /* 仅当 DC 处于关机状态时才启动定时器 */
+    if (dc_pwr_query_power_on() != 0)
+    {
+        return;
+    }
+
+    delay_ms = dc_transport_delay_ms();
+    if (delay_ms == 0)
+    {
+        return;
+    }
+
+    if (!my_start_timer(MY_TIMER_DC_TRANSPORT, delay_ms, false, dc_transport_timer_cb)) /* 单次定时器启动失败 */
+    {
+        my_log_printf(1, "[DC_TRANSPORT] arm fail hours=%u", hours);
+        return;
+    }
+
+    g_dc_transport_timer_armed = 1;
+    my_log_printf(1, "[DC_TRANSPORT] arm %uh", hours);
+}
+
+/* 运输延迟定时器到期：通知 DC 任务处理（回调里只发消息，不直接发 Modbus） */
+static void dc_transport_timer_cb(void *param)
+{
+    (void)param;
+    my_send_msg(MOD_DC_UART, MOD_DC_UART, MY_MSG_DC_TRANSPORT_REQ);
+}
+
 /* 1=DC开机态(蓝牙可恢复)  0=DC关机态(蓝牙应抑制) */
 static uint8 dc_pwr_query_power_on(void)
 {
@@ -561,6 +641,21 @@ static void dc_pwr_sync_state(void)
                       power_on ? "POWER_ON" : "POWER_OFF");
         my_send_msg(MOD_MAIN, MOD_BLE,
                     power_on ? MY_MSG_BLE_DC_POWER_ON : MY_MSG_BLE_DC_POWER_OFF);
+
+        if (power_on)
+        {
+            /* DC 重新开机：若运输延迟定时器在跑，则停止计时 */
+            if (g_dc_transport_timer_armed)
+            {
+                dc_transport_timer_disarm();
+                my_log_printf(1, "[DC_TRANSPORT] disarm on power on");
+            }
+        }
+        else if (!g_dc_transport_timer_armed)
+        {
+            /* DC 关机：若尚未计时，则启动运输延迟定时器 */
+            dc_transport_timer_arm();
+        }
     }
     else if (s_prev_dc_pwr_on == 0xFF)
     {
@@ -569,6 +664,20 @@ static void dc_pwr_sync_state(void)
     }
 
     s_prev_dc_pwr_on = power_on;
+}
+
+/* 0x0001 Bit11 上升沿：通知 BLE 清除经典蓝牙全部配对记录 */
+static void dc_ble_unbind_sync_state(uint16 reg_switch_flags)
+{
+    uint8 unbind_req = (reg_switch_flags & (1u << DC_REG_SWITCH_BIT_BLE_UNBIND)) ? 1 : 0;
+
+    if (s_prev_ble_unbind != 0xFF && unbind_req && (unbind_req != s_prev_ble_unbind))
+    {
+        my_log_printf(1, "[DC_UNBIND] bit11 edge %u->%u", (unsigned)s_prev_ble_unbind, (unsigned)unbind_req);
+        my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_DC_UNBIND);
+    }
+
+    s_prev_ble_unbind = unbind_req;
 }
 
 /* DC 通讯恢复在线：清超时计数；COMM 模式下同步业务开机态 */
@@ -1510,6 +1619,25 @@ void my_dc_uart_task(void *p_arg)
                 if (!g_dc_req.active)
                 {
                     dc_try_send_ctrl_req(); // 发控制请求
+                }
+                break;
+            }
+
+            case MY_MSG_DC_TRANSPORT_REQ:
+            {
+                int ret = 0;
+
+                g_dc_transport_timer_armed = 0;
+                ret = my_dc_enter_transport_mode();
+                my_log_printf(1, "[DC_TRANSPORT] enter ret=%d", ret);
+
+                /* 本次定时器已到期（上面已清除计时标志），若仍配置延迟且 DC 仍为关机态，
+                 * 则重新启动下一轮计时：运输指令可能失败、DC 未就绪或 Bit10 被清除时，
+                 * 按间隔周期重试，直到开机后 dc_pwr_sync_state 里停止计时。 */
+                if (my_param_get_transport_delay_hours() > 0 &&
+                    dc_pwr_query_power_on() == 0)
+                {
+                    dc_transport_timer_arm();
                 }
                 break;
             }

@@ -18,6 +18,11 @@
 
 #define MY_DC_UART_RX_TMP_BUF_LEN    512
 
+/* DC关机后自动运输延迟（小时）；0=禁用，VM 持久化 */
+#define DC_TRANSPORT_DELAY_HOURS_DEFAULT 6   /* 默认 6 小时 */
+#define DC_TRANSPORT_DELAY_HOURS_MIN     1   /* 最小 1 小时 */
+#define DC_TRANSPORT_DELAY_HOURS_MAX     720 /* 最大约 30 天，防 ms 换算溢出 */
+
 /* 开关ID：与 MB300_SW_xx 指令一一对应，用于 my_dc_ctrl_switch(sw_id, onoff)
  * LED 时 onoff 传模式值 0~4（000/001/010/011/100） */
 typedef enum {

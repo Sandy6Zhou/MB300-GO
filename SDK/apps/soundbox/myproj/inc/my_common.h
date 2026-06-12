@@ -13,6 +13,7 @@
 #include "my_platform_time.h"
 #include "app_version.h"
 #include "app_tone.h"
+#include "tone_player.h"
 #include "asm/efuse.h"
 #include "boot.h"
 
@@ -53,6 +54,7 @@ typedef enum
     MY_TIMER_DC_POLL,            /* DC轮询定时器：100ms，init后常驻运行 */
     MY_TIMER_DC_CTRL_ACK,        /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
     MY_TIMER_BLE_CONNECT_REPORT, /* 上报延迟定时器：蓝牙本地存储数据上报延时500ms */
+    MY_TIMER_DC_TRANSPORT,       /* DC关机后延迟进入运输模式：单次定时器，到期后重新计时 */
     MY_TIMER_MAX_ID,
 } MY_E_TIMER;
 
@@ -67,10 +69,12 @@ typedef enum
     MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
     MY_MSG_BLE_DC_POWER_OFF, /* DC 通讯离线：关闭蓝牙广播并断链 */
     MY_MSG_BLE_DC_POWER_ON,  /* DC 通讯恢复：恢复蓝牙广播与可连接 */
+    MY_MSG_BLE_DC_UNBIND,    /* 0x0001 Bit11 置1：清除经典蓝牙配对并断链 */
     MY_MSG_DC_POLL_TICK,     /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
     MY_MSG_DC_POLL_START,    /* BLE连接：置0x0001 Bit7（蓝牙图标） */
     MY_MSG_DC_POLL_STOP,     /* BLE断开：清0x0001 Bit7（蓝牙图标） */
-    MY_MSG_DC_CTRL_REQ,      /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
+    MY_MSG_DC_CTRL_REQ,        /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
+    MY_MSG_DC_TRANSPORT_REQ,   /* 运输延迟计时到点：在 DC 任务里下发运输指令并重新开始下一轮计时 */
 } MY_MAIN_TASK_MSG;
 
 #include "my_uart.h"

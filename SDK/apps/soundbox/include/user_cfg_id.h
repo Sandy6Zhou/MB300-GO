@@ -63,6 +63,7 @@
 #define     CFG_IMEI_VALUE                   39
 #define     CFG_EMS_DAY_STATS_BLOB           40 /* 日统计数据块 */
 #define     CFG_EMS_ALARM_FIFO_BLOB          41 /* 告警数据块 */
+#define     CFG_DC_USER_PARAM                42 /* DC板参数 */
 
 #define     VM_SN_ADDR                       46 //设备SN(15位)
 #define     VM_MAC_ADDR                      47 //蓝牙MAC地址

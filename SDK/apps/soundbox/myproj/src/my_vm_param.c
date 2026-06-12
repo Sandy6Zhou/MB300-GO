@@ -34,6 +34,12 @@ const DevSn_t gDefaultSnValue =
     .hex = {'0','0','0','0','0','0','0','0','0','0','0','0','0','0','0'}
 };
 
+const CfgDcUserParam_t gDefaultCfgDcUserParam =
+{
+    .flag = FLAG_VALID,
+    .transport_delay_hours = DC_TRANSPORT_DELAY_HOURS_DEFAULT,
+};
+
 // 加载vm固件存储参数,这接口在shell线程初始化前被调用,所以里面的打印均不能采用自定义打印
 void my_param_load_vm_config(void)
 {
@@ -102,8 +108,51 @@ void my_param_load_vm_config(void)
         printf("sn not found. Use default:sn value(%s)\n", data_buff);
     }
 
+    //--------Load DC transport delay hours ---------------------
+    length = sizeof(CfgDcUserParam_t);
+    ret = syscfg_read(CFG_DC_USER_PARAM, &gConfigParam.dc_user_param, length);
+    if (ret != length)
+    {
+        memcpy(&gConfigParam.dc_user_param, &gDefaultCfgDcUserParam, length);
+        printf("dc transport delay not found. Use default:%uh\n",
+               gConfigParam.dc_user_param.transport_delay_hours);
+    }
+
     /* EMS 事件/告警 outbox */
     my_evt_store_init();
+}
+
+bool my_param_set_transport_delay_hours(uint16 hours)
+{
+    int ret;
+    int delay_len = sizeof(CfgDcUserParam_t);
+
+    if (hours != 0 && (hours < DC_TRANSPORT_DELAY_HOURS_MIN || hours > DC_TRANSPORT_DELAY_HOURS_MAX))
+    {
+        my_log_printf(1, "transport delay set fail, range(0 or %u~%u)",
+                      DC_TRANSPORT_DELAY_HOURS_MIN,
+                      DC_TRANSPORT_DELAY_HOURS_MAX);
+        return false;
+    }
+
+    gConfigParam.dc_user_param.flag = FLAG_VALID;
+    gConfigParam.dc_user_param.transport_delay_hours = hours;
+
+    ret = syscfg_write(CFG_DC_USER_PARAM,
+                       &gConfigParam.dc_user_param, delay_len);
+    if (ret != delay_len)
+    {
+        my_log_printf(1, "vm set transport delay Error!!!");
+        return false;
+    }
+
+    my_log_printf(1, "vm set transport delay OK!!! hours=%u", hours);
+    return true;
+}
+
+uint16 my_param_get_transport_delay_hours(void)
+{
+    return gConfigParam.dc_user_param.transport_delay_hours;
 }
 
 /************************************************************************

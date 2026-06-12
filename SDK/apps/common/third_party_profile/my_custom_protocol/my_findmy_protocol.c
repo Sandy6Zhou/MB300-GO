@@ -471,6 +471,31 @@ void ble_dc_power_on_restore(void)
     my_log_printf(1, "[DC_PWR] ble_dc_power_on_restore done");
 }
 
+void ble_dc_unbind_handle(void)
+{
+    my_log_printf(1, "[DC_UNBIND] ble_dc_unbind_handle enter");
+
+#if TCFG_APP_BT_EN
+    if (bt_get_curr_channel_state() != 0)
+    {
+        bt_cmd_prepare(USER_CTRL_POWER_OFF, 0, NULL); // 先断当前经典连接
+    }
+    bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL); // 清除全部配对记录
+#endif
+
+    my_findmy_ble_disconnect(); // 断 BLE GATT（FindMy 鉴权记录协议侧不擦除）
+    ble_dc_spp_disconnect();
+
+    if (!g_ble_dc_power_suppressed)
+    {
+        ble_dc_classic_restore(); // 恢复可被发现/连接，便于重新配对
+        bt_ble_adv_enable(1);
+    }
+
+    play_tone_file(get_tone_files()->bt_unpaired);
+    my_log_printf(1, "[DC_UNBIND] ble_dc_unbind_handle done");
+}
+
 void ble_connect_api(void)
 {
     if (g_ble_dc_power_suppressed)
