@@ -61,6 +61,29 @@ static bool ble_server_send_done = true;
  * ============================================================================
  */
 static u8 g_ble_dc_power_suppressed = 0; /* 1=DC关机抑制中，connect/disconnect 回调与 dual_conn 均受控 */
+static u8 s_ble_link = 0;                /* BLE GATT 是否连接 */
+static u8 s_bt_classic_link_cnt = 0;   /* 经典 BT 连接数，用于图标 OR 逻辑 */
+
+static void dc_ble_icon_sync(void)
+{
+    // DC关机抑制时，不更新蓝牙图标
+    if (g_ble_dc_power_suppressed)
+    {
+        return;
+    }
+
+    // 任一蓝牙链路存在时，点亮DC蓝牙图标
+    if (s_ble_link || s_bt_classic_link_cnt)
+    {
+        my_log_printf(1, "[DC_BT_ICON] on ble=%u classic=%u", s_ble_link, s_bt_classic_link_cnt);
+        my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);
+    }
+    else
+    {
+        my_log_printf(1, "[DC_BT_ICON] off ble=%u classic=%u", s_ble_link, s_bt_classic_link_cnt);
+        my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);
+    }
+}
 
 /************************************************************************
 **@brief: 查询 DC 关机抑制标志（供 dual_conn 等模块守卫用）
@@ -445,6 +468,9 @@ void ble_dc_power_off_handle(void)
 {
     my_log_printf(1, "[DC_PWR] ble_dc_power_off_handle enter");
     g_ble_dc_power_suppressed = 1; // 先置抑制，防断链回调反向开广播
+    // 清空链路状态，避免关机抑制期间误点亮图标
+    s_ble_link = 0;
+    s_bt_classic_link_cnt = 0;
 
     bt_ble_adv_enable(0);       // 关 BLE 广播
     my_findmy_ble_disconnect(); // 断 BLE GATT
@@ -504,7 +530,9 @@ void ble_connect_api(void)
         return;
     }
 
-    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_START);  /* BLE连接：DC侧蓝牙图标位置1 */
+    // 记录BLE连接状态，并同步DC蓝牙图标
+    s_ble_link = 1;
+    dc_ble_icon_sync();
     printf("stop connect adv obj, start no_connect adv obj.");
     // 关闭两个可连接广播对象
     os_time_dly(10); 
@@ -526,7 +554,9 @@ void ble_disconnect_api(void)
         return;
     }
 
-    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_POLL_STOP);   /* BLE断开：DC侧蓝牙图标位清0 */
+    // 记录BLE断开状态，并同步DC蓝牙图标
+    s_ble_link = 0;
+    dc_ble_icon_sync();
     /* 断开时切到 BLE 线程统一收尾，把本轮的 RAM 清理提交到 VM。 */
     my_send_msg(MOD_MAIN, MOD_BLE, MY_MSG_BLE_REPORT_STOP);
     printf("stop no_connect adv obj, start connect adv obj.");
@@ -545,6 +575,42 @@ void ble_disconnect_api(void)
     start_adv(&con_adv_obj_hdl[GOOGLE_ADV_TYPE], 1);
     os_time_dly(10); 
     start_adv(&con_adv_obj_hdl[APPLE_ADV_TYPE], 1);
+}
+
+void bt_connect_api(void)
+{
+    if (g_ble_dc_power_suppressed)
+    {
+        my_log_printf(1, "[DC_PWR] ignore bt_connect_api, suppressed=%u", (unsigned)g_ble_dc_power_suppressed);
+        return;
+    }
+
+    // 经典BT连接数+1，支持双连；仅当全部断开才清图标
+    if (s_bt_classic_link_cnt < 255)
+    {
+        s_bt_classic_link_cnt++;
+    }
+
+    // 经典BT连接后，同步DC蓝牙图标
+    dc_ble_icon_sync();
+}
+
+void bt_disconnect_api(void)
+{
+    if (g_ble_dc_power_suppressed)
+    {
+        my_log_printf(1, "[DC_PWR] ignore bt_disconnect_api, suppressed=%u", (unsigned)g_ble_dc_power_suppressed);
+        return;
+    }
+
+    // 经典BT连接数-1，支持双连；仅当全部断开才清图标
+    if (s_bt_classic_link_cnt > 0)
+    {
+        s_bt_classic_link_cnt--;
+    }
+
+    // 经典BT断开后，同步DC蓝牙图标
+    dc_ble_icon_sync();
 }
 
 static void custom_cbk_packet_handler(void *hdl, uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)

@@ -68,6 +68,10 @@
 #include "app_le_auracast.h"
 #include "btstack_rcsp_user.h"
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) && (MY_FINDMY_EN == 1)
+#include "my_findmy_protocol.h"
+#endif
+
 #define LOG_TAG             "[SOUNDBOX]"
 #define LOG_ERROR_ENABLE
 #define LOG_DEBUG_ENABLE
@@ -412,6 +416,9 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         if (get_vm_ram_storage_enable()) {
             vm_flush2flash(0);
         }
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) && (MY_FINDMY_EN == 1)
+        bt_connect_api();
+#endif
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
@@ -421,6 +428,9 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         }
 #if TCFG_CHARGESTORE_ENABLE
         chargestore_set_phone_disconnect();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN) && (MY_FINDMY_EN == 1)
+        bt_disconnect_api();
 #endif
         break;
 

@@ -81,6 +81,15 @@ int my_dc_is_online(void);
 /* 进入运输模式：写 0x0001 Bit10；返回0表示已受理。 */
 int my_dc_enter_transport_mode(void);
 
+/* 切换频率：写 0x0001 Bit12；返回0表示已受理。 */
+int my_dc_set_inv_freq(uint8 freq_hz);
+
+/* 写 0x0001 指定位；基线未就绪时 fire-and-forget 丢弃（Bit15 清 0 可挂 pending） */
+void my_dc_switch_bit_set(uint8 bit, uint8 on);
+
+#define DC_REG_SWITCH_BIT_BT_AUDIO_WORK  14  /* 蓝牙音箱：1=A2DP播放中 */
+#define DC_REG_SWITCH_BIT_BT_OTA         15  /* 蓝牙固件升级中 */
+
 void my_dc_uart_task(void *p_arg);
 
 #endif

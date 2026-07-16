@@ -35,6 +35,10 @@ void ble_cancel_defer_ems_schedule(void);
 void ble_dc_power_off_handle(void);
 void ble_dc_power_on_restore(void);
 void ble_dc_unbind_handle(void);
+void ble_connect_api(void);
+void ble_disconnect_api(void);
+void bt_connect_api(void);
+void bt_disconnect_api(void);
 u8 ble_dc_is_power_suppressed(void);
 
 #endif

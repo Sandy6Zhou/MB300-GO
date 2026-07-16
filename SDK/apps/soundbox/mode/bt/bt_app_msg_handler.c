@@ -24,6 +24,10 @@
 #include "app_le_auracast.h"
 #include "generic/jiffies.h"
 
+// 上报A2DP播放状态到DC Bit14
+#define DC_REG_SWITCH_BIT_BT_AUDIO_WORK  14
+extern void my_dc_switch_bit_set(u8 bit, u8 on);
+
 
 int bt_app_msg_handler(int *msg)
 {
@@ -245,7 +249,10 @@ int bt_app_msg_handler(int *msg)
         }
 #endif
         int err = a2dp_player_open(bt_addr);
-        if (err == -EBUSY) {
+        if (err == 0) {
+            // A2DP打开成功时，设置蓝牙音箱工作状态
+            my_dc_switch_bit_set(DC_REG_SWITCH_BIT_BT_AUDIO_WORK, 1);
+        } else if (err == -EBUSY) {
             printf("bt_app_msg_handler open a2dp_player failed\n");
             bt_start_a2dp_slience_detect(bt_addr, 50);
         }

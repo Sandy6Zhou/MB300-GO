@@ -30,6 +30,11 @@
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
 #include "bt_key_func.h"
+
+// 上报A2DP播放状态到DC Bit14
+#define DC_REG_SWITCH_BIT_BT_AUDIO_WORK  14 //蓝牙音箱：1=A2DP播放中
+extern void my_dc_switch_bit_set(u8 bit, u8 on);
+
 #if LE_AUDIO_LOCAL_MIC_EN
 #include "le_audio_mix_mic_recorder.h"
 #endif
@@ -156,6 +161,9 @@ void a2dp_play_close(u8 *bt_addr)
         app_set_a2dp_play_status(bt_addr, 0);
         memset(g_play_addr, 0xff, 6);
     }
+
+    // A2DP关闭时，清除蓝牙音箱工作状态
+    my_dc_switch_bit_set(DC_REG_SWITCH_BIT_BT_AUDIO_WORK, 0);
 }
 
 static void a2dp_play_in_task(u8 *data)
@@ -203,7 +211,10 @@ static void a2dp_play_in_task(u8 *data)
         }
 #endif
         int err = a2dp_player_open(bt_addr);
-        if (err == -EBUSY) {
+        if (err == 0) {
+            // A2DP打开成功时，设置蓝牙音箱工作状态
+            my_dc_switch_bit_set(DC_REG_SWITCH_BIT_BT_AUDIO_WORK, 1);
+        } else if (err == -EBUSY) {
             bt_start_a2dp_slience_detect(bt_addr, 50); //丢掉50包(约1s)之后才开始能量检测,过滤掉提示音，避免提示音引起抢占
         }
         /* memset(g_play_addr, 0xff, 6); */
@@ -376,6 +387,8 @@ static int a2dp_app_msg_handler(int *msg)
     switch (msg[0]) {
     case APP_MSG_BT_A2DP_PAUSE:
         puts("app_msg_bt_a2dp_pause\n");
+        // A2DP暂停时，清除蓝牙音箱工作状态
+        my_dc_switch_bit_set(DC_REG_SWITCH_BIT_BT_AUDIO_WORK, 0);
         u8 is_play = a2dp_player_is_playing(bt_addr);
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN))
         app_broadcast_close_transmitter();

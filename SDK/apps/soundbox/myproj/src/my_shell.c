@@ -509,6 +509,34 @@ static void factory_cmd_transport(char *resp, int resp_len, char **pParam, int n
     snprintf(resp, resp_len, "RETURN_TRANSPORT_OK");
 }
 
+static void factory_cmd_freq(char *resp, int resp_len, char **pParam, int nParam)
+{
+    int freq = 0;
+
+    if (nParam != 2 || pParam[1] == NULL)
+    {
+        snprintf(resp, resp_len, "RETURN_FREQ_FAIL");
+        return;
+    }
+
+    freq = atoi(pParam[1]);
+    if (freq != 50 && freq != 60)
+    {
+        snprintf(resp, resp_len, "RETURN_FREQ_FAIL");
+        return;
+    }
+
+    // AT^GT_CM=FREQ,50 -> Ð´ 0x0001 Bit12 ÇÐ»» 50Hz
+    // AT^GT_CM=FREQ,60 -> Ð´ 0x0001 Bit12 ÇÐ»» 60Hz
+    if (my_dc_set_inv_freq((uint8)freq) != 0)
+    {
+        snprintf(resp, resp_len, "RETURN_FREQ_FAIL");
+        return;
+    }
+
+    snprintf(resp, resp_len, "RETURN_FREQ_%d_OK", freq);
+}
+
 static void factory_cmd_mac(char *resp, int resp_len, char **pParam, int nParam)
 {
     const uint8 *mac;
@@ -604,6 +632,7 @@ static const factory_cmd_entry_t g_factory_cmd_table[] = {
     {"RESET",       factory_cmd_reset      },
     {"DCTEST",      factory_cmd_dctest     },
     {"TRANSPORT",   factory_cmd_transport  },
+    {"FREQ",        factory_cmd_freq       },
     {NULL,          NULL                   },
 };
 

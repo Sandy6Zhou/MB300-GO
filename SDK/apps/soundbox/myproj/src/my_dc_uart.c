@@ -34,6 +34,7 @@
  *    Bit4~6 LEDÄ£Ê½(000¹Ø/001=20%/010=50%/011=100%/100ÉÁÁÁ)
  *    Bit7 À¶ÑÀÍ¼±ê | Bit8 Äæ±äĞİÃß | Bit9 Õû»úĞİÃß | Bit10 ÔËÊäÄ£Ê½
  *    Bit11 ½â³ıÀ¶ÑÀÁ¬½Ó | Bit12 ÆµÂÊ 50/60Hz
+ *    Bit14 À¶ÑÀÒôÏä¹¤×÷×´Ì¬ | Bit15 À¶ÑÀ¹Ì¼şÉı¼¶
  *    £¨¸æ¾¯µÈÖ»¶ÁÎ»¼û 0x0002/0x0003£¬Óë 0x0001 ¿ª¹ØÎ»·ÖÀë£©
  *    | 0x0004 | ³äµç¹¦ÂÊ 0.1W | 0x0007 µç³ØSOC 0.1% | 0x0012 DC5521¹¦ÂÊ |
  *    | 0x0013 | LED¹¦ÂÊ | 0x000E Äæ±äÆ÷¹¦ÂÊ | 0x000F USB×Ü¹¦ÂÊ |
@@ -74,7 +75,9 @@
 #define DC_REG_SWITCH_BIT_SYS_SLEEP  9      /* Õû»úĞİÃß£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
 #define DC_REG_SWITCH_BIT_TRANSPORT  10     /* ÔËÊäÄ£Ê½ */
 #define DC_REG_SWITCH_BIT_BLE_UNBIND 11     /* ½â³ıÀ¶ÑÀÁ¬½Ó£ºDCÖÃ1ºóÇå³ıBTÅä¶Ô */
-#define DC_REG_SWITCH_BIT_FREQ       12     /* ÆµÂÊÑ¡Ôñ£¨ÔİÎ´ÊµÏÖ¿ØÖÆ£© */
+#define DC_REG_SWITCH_BIT_FREQ       12     /* ÆµÂÊ 50/60Hz */
+#define DC_REG_SWITCH_BIT_BT_AUDIO   14     /* À¶ÑÀÒôÏä¹¤×÷×´Ì¬£º1=²¥·ÅÖĞ 0=Î´¹¤×÷ */
+#define DC_REG_SWITCH_BIT_BT_OTA     15     /* À¶ÑÀ¹Ì¼şÉı¼¶£º1=Éı¼¶ÖĞ 0=Î´Éı¼¶ */
 
 #define DC_LED_MODE_OFF    0 /* 000 ¹Ø±Õ */
 #define DC_LED_MODE_20PCT  1 /* 001 20% */
@@ -139,8 +142,10 @@ typedef struct
 static uint16 g_dc_reg_cache[DC_REG_CACHE_SIZE] = {0}; /* Modbus ¼Ä´æÆ÷¾µÏñ */
 static device_data g_dc_dev_data = {0};                /* ÒµÎñÊı¾İ¿ìÕÕ */
 static uint8 g_dc_switch_reg_ready = 0;                /* ÒÑÄÃµ½¿ÉĞÅµÄ 0x0001 ¼Ä´æÆ÷»ùÏß£¬¿É¾İ´Ë¼ÆËã 01 05 Ä¿±êÖµ */
-static uint8 s_prev_dc_pwr_on = 0xFF;                    /* ÒµÎñ¿ª»úÌ¬±ßÑØ»ùÏß£¬0xFF=Ê×²ÉÑù²»´¥·¢À¶ÑÀ */
-static uint8 s_prev_ble_unbind = 0xFF;                   /* Bit11±ßÑØ»ùÏß£¬0xFF=Ê×²ÉÑù²»´¥·¢½â°ó */
+static uint8 s_prev_dc_pwr_on = 0xFF;                  /* ÒµÎñ¿ª»úÌ¬±ßÑØ»ùÏß£¬0xFF=Ê×²ÉÑù²»´¥·¢À¶ÑÀ */
+static uint8 s_prev_ble_unbind = 0xFF;                 /* Bit11±ßÑØ»ùÏß£¬0xFF=Ê×²ÉÑù²»´¥·¢½â°ó */
+static uint8 s_dc_boot_ota_bit_cleared = 0;            /* ÉÏµçºóÒÑĞ´ Bit15=0 */
+static uint8 s_dc_pending_ota_bit_off = 0;             /* OTA OFF Ê±»ùÏßÎ´¾ÍĞ÷£¬ÑÓºóÇå Bit15 */
 
 /* ========== Á´Â·½¡¿µ×´Ì¬ ========== */
 static uint8 g_dc_online = 0;                             /* Á´Â·½¡¿µ£ºDC_OFFLINE_CONSECUTIVE_COUNT ´Î³¬Ê±ÖÃ 0 */
@@ -165,7 +170,7 @@ static uint8 g_dc_transport_timer_armed = 0;  /* 1=¹Ø»úÑÓ³ÙÔËÊä¶¨Ê±Æ÷ÒÑÆô¶¯£¬ÕıÔ
 #define DC_LOG_VERBOSE_EN 0 /* ¿ªÆô½âÎö/ÉÏ±¨ÈÕÖ¾ */
 
 /* DC ¹Ø»ú¼ì²â£º0=Í¨Ñ¶ÀëÏß  1=0x0001 Bit0£»ÇĞ»»Ê±Ö»¸Ä´ËºêÓë²éÑ¯º¯Êı */
-#define DC_PWR_DETECT_BY_BIT0  0
+#define DC_PWR_DETECT_BY_BIT0 1
 
 #define MY_DC_MOCK_EN 0 // Ä£ÄâÊı¾İ£¬²»ÒÀÀµÕæÊµ DC °å
 
@@ -204,6 +209,8 @@ static void dc_ble_unbind_sync_state(uint16 reg_switch_flags);
 static uint32 dc_transport_delay_ms(void);
 static void dc_transport_timer_arm(void);
 static void dc_transport_timer_disarm(void);
+static int dc_send_switch_bit_once(uint8 bit, uint8 on);
+static void dc_on_switch_reg_ready(void);
 
 /*
  * ============================================================================
@@ -515,7 +522,12 @@ static void dc_update_read_reg_cache(const uint8 *frame, uint16 start_addr)
     DC_LOG_VERBOSE("dc parse reg ok. start=0x%x, reg_num=%d", start_addr, byte_cnt / 2);
     if (start_addr <= DC_REG_SWITCH_FLAGS && (uint16)(start_addr + (byte_cnt / 2)) > DC_REG_SWITCH_FLAGS)
     {
-        g_dc_switch_reg_ready = 1;
+        // Ê×´ÎÄÃµ½0x0001»ùÏßÊ±£¬´¦Àí´ıÍ¬²½×´Ì¬
+        if (!g_dc_switch_reg_ready)
+        {
+            g_dc_switch_reg_ready = 1;
+            dc_on_switch_reg_ready();
+        }
     }
     dc_update_device_data_cache();
 }
@@ -1047,32 +1059,31 @@ static int dc_try_send_poll_req(void)
     return dc_send_request(DC_MODBUS_FUNC_READ_REG, DC_03_POLL_START, DC_03_POLL_QTY, 0) ? 1 : 0;
 }
 
-/* ·µ»Ø 1£ºÒÑ·¢ÆğÀ¶ÑÀÍ¼±êÎ»Ğ´ÇëÇó£»0£ºÎ´·¢ËÍ£¨Ã¦/»ùÏßÎ´¾ÍĞ÷/ÎŞĞè±ä»¯£© */
-static int dc_send_ble_icon_once(uint8 on)
+/* ·µ»Ø 1£ºÒÑ·¢Æğ 0x0001 Ö¸¶¨Î»Ğ´ÇëÇó£»0£ºÎ´·¢ËÍ£¨Ã¦/»ùÏßÎ´¾ÍĞ÷/ÎŞĞè±ä»¯£© */
+static int dc_send_switch_bit_once(uint8 bit, uint8 on)
 {
     uint16 cur = 0;
     uint16 target = 0;
+    uint16 bit_mask = 0;
 
-    if (g_dc_req.active)
+    // Ã¦¡¢»ùÏßÎŞĞ§»òÎ»ºÅ·Ç·¨Ê±£¬²»·¢ËÍ
+    if (g_dc_req.active || !g_dc_switch_reg_ready || bit > 15)
     {
         return 0;
     }
 
-    /* »ùÏßÎ´¾ÍĞ÷£¬²»·¢ËÍ */
-    if (!g_dc_switch_reg_ready)
-    {
-        return 0;
-    }
+    // ¸ù¾İÎ»ºÅÉú³ÉÄ¿±êÑÚÂë
+    bit_mask = (uint16)(1u << bit);
 
-    /* »ñÈ¡µ±Ç°À¶ÑÀÍ¼±êÎ» */
+    // ÔÚµ±Ç°0x0001Öµ»ù´¡ÉÏ¼ÆËãÄ¿±êÖµ
     cur = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
     if (on)
     {
-        target = (uint16)(cur | (uint16)(1u << DC_REG_SWITCH_BIT_BLE_ICON));
+        target = (uint16)(cur | bit_mask);
     }
     else
     {
-        target = (uint16)(cur & (uint16)(~(1u << DC_REG_SWITCH_BIT_BLE_ICON)));
+        target = (uint16)(cur & (uint16)(~bit_mask));
     }
 
     /* Ä¿±êÖµÓëµ±Ç°ÖµÏàÍ¬£¬²»·¢ËÍ */
@@ -1086,7 +1097,90 @@ static int dc_send_ble_icon_once(uint8 on)
     {
         return 0;
     }
+
     return 1;
+}
+
+/* ·µ»Ø 1£ºÒÑ·¢ÆğÀ¶ÑÀÍ¼±êÎ»Ğ´ÇëÇó£»0£ºÎ´·¢ËÍ£¨Ã¦/»ùÏßÎ´¾ÍĞ÷/ÎŞĞè±ä»¯£© */
+static int dc_send_ble_icon_once(uint8 on)
+{
+    return dc_send_switch_bit_once(DC_REG_SWITCH_BIT_BLE_ICON, on);
+}
+
+/* 0x0001 »ùÏßÊ×´Î¾ÍĞ÷£ºÉÏµçÇå Bit15£¬²¢´¦Àí OTA OFF ¹ÒÆğµÄÇåÎ» */
+static void dc_on_switch_reg_ready(void)
+{
+    uint16 cur = 0;
+
+    // ÉÏµçÇå Bit15
+    if (!s_dc_boot_ota_bit_cleared)
+    {
+        cur = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+        if ((cur & (1u << DC_REG_SWITCH_BIT_BT_OTA)) == 0)
+        {
+            s_dc_boot_ota_bit_cleared = 1;
+        }
+        else if (dc_send_switch_bit_once(DC_REG_SWITCH_BIT_BT_OTA, 0))
+        {
+            s_dc_boot_ota_bit_cleared = 1;
+            my_log_printf(1, "[DC_OTA] boot clear bit15");
+        }
+    }
+
+    // ´¦Àí OTA OFF ¹ÒÆğµÄÇåÎ»
+    if (s_dc_pending_ota_bit_off)
+    {
+        if (dc_send_switch_bit_once(DC_REG_SWITCH_BIT_BT_OTA, 0))
+        {
+            s_dc_pending_ota_bit_off = 0;
+        }
+    }
+}
+
+// ÉèÖÃ 0x0001 Ö¸¶¨Î»
+void my_dc_switch_bit_set(uint8 bit, uint8 on)
+{
+    // ·¢ËÍÇëÇó
+    if (dc_send_switch_bit_once(bit, on))
+    {
+        if (bit == DC_REG_SWITCH_BIT_BT_AUDIO)
+        {
+            my_log_printf(1, "[DC_AUDIO] bit14=%u", on);
+        }
+        else if (bit == DC_REG_SWITCH_BIT_BT_OTA)
+        {
+            my_log_printf(1, "[DC_OTA] bit15=%u", on);
+            if (!on)
+            {
+                s_dc_pending_ota_bit_off = 0;
+            }
+        }
+        return;
+    }
+
+    // ´¦Àí OTA OFF ¹ÒÆğµÄÇåÎ»
+    if (bit == DC_REG_SWITCH_BIT_BT_OTA && !on)
+    {
+        if (g_dc_switch_reg_ready)
+        {
+            uint16 cur = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+
+            if ((cur & (1u << DC_REG_SWITCH_BIT_BT_OTA)) == 0)
+            {
+                s_dc_pending_ota_bit_off = 0;
+            }
+            else
+            {
+                s_dc_pending_ota_bit_off = 1;
+                my_log_printf(1, "[DC_OTA] bit15 off pending");
+            }
+        }
+        else
+        {
+            s_dc_pending_ota_bit_off = 1;
+            my_log_printf(1, "[DC_OTA] bit15 off pending, baseline not ready");
+        }
+    }
 }
 
 /*
@@ -1149,6 +1243,12 @@ static void dc_handle_poll_tick(void)
                 dc_try_send_poll_req();
             }
         }
+    }
+
+    // ´¦Àí OTA ÇåÎ»
+    if (g_dc_switch_reg_ready && (!s_dc_boot_ota_bit_cleared || s_dc_pending_ota_bit_off))
+    {
+        dc_on_switch_reg_ready();
     }
 }
 
@@ -1477,6 +1577,60 @@ int my_dc_enter_transport_mode(void)
     g_dc_last_ctrl_result = MY_DC_CTRL_RET_PENDING;
     g_dc_last_ctrl_err = 0;
 
+    my_log_printf(1, "[DC_TRANSPORT] request enter");
+    my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_CTRL_REQ);
+    return 0;
+}
+
+/* ÇĞ»»ÆµÂÊ£ºModbus 05 Ğ´ 0x0001 Bit12 */
+int my_dc_set_inv_freq(uint8 freq_hz)
+{
+    uint16 target_reg = 0;
+    uint8 on = 0;
+
+    if (freq_hz != 50 && freq_hz != 60)
+    {
+        return -1;
+    }
+
+    // ÓĞÔÚÍ¾ÇëÇóÊ±£¬Ö±½Ó·µ»ØÊ§°Ü
+    if (g_dc_ctrl_req.waiting_confirm)
+    {
+        return -1;
+    }
+
+    // ¿ª¹ØÁ¿¼Ä´æÆ÷ÎŞĞ§Ê±£¬Ö±½Ó·µ»ØÊ§°Ü
+    /* Ö»ÓĞÄÃµ½¿ÉĞÅµÄ 0x0001 »ùÏßºó£¬²ÅÄÜ¼ÆËã 01 05 µÄÍêÕû¼Ä´æÆ÷Ä¿±êÖµ¡£ */
+    if (!g_dc_switch_reg_ready)
+    {
+        g_dc_last_ctrl_result = MY_DC_CTRL_RET_SEND_FAIL;
+        g_dc_last_ctrl_err = 0;
+        return -1;
+    }
+
+    on = (freq_hz == 50) ? 1 : 0;
+
+    // ¶ÁÈ¡µ±Ç° 0x0001 ¼Ä´æÆ÷Öµ£¬²¢ÔÚ´Ë»ù´¡ÉÏ¼ÆËãÄ¿±êÖµ¡£
+    target_reg = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+    if (on)
+    {
+        target_reg |= (uint16)(1u << DC_REG_SWITCH_BIT_FREQ);
+    }
+    else
+    {
+        target_reg &= (uint16)(~(1u << DC_REG_SWITCH_BIT_FREQ));
+    }
+
+    // ÉèÖÃ¿ØÖÆÇëÇó
+    g_dc_ctrl_req.valid = 1;
+    g_dc_ctrl_req.sw_id = MY_DC_SW_AC; // Õ¼Î»£¬Êµ¼ÊÏÂ·¢ target_reg_value£»Îğ×ß with_ack ÖØÊÔ
+    g_dc_ctrl_req.onoff = on;
+    g_dc_ctrl_req.target_reg_value = target_reg;
+    g_dc_ctrl_req.waiting_confirm = 0;
+    g_dc_last_ctrl_result = MY_DC_CTRL_RET_PENDING;
+    g_dc_last_ctrl_err = 0;
+
+    my_log_printf(1, "[DC_FREQ] set %uHz", freq_hz);
     my_send_msg(MOD_MAIN, MOD_DC_UART, MY_MSG_DC_CTRL_REQ);
     return 0;
 }
