@@ -29,9 +29,6 @@ uint8 my_factory_test_mode_get(void)
     return g_factory_test_mode;
 }
 
-// 替换蓝牙名称中IMEI后4位
-static void my_sync_bt_name_with_imei_last4(const char *imei);
-
 static int sh_test_led_impl(int argc, char *argv[]);
 static int sh_test_gpio_impl(int argc, char *argv[]);
 #if TCFG_EQ_ENABLE
@@ -210,7 +207,6 @@ static void factory_cmd_imei(char *resp, int resp_len, char **pParam, int nParam
         ret = my_param_set_imei(pParam[1], strlen(pParam[1]));
         if (ret == 0)
         {
-            my_sync_bt_name_with_imei_last4(pParam[1]);
             snprintf(resp, resp_len, "RETURN_IMEI_SET_OK");
         }
         else
@@ -668,22 +664,6 @@ char *my_handle_at_factory_cmd(char **pParam, int nParam)
 
     snprintf(resp, sizeof(resp), "RETURN_UNSUPPORTED_CMD");
     return resp;
-}
-
-static void my_sync_bt_name_with_imei_last4(const char *imei)
-{
-    uint8 new_bt_name[] = "Go 3 (0000)"; // 产品名+括号+IMEI后4位
-
-    if ((imei == NULL) || (strlen(imei) != GSM_IMEI_LENGTH))
-    {
-        return;
-    }
-
-    // 替换括号后的4位
-    memcpy(&new_bt_name[sizeof("Go 3 (") - 1], &imei[DEV_NAME_USE_IMEI_POS], 4);
-
-    // 修改蓝牙名称
-    bt_modify_name((u8 *)new_bt_name);
 }
 
 int sh_at_factory_cmd(char *pfactorycmd)

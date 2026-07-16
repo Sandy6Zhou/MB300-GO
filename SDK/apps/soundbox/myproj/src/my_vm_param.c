@@ -11,6 +11,28 @@
 #include "user_cfg_id.h"
 #include "my_findmy_protocol.h"
 
+extern int bt_modify_name(u8 *new_name);
+
+static void my_sync_bt_name_with_mac_last4(void)
+{
+    const uint8 *mac;
+    uint8 new_bt_name[] = "Go 3 (0000)"; // 产品名+括号+MAC后4位
+    char suffix[5];
+
+    mac = bt_get_mac_addr();
+    if (mac == NULL)
+    {
+        return;
+    }
+
+    // 替换括号后的4位，顺序与RETURN_MAC显示一致
+    snprintf(suffix, sizeof(suffix), "%02X%02X", mac[1], mac[0]);
+    memcpy(&new_bt_name[sizeof("Go 3 (") - 1], suffix, 4);
+
+    // 修改蓝牙名称
+    bt_modify_name((u8 *)new_bt_name);
+}
+
 ConfigParamStruct    gConfigParam = {0};
 
 const AdvValidValue_t gDefaultAdvValidValue =
@@ -120,6 +142,8 @@ void my_param_load_vm_config(void)
 
     /* EMS 事件/告警 outbox */
     my_evt_store_init();
+
+    my_sync_bt_name_with_mac_last4();
 }
 
 bool my_param_set_transport_delay_hours(uint16 hours)

@@ -16,7 +16,6 @@
 #define FLAG_VALID 0xAA
 
 #define GSM_IMEI_LENGTH                     15
-#define DEV_NAME_USE_IMEI_POS               11 // IMEI后4位
 #define DEV_SN_LENGTH                       15
 
 typedef struct /* 存储的LICENSE GG信息 */
