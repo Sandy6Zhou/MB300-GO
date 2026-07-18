@@ -83,8 +83,10 @@
 
 //#define CONFIG_VDDIO_LVD_LEVEL                  4 ////VDDIO_LVD挡位，0: 1.9V   1: 2.0V   2: 2.1V   3: 2.2V   4: 2.3V   5: 2.4V   6: 2.5V   7: 2.6V
 
-//with single-bank mode,actual vm size should larger this VM_LEAST_SIZE,and dual bank mode,actual vm size equals this;
-#define CONFIG_VM_LEAST_SIZE                    8K
+// 固定VM区域，避免固件大小变化导致VM起始地址随代码尾部移动。
+// 2MB Flash布局: VM 0x1ED000~0x1FD000, BTIF/EXIF继续位于末尾保留区。
+#define CONFIG_VM_ADDR                          0x1ED000
+#define CONFIG_VM_LEAST_SIZE                    0x10000
 //config whether erased this area when do a update,1-No Operation,0-Erase
 #define CONFIG_VM_OPT							1
 
