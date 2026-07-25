@@ -59,7 +59,9 @@ typedef struct
 } my_dc_ota_ctx_t;
 
 static my_dc_ota_ctx_t g_dc_ota;            /* DC OTA单实例上下文 */
-static uint8 g_my_dc_ota_start_pending; /* 启动消息已投递但尚未执行 */
+static uint8 g_my_dc_ota_start_pending;     /* 启动消息已投递但尚未执行 */
+static uint8 g_my_dc_ota_pending_from_ble;  /* 待启动任务的固件来源 */
+static uint32 g_my_dc_ota_pending_ble_size; /* BLE暂存固件的有效字节数 */
 
 /** @brief OTA 周期定时器回调：仅向 DC UART 任务投递状态机 tick。 */
 static void my_dc_ota_timer_cb(void *param)
@@ -254,6 +256,28 @@ int my_dc_ota_request_start(void)
     }
 
     g_my_dc_ota_start_pending = 1;
+    g_my_dc_ota_pending_from_ble = 0;
+    g_my_dc_ota_pending_ble_size = 0;
+    my_send_msg(MOD_BLE, MOD_DC_UART, MY_MSG_DC_OTA_START);
+    return 0;
+}
+
+/**
+ * @brief 请求使用BLE接收的DCOTA预留区固件升级DC。
+ * @param file_size 预留区内固件的有效字节数。
+ * @return 0=请求已投递，-1=长度非法或已有升级任务。
+ */
+int my_dc_ota_request_start_ble(uint32 file_size)
+{
+    if (file_size == 0 || file_size > MY_BLE_OTA_STORAGE_SIZE ||
+        g_dc_ota.state != DC_OTA_IDLE || g_my_dc_ota_start_pending)
+    {
+        return -1;
+    }
+
+    g_my_dc_ota_start_pending = 1;
+    g_my_dc_ota_pending_from_ble = 1;
+    g_my_dc_ota_pending_ble_size = file_size;
     my_send_msg(MOD_BLE, MOD_DC_UART, MY_MSG_DC_OTA_START);
     return 0;
 }
@@ -265,16 +289,29 @@ int my_dc_ota_request_start(void)
 int my_dc_ota_start(void)
 {
     int file_len;
+    uint8 from_ble = g_my_dc_ota_pending_from_ble;
+    uint32 ble_file_size = g_my_dc_ota_pending_ble_size;
 
     g_my_dc_ota_start_pending = 0;
+    g_my_dc_ota_pending_from_ble = 0;
+    g_my_dc_ota_pending_ble_size = 0;
     if (g_dc_ota.state != DC_OTA_IDLE)
     {
         return -1;
     }
 
     memset(&g_dc_ota, 0, sizeof(g_dc_ota));
-    g_dc_ota.file = my_dc_ota_open_resource();
-    file_len = g_dc_ota.file ? resfile_get_len(g_dc_ota.file) : -1;
+    if (from_ble)
+    {
+        snprintf(g_dc_ota.res_path, sizeof(g_dc_ota.res_path), "%s", MY_BLE_OTA_STORAGE_PATH);
+        g_dc_ota.file = resfile_open(g_dc_ota.res_path);
+        file_len = (int)ble_file_size;
+    }
+    else
+    {
+        g_dc_ota.file = my_dc_ota_open_resource();
+        file_len = g_dc_ota.file ? resfile_get_len(g_dc_ota.file) : -1;
+    }
 
     if (g_dc_ota.file == NULL)
     {
@@ -283,7 +320,7 @@ int my_dc_ota_start(void)
     }
 
     my_log_printf(1, "[DC_OTA] resource opened: %s", g_dc_ota.res_path);
-    if (file_len <= 0)
+    if (file_len <= 0 || (from_ble && resfile_get_len(g_dc_ota.file) < file_len))
     {
         my_dc_ota_close_file();
         my_log_printf(1, "[DC_OTA] resource length invalid: %d", file_len);

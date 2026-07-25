@@ -94,10 +94,10 @@
 #define CONFIG_BTIF_OPT							1
 
 //reserved two custom cfg area for the future definition
-//#define CONFIG_RESERVED_AREA1					EXIF1
+#define CONFIG_RESERVED_AREA1					DCOTA
 #ifdef CONFIG_RESERVED_AREA1
 #define CONFIG_RESERVED_AREA1_ADDR				AUTO
-#define CONFIG_RESERVED_AREA1_LEN				0x1000
+#define CONFIG_RESERVED_AREA1_LEN				0x10000
 #define CONFIG_RESERVED_AREA1_OPT				1
 //#define CONFIG_RESERVED_AREA1_FILE				anc_gains.bin
 #endif

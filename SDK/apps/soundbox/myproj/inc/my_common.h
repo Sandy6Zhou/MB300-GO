@@ -56,6 +56,7 @@ typedef enum
     MY_TIMER_BLE_CONNECT_REPORT, /* 上报延迟定时器：蓝牙本地存储数据上报延时500ms */
     MY_TIMER_DC_TRANSPORT,       /* DC关机后延迟进入运输模式：单次定时器，到期后重新计时 */
     MY_TIMER_DC_OTA,             /* DC OTA状态机定时器：每100ms驱动YMODEM超时和重试 */
+    MY_TIMER_BLE_OTA,            /* BLE文件接收定时器：检测0x4605传输超时 */
     MY_TIMER_MAX_ID,
 } MY_E_TIMER;
 
@@ -70,6 +71,7 @@ typedef enum
     MY_MSG_BLE_REPORT_STOP,  /* EMS上报结束：由断开流程投递到BLE线程 */
     MY_MSG_BLE_DC_POWER_OFF, /* DC 通讯离线：关闭蓝牙广播并断链 */
     MY_MSG_BLE_DC_POWER_ON,  /* DC 通讯恢复：恢复蓝牙广播与可连接 */
+    MY_MSG_BLE_OTA_TICK,     /* BLE文件接收定时消息：在BLE任务中处理0x4605超时 */
     MY_MSG_BLE_DC_UNBIND,    /* 0x0001 Bit11 置1：清除经典蓝牙配对并断链 */
     MY_MSG_DC_POLL_TICK,     /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
     MY_MSG_DC_POLL_START,    /* BLE连接：置0x0001 Bit7（蓝牙图标） */
@@ -93,6 +95,7 @@ typedef enum
 #include "my_ble.h"
 #include "my_dc_uart.h"
 #include "ymodem_sender.h"
+#include "my_ble_ota.h"
 #include "my_dc_ota.h"
 #include "my_gpio.h"
 #include "my_event_report.h"

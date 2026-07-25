@@ -31,6 +31,7 @@ extern uint16 ble_server_mtu;
 
 void BLE_DataInputBuffer(const uint8 *data, uint16 len);
 void ble_rx_proc_handle(void);
+int ble_comu_send_packet(uint16 type, uint8 *data, uint16 len);
 void ble_comu_response_or_expansion_cmd(uint16 type, uint8 *str_data, uint8 len);
 #endif
 

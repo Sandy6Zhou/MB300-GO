@@ -229,12 +229,12 @@ static uint32 ble_comu_generate_pkey(void)
 }
 
 /************************************************************************
-**@brief: 蓝牙数据加密组包
+**@brief: 蓝牙数据加密组包，供普通响应和OTA文件传输应答共用
 **@param[in] type:  发送数据类型
 **@param[in] data:  发送的数据
 **@param[in] len:   发送的数据长度
 *************************************************************************/
-static int ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
+int ble_comu_send_packet(uint16 type, uint8 *data, uint16 len)
 {
     uint8 tx_ble_buf[BLE_RESP_LENGTH_MAX];
     uint8 encrypt_out[BLE_RESP_LENGTH_MAX];
@@ -494,7 +494,6 @@ void ble_comu_app_handle(uint32 type, const uint8 *data, uint16 len)
 {
     int ret;
     uint8 dec_buf[BLE_SVC_RX_MAX_LEN - 4] = {0};
-    uint8 rsp_buf[BLE_SVC_RX_MAX_LEN - 4] = {0};
 
     if(type == BLE_DATA_TYPE_PKEY)
     {
@@ -547,6 +546,13 @@ void ble_comu_app_handle(uint32 type, const uint8 *data, uint16 len)
                 {
                     /* 连接后的 day 历史走 FF01，这里负责把 APP ACK 转给 day 阶段机。 */
                     ble_handle_expansion_ack(dec_buf, len);
+                }
+                break;
+
+                case BLE_DATA_TYPE_FILE_TRANS:
+                {
+                    /* 0x4605为通用文件传输协议，解密后交给DC固件接收状态机处理 */
+                    my_ble_ota_handle_packet(dec_buf, len);
                 }
                 break;
 
@@ -620,9 +626,11 @@ void ble_rx_proc_handle(void)
 
     if(read_packet_head == BLE_DATA_PACKET_HEAD)
     {
+        /* 文件分片同样在BLE任务中完成解密和落盘，接收回调只负责缓存与投递 */
         if(read_cmd_head == BLE_DATA_TYPE_FILE_TRANS)
         {
-            // TODO
+            my_log_printf(1, "[BLE_OTA] RX dispatch len=%u", (unsigned)rx_ble_buf_index);
+            ble_app_comm_data_proc(rx_ble_buf, rx_ble_buf_index);
         }
         else
         {

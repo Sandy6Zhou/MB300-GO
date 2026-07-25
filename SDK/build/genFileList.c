@@ -1620,6 +1620,7 @@ c_SRC_FILES += \
     apps/soundbox/myproj/src/my_led_spi.c \
     apps/soundbox/myproj/src/ble_comunication.c \
     apps/soundbox/myproj/src/my_ble.c \
+    apps/soundbox/myproj/src/my_ble_ota.c \
     apps/soundbox/myproj/src/my_dc_uart.c \
     apps/soundbox/myproj/src/ymodem_sender.c \
     apps/soundbox/myproj/src/my_dc_ota.c \

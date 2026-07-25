@@ -697,7 +697,7 @@ static void app_task_loop(void *p)
         r_printf("creat fail %x\n", err);
     }
 
-    err = os_task_create(my_ble_task, NULL, 1, 2 * 1024, 128, my_ble_task_name);
+    err = os_task_create(my_ble_task, NULL, 1, 4 * 1024, 128, my_ble_task_name);
     if (err != OS_NO_ERR) {
         r_printf("creat ble task fail %x\n", err);
     }

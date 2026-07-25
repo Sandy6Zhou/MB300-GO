@@ -12,6 +12,8 @@
 /** @brief 请求使用内置资源固件升级DC，仅用于本地调试。 */
 int my_dc_ota_request_start(void);
 
+/** @brief 请求使用BLE暂存固件升级DC。 */
+int my_dc_ota_request_start_ble(uint32 file_size);
 
 /** @brief 在DC UART任务中启动升级状态机。 */
 int my_dc_ota_start(void);
