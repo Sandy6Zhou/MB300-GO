@@ -13,6 +13,7 @@ extern void multi_protocol_rcsp_adv_ota_mode_set(u8 enable);
 static int mb300_sw_cmd_handler(at_cmd_struc* msg);
 static int mb300_ota_mode_handler(at_cmd_struc* msg);
 static int mb300_get_status_handler(at_cmd_struc* msg);
+static int mb300_my_dc_ota_handler(at_cmd_struc* msg);
 
 static const at_cmd_attr_t at_cmd_attr_table[] =
 {
@@ -21,6 +22,7 @@ static const at_cmd_attr_t at_cmd_attr_table[] =
     {"MB300_SW_USB",        mb300_sw_cmd_handler},
     {"MB300_SW_LED",        mb300_sw_cmd_handler},
     {"MB300_SW_OTA",        mb300_ota_mode_handler},
+    {"MB300_DC_OTA",        mb300_my_dc_ota_handler},
     {"MB300_GET_STATUS",    mb300_get_status_handler},
 };
 
@@ -341,6 +343,27 @@ static int mb300_ota_mode_handler(at_cmd_struc *msg)
      */
     multi_protocol_rcsp_adv_ota_mode_set(ota_en);
     msg->resp_length = snprintf(msg->resp_msg, remaining, "RETURN_%s_%s_OK", msg->parm[0], msg->parm[1]);
+    return BLE_DATA_TYPE_AT_CMD;
+}
+
+/************************************************************************
+**@brief: 处理DC OTA指令(MB300_DC_OTA)
+**@param[in] msg: AT指令结构体指针，包含指令参数和响应缓冲区信息
+**@return: 返回BLE数据类型（AT指令响应类型）
+*************************************************************************/
+static int mb300_my_dc_ota_handler(at_cmd_struc *msg)
+{
+    uint16 remaining = sizeof(msg->resp_msg);
+
+    if (my_dc_ota_request_start() != 0)
+    {
+        msg->resp_length = snprintf(msg->resp_msg, remaining,
+                                    "RETURN_MB300_DC_OTA_START_FAIL");
+        return BLE_DATA_TYPE_AT_CMD;
+    }
+
+    msg->resp_length = snprintf(msg->resp_msg, remaining,
+                                "RETURN_MB300_DC_OTA_START_OK");
     return BLE_DATA_TYPE_AT_CMD;
 }
 

@@ -49,6 +49,22 @@ struct tone_files {
     const char *le_connected_open;
     const char *le_connected_close;
     const char *surround_sound_mode;
+#if 1 // custom tone
+    const char *low_power_c;
+    const char *bt_pairing;
+    const char *bt_reset;
+    const char *bt_unpaired;
+    const char *charge_done;
+    const char *light_on;
+    const char *light_off;
+    const char *muted;
+    const char *unmuted;
+    const char *overload;
+    const char *temp_high;
+    const char *switch_on;
+    const char *switch_off;
+    const char *dc_ota;
+#endif
 };
 
 

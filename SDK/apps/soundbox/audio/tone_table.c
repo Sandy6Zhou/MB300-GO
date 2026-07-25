@@ -69,6 +69,7 @@ static const struct tone_files chinese_tone_files = {
     .temp_high          = "tone_zh/temp_high.*",
     .switch_on          = "tone_zh/switch_on.*",
     .switch_off         = "tone_zh/switch_off.*",
+    .dc_ota             = "tone_zh/dc_ota.*",
 #endif
 };
 
@@ -129,6 +130,7 @@ static const struct tone_files english_tone_files = {
     .temp_high          = "tone_en/temp_high.*",
     .switch_on          = "tone_en/switch_on.*",
     .switch_off         = "tone_en/switch_off.*",
+    .dc_ota             = "tone_en/dc_ota.*",
 #endif
 };
 

@@ -61,6 +61,15 @@ void my_dc_uart_deinit(void);
 
 unsigned int my_dc_uart_send(unsigned char *data, unsigned int size);
 
+/** @brief 通过DC UART发送IAP/YMODEM原始数据，不受Modbus单帧长度限制。 */
+unsigned int my_dc_uart_send_raw(const unsigned char *data, unsigned int size);
+
+/** @brief 停止Modbus轮询并通过0x0001 Bit13复位DC，进入OTA独占模式。 */
+int my_dc_uart_enter_ota_mode(void);
+
+/** @brief 退出OTA独占模式并恢复DC Modbus轮询。 */
+void my_dc_uart_exit_ota_mode(void);
+
 void my_dc_proto_feed(const unsigned char *data, unsigned int len);
 
 /* 获取最新设备数据快照；返回0表示成功。 */
@@ -87,6 +96,7 @@ int my_dc_set_inv_freq(uint8 freq_hz);
 /* 写 0x0001 指定位；基线未就绪时 fire-and-forget 丢弃（Bit15 清 0 可挂 pending） */
 void my_dc_switch_bit_set(uint8 bit, uint8 on);
 
+#define DC_REG_SWITCH_BIT_RESET          13  /* DC复位触发位：写1后DC进入IAP */
 #define DC_REG_SWITCH_BIT_BT_AUDIO_WORK  14  /* 蓝牙音箱：1=A2DP播放中 */
 #define DC_REG_SWITCH_BIT_BT_OTA         15  /* 蓝牙固件升级中 */
 

@@ -1621,6 +1621,8 @@ c_SRC_FILES += \
     apps/soundbox/myproj/src/ble_comunication.c \
     apps/soundbox/myproj/src/my_ble.c \
     apps/soundbox/myproj/src/my_dc_uart.c \
+    apps/soundbox/myproj/src/ymodem_sender.c \
+    apps/soundbox/myproj/src/my_dc_ota.c \
     apps/soundbox/myproj/src/my_cmd_handler.c \
 
 // *JIMI-MYPROJ*
@@ -2105,4 +2107,3 @@ c_SRC_FILES += \
 	apps/soundbox/mode/bt/le_audio/auracast/le_auracast_pawr.c \
 	apps/soundbox/mode/bt/le_audio/auracast/le_auracast_pawr_slave.c
 #endif
-

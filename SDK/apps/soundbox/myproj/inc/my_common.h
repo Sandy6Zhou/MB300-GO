@@ -55,6 +55,7 @@ typedef enum
     MY_TIMER_DC_CTRL_ACK,        /* DC控制ACK定时器：开关控制后每500ms检查一次结果，最多3次 */
     MY_TIMER_BLE_CONNECT_REPORT, /* 上报延迟定时器：蓝牙本地存储数据上报延时500ms */
     MY_TIMER_DC_TRANSPORT,       /* DC关机后延迟进入运输模式：单次定时器，到期后重新计时 */
+    MY_TIMER_DC_OTA,             /* DC OTA状态机定时器：每100ms驱动YMODEM超时和重试 */
     MY_TIMER_MAX_ID,
 } MY_E_TIMER;
 
@@ -73,8 +74,10 @@ typedef enum
     MY_MSG_DC_POLL_TICK,     /* DC 100ms 定时消息：dc_poll_timer_cb 发送 */
     MY_MSG_DC_POLL_START,    /* BLE连接：置0x0001 Bit7（蓝牙图标） */
     MY_MSG_DC_POLL_STOP,     /* BLE断开：清0x0001 Bit7（蓝牙图标） */
-    MY_MSG_DC_CTRL_REQ,        /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
-    MY_MSG_DC_TRANSPORT_REQ,   /* 运输延迟计时到点：在 DC 任务里下发运输指令并重新开始下一轮计时 */
+    MY_MSG_DC_CTRL_REQ,      /* DC控制请求：BLE 收到 MB300_SW_xx 后发往 DC 任务 */
+    MY_MSG_DC_TRANSPORT_REQ, /* 运输延迟计时到点：在 DC 任务里下发运输指令并重新开始下一轮计时 */
+    MY_MSG_DC_OTA_START,     /* DC OTA启动消息：在DC UART任务中打开固件并复位DC */
+    MY_MSG_DC_OTA_TICK,      /* DC OTA定时消息：在DC UART任务中驱动状态机 */
 } MY_MAIN_TASK_MSG;
 
 #include "my_uart.h"
@@ -89,6 +92,8 @@ typedef enum
 #include "ble_comunication.h"
 #include "my_ble.h"
 #include "my_dc_uart.h"
+#include "ymodem_sender.h"
+#include "my_dc_ota.h"
 #include "my_gpio.h"
 #include "my_event_report.h"
 #include "my_cmd_handler.h"

@@ -113,9 +113,10 @@
 /* 寄存器镜像：0x0000~0x0027 */
 #define DC_REG_CACHE_SIZE (DC_03_POLL_START + DC_03_POLL_QTY)
 
-/* 接收拼包缓存、单帧发送缓存 */
-#define DC_RX_CACHE_SIZE 128
-#define DC_TX_FRAME_MAX  16
+/* 接收拼包缓存、Modbus单帧长度和OTA DMA分片长度 */
+#define DC_RX_CACHE_SIZE     128
+#define DC_TX_FRAME_MAX      16
+#define DC_TX_DMA_CHUNK_SIZE 256 /* YMODEM原始帧分片搬运到DMA内存 */
 
 /* 在途 Modbus 请求上下文：同一时刻仅允许一个请求 */
 typedef struct
@@ -1272,7 +1273,7 @@ void my_dc_uart_init(void)
 
     if (g_dc_tx_dma_buf == NULL)
     {
-        g_dc_tx_dma_buf = (uint8 *)dma_malloc(DC_TX_FRAME_MAX);
+        g_dc_tx_dma_buf = (uint8 *)dma_malloc(DC_TX_DMA_CHUNK_SIZE);
         if (g_dc_tx_dma_buf == NULL)
         {
             my_log_printf(1, "dc tx dma alloc fail");
@@ -1702,6 +1703,85 @@ int my_dc_get_last_ctrl_result(uint8 *result, uint8 *err_code)
     return 0;
 }
 
+/* 通过DC UART发送IAP/YMODEM原始数据，返回实际发送字节数 */
+uint32 my_dc_uart_send_raw(const uint8 *data, uint32 size)
+{
+    uint32 sent = 0;
+    uint32 chunk;
+
+    if (data == NULL || size == 0 || g_dc_tx_dma_buf == NULL)
+    {
+        return 0;
+    }
+
+    /* UART底层DMA直接读取发送缓冲区，每片发送完成后才能安全复用该内存 */
+    while (sent < size)
+    {
+        chunk = MIN(size - sent, DC_TX_DMA_CHUNK_SIZE);
+        memcpy(g_dc_tx_dma_buf, data + sent, chunk);
+        if (my_uart_write_data(MY_DC_UART_PORT, g_dc_tx_dma_buf, chunk) != chunk)
+        {
+            return sent;
+        }
+        sent += chunk;
+    }
+
+    return sent;
+}
+
+/* 停止普通Modbus业务，通过0x0001 Bit13复位DC并切换到OTA串口模式 */
+int my_dc_uart_enter_ota_mode(void)
+{
+    uint8 frame[16] = {0};
+    uint16 frame_len;
+    uint16 current;
+    uint16 target;
+
+    if (!g_dc_switch_reg_ready)
+    {
+        my_log_printf(1, "[DC_OTA] reset rejected: register 0x0001 is not ready");
+        return -1;
+    }
+
+    current = dc_get_reg_value(DC_REG_SWITCH_FLAGS, 0);
+    target = (uint16)(current | (1u << DC_REG_SWITCH_BIT_RESET));
+    frame_len = dc_build_req_frame(frame, DC_MODBUS_FUNC_WRITE_REG,
+                                   DC_REG_SWITCH_FLAGS, target);
+    if (frame_len == 0)
+    {
+        return -1;
+    }
+
+    /* OTA独占串口，停止轮询并清理尚未完成的Modbus和控制请求 */
+    dc_poll_stop();
+    g_dc_req.active = 0;
+    g_dc_ctrl_req.valid = 0;
+    g_dc_ctrl_req.waiting_confirm = 0;
+    my_stop_timer(MY_TIMER_DC_CTRL_ACK);
+    dc_ctrl_ack_ctx_clear();
+
+    dc_log_frame("dc ota reset tx", frame, frame_len);
+    if (my_dc_uart_send(frame, frame_len) != frame_len)
+    {
+        dc_poll_start();
+        return -1;
+    }
+
+    /* DC收到复位写命令后立即重启，不等待Modbus应答 */
+    g_dc_switch_reg_ready = 0;
+    dc_mark_offline();
+    my_log_printf(1, "[DC_OTA] reset sent: reg 0x0001 0x%x -> 0x%x",
+                  current, target);
+    return 0;
+}
+
+/* 清理OTA期间的请求状态并恢复Modbus轮询 */
+void my_dc_uart_exit_ota_mode(void)
+{
+    g_dc_req.active = 0;
+    g_dc_req.wait_ms = 0;
+    dc_poll_start();
+}
 void my_dc_uart_task(void *p_arg)
 {
     int ret = 0;
@@ -1742,7 +1822,15 @@ void my_dc_uart_task(void *p_arg)
                         break;
                     }
 
-                    my_dc_proto_feed(rx_buff, (uint32)len);
+                    /* OTA期间串口归IAP/YMODEM状态机独占，其余时间按Modbus协议解析 */
+                    if (my_dc_ota_is_active())
+                    {
+                        my_dc_ota_input(rx_buff, (uint32)len);
+                    }
+                    else
+                    {
+                        my_dc_proto_feed(rx_buff, (uint32)len);
+                    }
                 }
                 break;
             }
@@ -1795,6 +1883,30 @@ void my_dc_uart_task(void *p_arg)
                 }
                 break;
             }
+
+            case MY_MSG_DC_OTA_START:
+                /* 固件打开、合法性校验和DC复位均在DC UART任务中执行 */
+                (void)my_dc_ota_start();
+                break;
+
+            case MY_MSG_DC_OTA_TICK:
+                /*
+                 * UART RX超时事件只表示当前有数据；每个tick排空DMA循环缓存，
+                 * 避免较长的IAP启动菜单残留在下一段而无法被状态机识别。
+                 */
+                if (rx_buff != NULL)
+                {
+                    do
+                    {
+                        len = my_dc_uart_read_data(rx_buff, MY_DC_UART_RX_TMP_BUF_LEN);
+                        if (len > 0 && my_dc_ota_is_active())
+                        {
+                            my_dc_ota_input(rx_buff, (uint32)len);
+                        }
+                    } while (len > 0 && my_dc_ota_is_active());
+                }
+                my_dc_ota_tick();
+                break;
 
             default:
                 break;
